@@ -32,6 +32,7 @@ const CATEGORIES = [
   { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_talep", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },
   { label: "Stok — Raporlar", keys: ["stok_raporlar"] },
   { label: "Stok — Satın Alma", keys: ["stok_satinalma"] },
+  { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

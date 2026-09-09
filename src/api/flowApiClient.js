@@ -97,6 +97,9 @@ const ENTITY_MAP = {
   StokTalepSatir:    'stok_talep_satirlari',
   StokUrunTedarikci: 'stok_urun_tedarikci',
   StokFiyatGecmisi:  'stok_fiyat_gecmisi',
+  StokPersonel:      'stok_personeller',
+  StokDemirbas:      'stok_demirbaslar',
+  StokZimmet:        'stok_zimmetler',
 };
 
 function createEntityClient(entityName) {
@@ -294,6 +297,13 @@ export const stok = {
   async fiyatGecmisi(filtre = {}) {
     const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
     return handleResponse(await fetch(`${BASE_URL}/api/stok/fiyat-gecmisi?${p}`, { credentials: 'include' }));
+  },
+  async zimmetle(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet`, _sjson('POST', body))); },
+  async zimmetIade(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/${id}/iade`, _sjson('POST', body || {}))); },
+  async zimmetOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet-ozet`, { credentials: 'include' })); },
+  async zimmetList(filtre = {}) {
+    const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmetler?${p}`, { credentials: 'include' }));
   },
 };
 

@@ -411,6 +411,8 @@ function initDb() {
       'stok_raporlar',
       // Faz 7: Satın Alma
       'stok_satinalma',
+      // Faz 8: Zimmet / El Aletleri
+      'stok_zimmet',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -677,6 +679,36 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_fg_tarih ON stok_fiyat_gecmisi(tarih);
     `);
   } catch(e) { console.error('stok faz7 tablolari:', e.message); }
+
+  // ── Stok Faz 8: el aletleri / demirbaş + terminli zimmet ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_personeller (
+        id TEXT PRIMARY KEY, kod TEXT, ad_soyad TEXT NOT NULL, telefon TEXT, eposta TEXT,
+        departman TEXT, employee_id TEXT, aktif INTEGER DEFAULT 1, not_ TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_demirbaslar (
+        id TEXT PRIMARY KEY, varlik_kodu TEXT, urun_id TEXT, urun_adi TEXT,
+        depo_id TEXT, depo_adi TEXT, raf_id TEXT, raf_adi TEXT,
+        seri_no TEXT, barkod TEXT, alis_tarihi TEXT, garanti_bitis TEXT, kondisyon TEXT,
+        durum TEXT DEFAULT 'kullanilabilir',   -- kullanilabilir | personelde | bakimda | hurda
+        not_ TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_zimmetler (
+        id TEXT PRIMARY KEY, zimmet_no TEXT, demirbas_id TEXT, demirbas_adi TEXT, varlik_kodu TEXT,
+        personel_id TEXT, personel_adi TEXT, saha_id TEXT, saha_adi TEXT,
+        teslim_tarihi TEXT, termin_tarihi TEXT, teslim_notu TEXT, iade_tarihi TEXT, iade_notu TEXT,
+        durum TEXT DEFAULT 'acik',   -- acik | iade
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_demirbas_durum ON stok_demirbaslar(durum);
+      CREATE INDEX IF NOT EXISTS idx_stok_zimmet_demirbas ON stok_zimmetler(demirbas_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_zimmet_durum ON stok_zimmetler(durum);
+    `);
+  } catch(e) { console.error('stok faz8 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

@@ -8,7 +8,8 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
-  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler'];
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
+  'stok_personeller','stok_demirbaslar'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -140,6 +141,9 @@ const TABLE_TO_MODULE = {
   stok_talep_satirlari: 'stok_talep',
   stok_urun_tedarikci: 'stok_satinalma',
   stok_fiyat_gecmisi: 'stok_satinalma',
+  stok_personeller: 'stok_zimmet',
+  stok_demirbaslar: 'stok_zimmet',
+  stok_zimmetler: 'stok_zimmet',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -257,6 +261,9 @@ const ALLOWED_COLUMNS = {
   stok_talep_satirlari: ['talep_id','urun_id','urun_adi','urun_kodu','miktar','birim','karsilanan_miktar','not_'],
   stok_urun_tedarikci: ['urun_id','urun_adi','cari_id','cari_adi','tedarikci_urun_kodu','marka','model','birim','birim_fiyat','para_birimi','fiyat_tarihi','teslim_suresi_gun','min_siparis','stok_durumu','tercih_edilen','aktif','not_'],
   stok_fiyat_gecmisi: ['urun_id','urun_adi','cari_id','cari_adi','alis_fiyati','para_birimi','tarih','kaynak','fis_no','not_'],
+  stok_personeller: ['kod','ad_soyad','telefon','eposta','departman','employee_id','aktif','not_','is_deleted'],
+  stok_demirbaslar: ['varlik_kodu','urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','seri_no','barkod','alis_tarihi','garanti_bitis','kondisyon','durum','not_','is_deleted'],
+  stok_zimmetler: ['zimmet_no','demirbas_id','demirbas_adi','varlik_kodu','personel_id','personel_adi','saha_id','saha_adi','teslim_tarihi','termin_tarihi','teslim_notu','iade_tarihi','iade_notu','durum'],
 };
 
 // Zorunlu alanlar
@@ -308,6 +315,8 @@ const REQUIRED_FIELDS = {
   stok_talep_satirlari: ['talep_id'],
   stok_urun_tedarikci: ['urun_id','cari_id'],
   stok_fiyat_gecmisi: ['urun_id'],
+  stok_personeller: ['ad_soyad'],
+  stok_demirbaslar: ['urun_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {
@@ -628,6 +637,25 @@ function createEntityRouter(tableName) {
             VALUES (?, ?, ?, 'GENEL', 'GENEL RAF', 'STANDART', 0, 1, ?, ?, ?)`)
             .run(uuidv4(), created.id, created.ad, req.user?.email || null, now2, now2);
         } catch (e) { console.error('[stok] GENEL RAF olusturma hatasi:', e.message); }
+      }
+
+      // Stok: demirbaş / personel için otomatik kod
+      if (tableName === 'stok_demirbaslar' && (!created.varlik_kodu || !created.barkod)) {
+        try {
+          const seq = db.prepare("SELECT COUNT(*) c FROM stok_demirbaslar").get().c;
+          const vk = created.varlik_kodu || ('DMB-' + String(seq).padStart(6, '0'));
+          const bk = created.barkod || ('869' + String(Date.now()).slice(-10));
+          db.prepare("UPDATE stok_demirbaslar SET varlik_kodu=?, barkod=? WHERE id=?").run(vk, bk, created.id);
+          created.varlik_kodu = vk; created.barkod = bk;
+        } catch (e) { console.error('[stok] demirbas kod:', e.message); }
+      }
+      if (tableName === 'stok_personeller' && !created.kod) {
+        try {
+          const seq = 1000 + db.prepare("SELECT COUNT(*) c FROM stok_personeller").get().c;
+          const kod = 'PRS-' + String(seq).padStart(6, '0');
+          db.prepare("UPDATE stok_personeller SET kod=? WHERE id=?").run(kod, created.id);
+          created.kod = kod;
+        } catch (e) { console.error('[stok] personel kod:', e.message); }
       }
 
       res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });

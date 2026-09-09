@@ -331,10 +331,18 @@ export const stok = {
   async fiyatArastirUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fiyat-arastir/uygula`, _sjson('POST', body))); },
 };
 
+// ── İK / Özlük / Bordro ──
+export const ik = {
+  async zamUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/zam-uygula`, _sjson('POST', body))); },
+  async cikisVer(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/personel/${id}/cikis`, _sjson('POST', body))); },
+  async ucretSenkron(id) { return handleResponse(await fetch(`${BASE_URL}/api/ik/personel/${id}/ucret-senkron`, _sjson('POST'))); },
+};
+
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde
 export const flowApi = {
   auth,
   stok,
+  ik,
   entities: new Proxy({}, {
     get(_, entityName) {
       return createEntityClient(entityName);

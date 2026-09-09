@@ -298,7 +298,7 @@ const ALLOWED_COLUMNS = {
 
 // Zorunlu alanlar
 // employees tablosunda disariya sizmamasi gereken hassas kisisel veriler (KVKK)
-const SENSITIVE_EMPLOYEE_FIELDS = ['tc','iban','bank_name','tax_office','tax_number','sgk_number','disability_status','blood_type','emergency_contact','emergency_phone','address','notes','exit_reason','exit_notes','exit_document','marital_status','military_status','education_documents','birth_date','gender','card_uid'];
+const SENSITIVE_EMPLOYEE_FIELDS = ['tc','iban','bank_name','tax_office','tax_number','sgk_number','disability_status','blood_type','emergency_contact','emergency_phone','address','notes','exit_reason','exit_notes','exit_document','marital_status','military_status','education_documents','birth_date','gender','card_uid','personel_adresi','kanun_no','aylik_ucret','saatlik_ucret','dakikalik_ucret','ticket_aylik','sahsi_hesap_aktif','sahsi_hesap_tutar','sahsi_hesap_banka','sahsi_hesap_iban','sahsi_hesap_aciklama'];
 
 function isPrivilegedForEmployeeData(role) {
   if (role === 'admin' || role === 'yonetici') return true;

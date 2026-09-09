@@ -2460,6 +2460,100 @@ app.post('/api/stok/fiyat-arastir/uygula', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// İK / Özlük / Bordro — Faz 1: zam uygulama + çıkış ver
+// ═══════════════════════════════════════════════════════════════════
+function ikPerm(req, action, ...mods) {
+  if (req.user?.role === 'admin') return true;
+  const list = mods.length ? mods : ['ikb_personel'];
+  return list.some((m) => checkPermission(db, req.user?.role, m, action));
+}
+// Aylık ücret → saatlik (aylık/225) ve dakikalık (saatlik/60). 225 = 30 gün × 7,5 saat.
+function ikUcretTuret(aylik) {
+  const a = Number(aylik) || 0;
+  const saatlik = a > 0 ? +(a / 225).toFixed(6) : 0;
+  return { saatlik_ucret: saatlik, dakikalik_ucret: saatlik > 0 ? +(saatlik / 60).toFixed(6) : 0 };
+}
+
+// Toplu / bireysel zam uygulama sihirbazı
+app.post('/api/ik/zam-uygula', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_zam', 'ikb_personel')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const b = req.body || {};
+  const hedef = b.hedef || 'tek_personel';           // meslek_grubu | maas_araligi | tek_personel | tumu
+  const zamAlani = b.zam_alani || 'resmi';            // resmi | sahsi | her_ikisi
+  const islem = b.islem || 'yuzde';                   // yuzde | sabit | yeni
+  const deger = Number(b.deger);
+  if (!Number.isFinite(deger)) return res.status(400).json({ error: 'Geçerli bir değer girin' });
+
+  const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'"];
+  const params = [];
+  if (hedef === 'tek_personel') { if (!b.personel_id) return res.status(400).json({ error: 'Personel seçin' }); cond.push('id=?'); params.push(b.personel_id); }
+  else if (hedef === 'meslek_grubu') { if (!b.meslek_kodu) return res.status(400).json({ error: 'Meslek kodu seçin' }); cond.push('meslek_kodu=?'); params.push(b.meslek_kodu); }
+  else if (hedef === 'maas_araligi') {
+    cond.push('COALESCE(aylik_ucret,0) >= ? AND COALESCE(aylik_ucret,0) <= ?');
+    params.push(Number(b.maas_min) || 0, Number(b.maas_max) || 1e12);
+  }
+  const list = db.prepare(`SELECT id, full_name, aylik_ucret, sahsi_hesap_tutar FROM employees WHERE ${cond.join(' AND ')}`).all(...params);
+  if (!list.length) return res.status(400).json({ error: 'Kritere uyan personel yok' });
+
+  const yeniDeger = (mevcut) => {
+    const m = Number(mevcut) || 0;
+    if (islem === 'yuzde') return +(m * (1 + deger / 100)).toFixed(2);
+    if (islem === 'sabit') return +(m + deger).toFixed(2);
+    return +deger.toFixed(2); // yeni
+  };
+  const now = new Date().toISOString();
+  const insGecmis = db.prepare(`INSERT INTO ik_ucret_gecmisi
+    (id, personel_id, personel_adi, alan, eski_tutar, yeni_tutar, gecerlilik, aciklama, kaynak, created_by, created_date)
+    VALUES (?,?,?,?,?,?,?,?,'zam_sihirbazi',?,?)`);
+  let n = 0;
+  try {
+    db.transaction(() => {
+      for (const p of list) {
+        if (zamAlani === 'resmi' || zamAlani === 'her_ikisi') {
+          const yeni = yeniDeger(p.aylik_ucret);
+          const t = ikUcretTuret(yeni);
+          db.prepare('UPDATE employees SET aylik_ucret=?, saatlik_ucret=?, dakikalik_ucret=?, updated_date=? WHERE id=?')
+            .run(yeni, t.saatlik_ucret, t.dakikalik_ucret, now, p.id);
+          insGecmis.run(_stokUUID(), p.id, p.full_name, 'resmi_maas', Number(p.aylik_ucret) || 0, yeni, b.gecerlilik || now.slice(0, 10), b.aciklama || null, req.user.email, now);
+        }
+        if (zamAlani === 'sahsi' || zamAlani === 'her_ikisi') {
+          const yeni = yeniDeger(p.sahsi_hesap_tutar);
+          db.prepare('UPDATE employees SET sahsi_hesap_tutar=?, updated_date=? WHERE id=?').run(yeni, now, p.id);
+          insGecmis.run(_stokUUID(), p.id, p.full_name, 'sahsi_hesap', Number(p.sahsi_hesap_tutar) || 0, yeni, b.gecerlilik || now.slice(0, 10), b.aciklama || null, req.user.email, now);
+        }
+        n++;
+      }
+    })();
+    res.json({ ok: true, etkilenen: n });
+  } catch (err) { console.error('[ik] zam uygula:', err); res.status(500).json({ error: err.message }); }
+});
+
+// İşten çıkış ver
+app.post('/api/ik/personel/:id/cikis', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_cikis', 'ikb_personel')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const emp = db.prepare('SELECT * FROM employees WHERE id=?').get(req.params.id);
+  if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
+  const { exit_date, exit_reason, exit_notes } = req.body || {};
+  if (!exit_date) return res.status(400).json({ error: 'Çıkış tarihi zorunlu' });
+  try {
+    db.prepare("UPDATE employees SET status='pasif', exit_date=?, exit_reason=?, exit_notes=?, updated_date=? WHERE id=?")
+      .run(exit_date, exit_reason || null, exit_notes || null, new Date().toISOString(), emp.id);
+    res.json({ ok: true, personel: db.prepare('SELECT id, full_name, status, exit_date FROM employees WHERE id=?').get(emp.id) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Ücret senkron: aylık ücret değişince saatlik/dakikalık türet (tek kişi, personel kartı kaydından sonra)
+app.post('/api/ik/personel/:id/ucret-senkron', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_personel')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const emp = db.prepare('SELECT id, aylik_ucret FROM employees WHERE id=?').get(req.params.id);
+  if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
+  const t = ikUcretTuret(emp.aylik_ucret);
+  db.prepare('UPDATE employees SET saatlik_ucret=?, dakikalik_ucret=?, updated_date=? WHERE id=?')
+    .run(t.saatlik_ucret, t.dakikalik_ucret, new Date().toISOString(), emp.id);
+  res.json({ ok: true, ...t });
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 const { startCronJobs } = require('./cronJobs');

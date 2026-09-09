@@ -385,6 +385,8 @@ function initDb() {
     // ve normal musteri girisi 1 (varsayilan). Stok modulunden acilan saf tedarikci
     // is_customer=0 ile eklenir -> satis listesinde gorunmez, sadece Tedarikciler'de.
     "ALTER TABLE customers ADD COLUMN is_customer INTEGER DEFAULT 1",
+    // Seri no takibi: hareket satırına seri no (çıkışta "bu SN bu depoda mı" kontrolü için).
+    "ALTER TABLE stok_hareketler ADD COLUMN seri_no TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

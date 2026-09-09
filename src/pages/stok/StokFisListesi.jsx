@@ -5,7 +5,8 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer } from "lucide-react";
+import { fisBelgeYazdir } from "@/lib/stokBelge";
 import { toast } from "sonner";
 
 const TIP_BADGE = {
@@ -64,6 +65,10 @@ export default function StokFisListesi() {
   const openDetay = async (f) => {
     try { setDetay(await flowApi.stok.getFis(f.id)); }
     catch (e) { toast.error("Detay açılamadı: " + (e?.message || "hata")); }
+  };
+  const yazdir = async (f, belgeTuru) => {
+    try { fisBelgeYazdir(await flowApi.stok.getFis(f.id), { belgeTuru }); }
+    catch (e) { toast.error("Belge açılamadı: " + (e?.message || "hata")); }
   };
   const duzenleYol = (f) => `/stok/${f.tip === "giris" ? "giris" : f.tip === "cikis" ? "cikis" : "transfer"}?id=${f.id}`;
 
@@ -141,6 +146,7 @@ export default function StokFisListesi() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         <Button variant="ghost" size="icon" className="h-7 w-7" title="Detay" onClick={() => openDetay(f)}><Eye className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Belge Çıktısı" onClick={() => yazdir(f, "fis")}><Printer className="w-3.5 h-3.5" /></Button>
                         {["taslak", "onay_bekliyor"].includes(f.durum) && (
                           <>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Düzenle" onClick={() => navigate(duzenleYol(f))}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -169,6 +175,12 @@ export default function StokFisListesi() {
           <DialogHeader><DialogTitle>{detay?.fis_no} — {TIP_BADGE[detay?.tip]?.label} <span className={`ml-2 text-xs px-2 py-0.5 rounded ${DURUM_BADGE[detay?.durum] || ""}`}>{DURUM_LBL[detay?.durum]}</span></DialogTitle></DialogHeader>
           {detay && (
             <div className="space-y-3 text-sm max-h-[70vh] overflow-y-auto">
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => fisBelgeYazdir(detay, { belgeTuru: "fis" })}><Printer className="w-3.5 h-3.5 mr-1.5" /> Belge Çıktısı</Button>
+                {(detay.tip === "cikis" || detay.tip === "transfer") && (
+                  <Button size="sm" variant="outline" onClick={() => fisBelgeYazdir(detay, { belgeTuru: "irsaliye" })}><Printer className="w-3.5 h-3.5 mr-1.5" /> Sevk İrsaliyesi</Button>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2 text-muted-foreground">
                 <div>Tarih: <b className="text-foreground">{detay.tarih}</b></div>
                 <div>Oluşturan: <b className="text-foreground">{detay.olusturan || "—"}</b></div>
@@ -188,7 +200,7 @@ export default function StokFisListesi() {
                 <tbody>
                   {(detay.satirlar || []).map((s) => (
                     <tr key={s.id} className="border-t">
-                      <td className="px-2 py-1.5">{s.urun_adi}{s.lot_no ? ` · Lot ${s.lot_no}` : ""}</td>
+                      <td className="px-2 py-1.5">{s.urun_adi}{s.lot_no ? ` · Lot ${s.lot_no}` : ""}{s.seri_no ? ` · SN ${s.seri_no}` : ""}</td>
                       <td className="px-2 py-1.5 text-muted-foreground">{s.hedef_raf_adi || s.kaynak_raf_adi || "GENEL RAF"}</td>
                       <td className="px-2 py-1.5 text-muted-foreground">{s.birim} ×{s.carpan}</td>
                       <td className="px-2 py-1.5 text-right">{s.miktar}</td>

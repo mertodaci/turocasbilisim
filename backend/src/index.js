@@ -1204,6 +1204,26 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     if (yetersiz.length) return res.status(400).json({ error: 'Yetersiz stok — onaylanamadı:\n' + yetersiz.join('\n') });
   }
 
+  // Seri no takipli ürünler: her satır tek adet + seri no zorunlu. Çıkış/transferde
+  // seri no o an kaynak depoda "içeride" olmalı; girişte hedef depoda zaten olmamalı.
+  {
+    const seriHatalar = [];
+    const seriBak = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?");
+    for (const s of satirlar) {
+      const u = db.prepare('SELECT seri_no_takip FROM stok_urunler WHERE id=?').get(s.urun_id);
+      if (!u || !u.seri_no_takip) continue;
+      if (Math.abs((Number(s.miktar_ana_birim) || 0) - 1) > 1e-9) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no takipli — her satır 1 ana birim olmalı`); continue; }
+      const sn = s.seri_no ? String(s.seri_no).trim() : '';
+      if (!sn) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no zorunlu`); continue; }
+      if (fis.tip === 'giris') {
+        if (seriBak.get(s.urun_id, fis.hedef_depo_id, sn).n > 0) seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu seri no zaten hedef depoda kayıtlı`);
+      } else {
+        if (seriBak.get(s.urun_id, fis.kaynak_depo_id, sn).n <= 0) seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu seri no kaynak depoda değil`);
+      }
+    }
+    if (seriHatalar.length) return res.status(400).json({ error: 'Seri no kontrolü başarısız:\n' + seriHatalar.join('\n') });
+  }
+
   try {
     const now = new Date().toISOString();
     // Raf seçilmemişse ilgili deponun GENEL RAF'ını kullan (hareket + parti izi için).
@@ -1214,25 +1234,26 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     }
     const insHrk = db.prepare(`INSERT INTO stok_hareketler
       (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet,
-       fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+       fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, seri_no, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     db.transaction(() => {
       for (const s of satirlar) {
+        const sn = s.seri_no ? String(s.seri_no).trim() : null;
         if (fis.tip === 'giris') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, sn, req.user.email, now, now);
         } else if (fis.tip === 'cikis') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, sn, req.user.email, now, now);
         } else {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, sn, req.user.email, now, now);
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, sn, req.user.email, now, now);
         }
       }
       // Faz 3: FIFO parti oluştur / tüket

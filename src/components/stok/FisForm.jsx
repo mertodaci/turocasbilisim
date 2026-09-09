@@ -19,7 +19,7 @@ const TIP_CFG = {
 
 const bosSatir = () => ({
   urun_id: "", urun_adi: "", urun_kodu: "", barkod: "", birim: "", carpan: 1, miktar: 1, birim_fiyat: 0,
-  kaynak_raf_id: "", hedef_raf_id: "", icerik_aciklamasi: "",
+  kaynak_raf_id: "", hedef_raf_id: "", icerik_aciklamasi: "", seri_no: "",
   lot_no: "", uretim_tarihi: "", raf_omru_ay: "", kontrol_tarihi: "", skt: "", raf_omru_durumu: "Takip Edilecek",
 });
 
@@ -62,7 +62,7 @@ export default function FisForm({ tip }) {
       setLines((f.satirlar || []).map((s) => ({
         urun_id: s.urun_id || "", urun_adi: s.urun_adi || "", urun_kodu: s.urun_kodu || "", barkod: s.barkod || "",
         birim: s.birim || "", carpan: s.carpan || 1, miktar: s.miktar || 0, birim_fiyat: s.birim_fiyat || 0,
-        kaynak_raf_id: s.kaynak_raf_id || "", hedef_raf_id: s.hedef_raf_id || "", icerik_aciklamasi: s.icerik_aciklamasi || "",
+        kaynak_raf_id: s.kaynak_raf_id || "", hedef_raf_id: s.hedef_raf_id || "", icerik_aciklamasi: s.icerik_aciklamasi || "", seri_no: s.seri_no || "",
         lot_no: s.lot_no || "", uretim_tarihi: s.uretim_tarihi || "", raf_omru_ay: s.raf_omru_ay ?? "",
         kontrol_tarihi: s.kontrol_tarihi || "", skt: s.skt || "", raf_omru_durumu: s.raf_omru_durumu || "Takip Edilecek",
       })));
@@ -71,6 +71,8 @@ export default function FisForm({ tip }) {
   }, [editId]); // eslint-disable-line
 
   const depoAdi = (id) => depolar.find((d) => d.id === id)?.ad || "";
+  const urunById = (id) => urunler.find((u) => u.id === id);
+  const isSerili = (id) => { const u = urunById(id); return u?.seri_no_takip === 1 || u?.seri_no_takip === true; };
   const rafById = (id) => raflar.find((r) => r.id === id);
   const rafOptions = (depoId) => raflar.filter((r) => r.depo_id === depoId).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));
 
@@ -82,7 +84,7 @@ export default function FisForm({ tip }) {
     const u = urunler.find((x) => x.id === urunId);
     setLine(i, {
       urun_id: urunId, urun_adi: u?.ad || "", urun_kodu: u?.kod || "", barkod: u?.barkod || "",
-      birim: u?.ana_birim || "ADET", carpan: 1,
+      birim: u?.ana_birim || "ADET", carpan: 1, miktar: 1, seri_no: "",
       birim_fiyat: tip === "giris" ? (u?.alis_fiyati || 0) : (u?.satis_fiyati || 0),
       raf_omru_ay: tip === "giris" ? (u?.varsayilan_raf_omru_ay || "") : "",
     });
@@ -121,6 +123,11 @@ export default function FisForm({ tip }) {
     if (tip === "cikis" && header.cikis_hedef === "saha" && !header.hedef_saha_id) return "Hedef saha seçin";
     if (tip === "giris" && !header.fatura_no && !header.irsaliye_no && !header.belge_no) return "Fatura / İrsaliye / Fiş No alanlarından en az biri gerekli";
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";
+    for (const l of lines) {
+      if (!l.urun_id || !isSerili(l.urun_id)) continue;
+      if ((Number(l.miktar) || 0) * (Number(l.carpan) || 1) !== 1) return `${l.urun_adi}: seri no takipli — satır 1 ana birim olmalı (her adet ayrı satır)`;
+      if (!l.seri_no || !l.seri_no.trim()) return `${l.urun_adi}: seri no zorunlu`;
+    }
     return null;
   };
 
@@ -292,6 +299,13 @@ export default function FisForm({ tip }) {
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => delLine(i)}><Trash2 className="w-4 h-4" /></Button>
               </div>
             </div>
+            {l.urun_id && isSerili(l.urun_id) && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs shrink-0 text-amber-600">Seri No *</Label>
+                <Input placeholder="Bu ürün seri no takipli — 1 adet / satır" value={l.seri_no}
+                  onChange={(e) => setLine(i, { seri_no: e.target.value })} />
+              </div>
+            )}
             {tip === "cikis" && (
               <Input placeholder="Açıklama / içerik (KUTULU/KUTUSUZ vb.)" value={l.icerik_aciklamasi} onChange={(e) => setLine(i, { icerik_aciklamasi: e.target.value })} />
             )}

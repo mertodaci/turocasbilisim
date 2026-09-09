@@ -120,6 +120,11 @@ const ENTITY_MAP = {
   IkHakedisAyar:     'ik_hakedis_genel_ayar',
   IkHakedisTanim:    'ik_hakedis_tanim',
   IkBordroYemekKural: 'ik_bordro_yemek_kural',
+  IkKesintiPlan:     'ik_kesinti_planlari',
+  IkKesinti:         'ik_kesintiler',
+  IkIcBorc:          'ik_ic_borclar',
+  IkIcBorcTahsilat:  'ik_ic_borc_tahsilat',
+  IkPersonelMasraf:  'ik_personel_masraf',
 };
 
 function createEntityClient(entityName) {
@@ -358,6 +363,9 @@ export const ik = {
   async mesaiTopluOnay(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/mesai/toplu-onay`, _sjson('POST', body))); },
   async hakedisListe() { return handleResponse(await fetch(`${BASE_URL}/api/ik/hakedis/liste`, { credentials: 'include' })); },
   async hakedisToplu(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/hakedis/toplu`, _sjson('POST', body))); },
+  async kesintiPlan(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/kesinti/plan`, _sjson('POST', body))); },
+  async kesintiDonemUret(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/kesinti/donem-uret`, _sjson('POST', body))); },
+  async kesintiDonem(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/kesinti/donem?${qs}`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

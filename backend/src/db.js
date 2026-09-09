@@ -1087,6 +1087,59 @@ function initDb() {
     `);
   } catch(e) { console.error('ik faz6 tablolari:', e.message); }
 
+  // ── İK / Özlük / Bordro — Faz 7-8: kesinti merkezi + iç borç + masraf ──
+  try {
+    db.exec(`
+      -- İcra / BES gibi taksitli kesinti planları
+      CREATE TABLE IF NOT EXISTS ik_kesinti_planlari (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        tur TEXT NOT NULL,                       -- icra | bes
+        toplam_tutar REAL DEFAULT 0, baslangic_yil INTEGER, baslangic_ay INTEGER,
+        taksit_sayisi INTEGER DEFAULT 1, aylik_taksit REAL DEFAULT 0,
+        referans_maas REAL DEFAULT 0,            -- icra: başlangıç ayı maaşı
+        kalan_bakiye REAL DEFAULT 0, aktif INTEGER DEFAULT 1, aciklama TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Dönem bazlı kesinti kayıtları (bordroya çekilir)
+      CREATE TABLE IF NOT EXISTS ik_kesintiler (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        donem_yil INTEGER, donem_ay INTEGER,
+        tur TEXT NOT NULL,                       -- avans | icra | bes | diger | gun_kes
+        tutar REAL DEFAULT 0, plan_id TEXT, taksit_no INTEGER,
+        aciklama TEXT, kaynak TEXT DEFAULT 'elle',   -- elle | plan | puantaj
+        tarih TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Personelin şirkete borcu (içeriye borç) + taksitli tahsilat
+      CREATE TABLE IF NOT EXISTS ik_ic_borclar (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        acilis_tutar REAL DEFAULT 0, kalan_bakiye REAL DEFAULT 0,
+        varsayilan_kaynak TEXT DEFAULT 'maas',   -- maas | yol_yemek_ticket
+        tarih TEXT, aciklama TEXT, durum TEXT DEFAULT 'acik',  -- acik | kapali
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS ik_ic_borc_tahsilat (
+        id TEXT PRIMARY KEY, borc_id TEXT NOT NULL, personel_id TEXT,
+        donem_yil INTEGER, donem_ay INTEGER, tutar REAL DEFAULT 0, kaynak TEXT,
+        bordro_satir_id TEXT, created_by TEXT, created_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Personel masrafı (bordro açıklaması / kesinti kaynağı)
+      CREATE TABLE IF NOT EXISTS ik_personel_masraf (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        donem_yil INTEGER, donem_ay INTEGER, tutar REAL DEFAULT 0, aciklama TEXT,
+        kesinti_kaynagi TEXT DEFAULT 'sadece_not',  -- sadece_not | maas | yol | yemek | ticket | sahsi
+        kilitli INTEGER DEFAULT 0, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_kesintiler_donem ON ik_kesintiler(donem_yil, donem_ay);
+      CREATE INDEX IF NOT EXISTS idx_ik_kesintiler_personel ON ik_kesintiler(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_ic_borc_personel ON ik_ic_borclar(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_masraf_donem ON ik_personel_masraf(donem_yil, donem_ay);
+    `);
+  } catch(e) { console.error('ik faz7 tablolari:', e.message); }
+
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
   try {

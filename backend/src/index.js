@@ -210,6 +210,11 @@ app.use('/api/entities/ik_mesai_kayitlari',    createEntityRouter('ik_mesai_kayi
 app.use('/api/entities/ik_hakedis_genel_ayar', createEntityRouter('ik_hakedis_genel_ayar'));
 app.use('/api/entities/ik_hakedis_tanim',      createEntityRouter('ik_hakedis_tanim'));
 app.use('/api/entities/ik_bordro_yemek_kural', createEntityRouter('ik_bordro_yemek_kural'));
+app.use('/api/entities/ik_kesinti_planlari',   createEntityRouter('ik_kesinti_planlari'));
+app.use('/api/entities/ik_kesintiler',         createEntityRouter('ik_kesintiler'));
+app.use('/api/entities/ik_ic_borclar',         createEntityRouter('ik_ic_borclar'));
+app.use('/api/entities/ik_ic_borc_tahsilat',   createEntityRouter('ik_ic_borc_tahsilat'));
+app.use('/api/entities/ik_personel_masraf',    createEntityRouter('ik_personel_masraf'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2904,6 +2909,108 @@ app.post('/api/ik/hakedis/toplu', authMiddleware, (req, res) => {
     })();
     res.json({ ok: true, guncellenen: personel_ids.length });
   } catch (err) { console.error('[ik] hakedis toplu:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 7-8: Kesinti Merkezi + İç Borç + Personel Masrafı
+// ═══════════════════════════════════════════════════════════════════
+// İcra / BES taksitli plan oluştur
+app.post('/api/ik/kesinti/plan', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_add', 'ikb_kesinti')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const b = req.body || {};
+  if (!b.personel_id || !['icra', 'bes'].includes(b.tur) || !(Number(b.toplam_tutar) > 0))
+    return res.status(400).json({ error: 'Personel, tür (icra/bes) ve toplam tutar gerekli' });
+  const emp = db.prepare('SELECT id, full_name, aylik_ucret FROM employees WHERE id=?').get(b.personel_id);
+  if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
+  const toplam = Number(b.toplam_tutar);
+  const now = new Date().toISOString();
+  const bd = new Date();
+  const byil = Number(b.baslangic_yil) || bd.getFullYear();
+  const bay = Number(b.baslangic_ay) || (bd.getMonth() + 1);
+  let aylik, taksitSayisi, refMaas = 0;
+  if (b.tur === 'icra') {
+    refMaas = Number(emp.aylik_ucret) || 0;
+    aylik = +(refMaas / 4).toFixed(2);                    // ayda max maaşın 1/4'ü
+    taksitSayisi = aylik > 0 ? Math.ceil(toplam / aylik) : 1;
+  } else {
+    taksitSayisi = Math.max(1, Number(b.taksit_sayisi) || 1);
+    aylik = +(toplam / taksitSayisi).toFixed(2);
+  }
+  try {
+    const id = _stokUUID();
+    db.prepare(`INSERT INTO ik_kesinti_planlari
+      (id, personel_id, personel_adi, tur, toplam_tutar, baslangic_yil, baslangic_ay, taksit_sayisi, aylik_taksit, referans_maas, kalan_bakiye, aktif, aciklama, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)`).run(
+      id, emp.id, emp.full_name, b.tur, toplam, byil, bay, taksitSayisi, aylik, refMaas, toplam, b.aciklama || null, req.user.email, now, now);
+    res.status(201).json(db.prepare('SELECT * FROM ik_kesinti_planlari WHERE id=?').get(id));
+  } catch (err) { console.error('[ik] kesinti plan:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Dönem için: aktif plan taksitleri + puantaj kaynaklı gün kesintileri → ik_kesintiler'e yaz
+app.post('/api/ik/kesinti/donem-uret', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_kesinti')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { donem_yil, donem_ay } = req.body || {};
+  if (!donem_yil || !donem_ay) return res.status(400).json({ error: 'Dönem gerekli' });
+  const yil = Number(donem_yil), ay = Number(donem_ay);
+  const now = new Date().toISOString();
+  try {
+    let planN = 0, gunN = 0;
+    db.transaction(() => {
+      // Bu dönemin plan/puantaj kaynaklı kayıtlarını sil (elle avans/diğer korunur)
+      db.prepare("DELETE FROM ik_kesintiler WHERE donem_yil=? AND donem_ay=? AND kaynak IN ('plan','puantaj')").run(yil, ay);
+
+      // 1) Aktif planlar → taksit
+      const planlar = db.prepare("SELECT * FROM ik_kesinti_planlari WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").all();
+      for (const p of planlar) {
+        const gecenAy = (yil - p.baslangic_yil) * 12 + (ay - p.baslangic_ay);
+        if (gecenAy < 0 || gecenAy >= p.taksit_sayisi) continue;
+        const oncekiToplam = gecenAy * p.aylik_taksit;
+        const buTaksit = Math.min(p.aylik_taksit, Math.max(0, p.toplam_tutar - oncekiToplam));
+        if (buTaksit <= 0) continue;
+        db.prepare(`INSERT INTO ik_kesintiler (id, personel_id, personel_adi, donem_yil, donem_ay, tur, tutar, plan_id, taksit_no, aciklama, kaynak, tarih, created_by, created_date, updated_date)
+          VALUES (?,?,?,?,?,?,?,?,?,?, 'plan', ?, ?, ?, ?)`).run(
+          _stokUUID(), p.personel_id, p.personel_adi, yil, ay, p.tur, +buTaksit.toFixed(2), p.id, gecenAy + 1,
+          `${p.tur.toUpperCase()} taksit ${gecenAy + 1}/${p.taksit_sayisi}`, now.slice(0, 10), req.user.email, now, now);
+        planN++;
+      }
+
+      // 2) Puantaj devam kodları → yol/yemek gün kesintisi (E+I+R+U+M+CT gün; N günü hariç)
+      const t1 = `${yil}-${String(ay).padStart(2, '0')}-01`;
+      const t2 = `${yil}-${String(ay).padStart(2, '0')}-31`;
+      const gunSay = db.prepare(`SELECT personel_id, MAX(personel_adi) personel_adi,
+          SUM(CASE WHEN durum_kodu IN ('E','I','R','U','M','CT') THEN 1 ELSE 0 END) kesilecek
+        FROM ik_puantaj WHERE tarih>=? AND tarih<=? GROUP BY personel_id`).all(t1, t2);
+      for (const g of gunSay) {
+        if (!g.kesilecek) continue;
+        const tanimlar = db.prepare("SELECT tur, aktif, baz_gun, aylik_tutar FROM ik_hakedis_tanim WHERE personel_id=? AND aktif=1").all(g.personel_id);
+        let toplamKes = 0; const parcalar = [];
+        for (const t of tanimlar) {
+          if (t.tur === 'ticket') continue; // ticket kesintisi kendi kurallarıyla bordroda
+          const gunluk = (t.baz_gun > 0) ? (t.aylik_tutar / t.baz_gun) : 0;
+          const kes = +(gunluk * g.kesilecek).toFixed(2);
+          if (kes > 0) { toplamKes += kes; parcalar.push(`${t.tur}:${kes}`); }
+        }
+        if (toplamKes > 0) {
+          db.prepare(`INSERT INTO ik_kesintiler (id, personel_id, personel_adi, donem_yil, donem_ay, tur, tutar, aciklama, kaynak, tarih, created_by, created_date, updated_date)
+            VALUES (?,?,?,?,?, 'gun_kes', ?, ?, 'puantaj', ?, ?, ?, ?)`).run(
+            _stokUUID(), g.personel_id, g.personel_adi, yil, ay, +toplamKes.toFixed(2),
+            `${g.kesilecek} gün yol/yemek kesintisi (${parcalar.join(', ')})`, now.slice(0, 10), req.user.email, now, now);
+          gunN++;
+        }
+      }
+    })();
+    res.json({ ok: true, plan_taksiti: planN, gun_kesintisi: gunN });
+  } catch (err) { console.error('[ik] kesinti donem uret:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Dönem kesinti özeti
+app.get('/api/ik/kesinti/donem', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_kesinti')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { donem_yil, donem_ay } = req.query;
+  if (!donem_yil || !donem_ay) return res.status(400).json({ error: 'Dönem gerekli' });
+  const rows = db.prepare(`SELECT * FROM ik_kesintiler WHERE donem_yil=? AND donem_ay=? AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY personel_adi, tur`).all(Number(donem_yil), Number(donem_ay));
+  const ozet = rows.reduce((m, r) => { m[r.tur] = (m[r.tur] || 0) + (r.tutar || 0); m.toplam += (r.tutar || 0); return m; }, { toplam: 0 });
+  res.json({ rows, ozet });
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

@@ -10,7 +10,8 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
-  'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari'];
+  'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
+  'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -173,6 +174,11 @@ const TABLE_TO_MODULE = {
   ik_hakedis_genel_ayar: 'ikb_hakedis_ayar',
   ik_hakedis_tanim: 'ikb_hakedis_ayar',
   ik_bordro_yemek_kural: 'ikb_bordro_yemek',
+  ik_kesinti_planlari: 'ikb_kesinti',
+  ik_kesintiler: 'ikb_kesinti',
+  ik_ic_borclar: 'ikb_ic_borc',
+  ik_ic_borc_tahsilat: 'ikb_ic_borc',
+  ik_personel_masraf: 'ikb_personel_masraf',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -315,6 +321,11 @@ const ALLOWED_COLUMNS = {
   ik_hakedis_genel_ayar: ['varsayilan_baz_gun','ticket_qr_yoksa_kes','ticket_e_kes','ticket_izin_rapor_kes','ticket_rt_kesme','ticket_cumartesi_yemek_kurali'],
   ik_hakedis_tanim: ['personel_id','personel_adi','tur','aktif','baz_gun','aylik_tutar'],
   ik_bordro_yemek_kural: ['personel_id','personel_adi','cumartesi_kurali','kesinti_tipi','aciklama','aktif'],
+  ik_kesinti_planlari: ['personel_id','personel_adi','tur','toplam_tutar','baslangic_yil','baslangic_ay','taksit_sayisi','aylik_taksit','referans_maas','kalan_bakiye','aktif','aciklama','is_deleted'],
+  ik_kesintiler: ['personel_id','personel_adi','donem_yil','donem_ay','tur','tutar','plan_id','taksit_no','aciklama','kaynak','tarih','is_deleted'],
+  ik_ic_borclar: ['personel_id','personel_adi','acilis_tutar','kalan_bakiye','varsayilan_kaynak','tarih','aciklama','durum','is_deleted'],
+  ik_ic_borc_tahsilat: ['borc_id','personel_id','donem_yil','donem_ay','tutar','kaynak','bordro_satir_id'],
+  ik_personel_masraf: ['personel_id','personel_adi','donem_yil','donem_ay','tutar','aciklama','kesinti_kaynagi','kilitli','is_deleted'],
 };
 
 // Zorunlu alanlar

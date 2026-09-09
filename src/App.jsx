@@ -102,6 +102,8 @@ const IkPuantajRapor = lazy(() => import('./pages/ik/IkPuantajRapor'));
 const IkMesai = lazy(() => import('./pages/ik/IkMesai'));
 const IkHakedisAyar = lazy(() => import('./pages/ik/IkHakedisAyar'));
 const IkBordroYemek = lazy(() => import('./pages/ik/IkBordroYemek'));
+const IkKesinti = lazy(() => import('./pages/ik/IkKesinti'));
+const IkIcBorcMasraf = lazy(() => import('./pages/ik/IkIcBorcMasraf'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -272,6 +274,9 @@ const AuthenticatedApp = () => {
         <Route path="/ik/mesai" element={guard("ikb_mesai", <IkMesai />)} />
         <Route path="/ik/hakedis-ayar" element={guard("ikb_hakedis_ayar", <IkHakedisAyar />)} />
         <Route path="/ik/bordro-yemek" element={guard("ikb_bordro_yemek", <IkBordroYemek />)} />
+        <Route path="/ik/kesinti" element={guard("ikb_kesinti", <IkKesinti />)} />
+        <Route path="/ik/ic-borc" element={guard("ikb_ic_borc", <IkIcBorcMasraf mode="borc" />)} />
+        <Route path="/ik/personel-masraf" element={guard("ikb_personel_masraf", <IkIcBorcMasraf mode="masraf" />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

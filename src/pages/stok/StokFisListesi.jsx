@@ -90,9 +90,9 @@ export default function StokFisListesi() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
         {[
-          ["Toplam", k.toplam], ["Giriş", k.giris], ["Çıkış", k.cikis], ["Transfer", k.transfer],
+          ["Toplam", k.toplam], ["Giriş", k.giris], ["Çıkış", k.cikis], ["Transfer", k.transfer], ["Ted. İade", k.iade],
           ["Taslak", k.taslak], ["Onay Bekleyen", k.onay_bekliyor], ["Onaylı", k.onayli], ["İptal", k.iptal],
         ].map(([lbl, v]) => (
           <div key={lbl} className="bg-card border rounded-xl p-3">

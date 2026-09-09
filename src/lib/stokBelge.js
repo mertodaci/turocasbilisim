@@ -103,7 +103,13 @@ export function fisBelgeYazdir(fis, opt = {}) {
     ${irsaliye ? "<div>Taşıyıcı</div>" : ""}
   </div>
 
-  <script>window.onload = function () { window.print(); };</script>
+  <script>
+    (function () {
+      function go() { try { window.focus(); window.print(); } catch (e) {} }
+      if (document.readyState === "complete") setTimeout(go, 150);
+      else window.addEventListener("load", function () { setTimeout(go, 150); });
+    })();
+  </script>
 </body></html>`;
 
   const w = window.open("", "_blank", "width=900,height=1000");
@@ -111,4 +117,6 @@ export function fisBelgeYazdir(fis, opt = {}) {
   w.document.open();
   w.document.write(html);
   w.document.close();
+  // document.write sonrası load tetiklenmiş olabilir; dışarıdan da bir kez deneriz.
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* pencere içi script halleder */ } }, 400);
 }

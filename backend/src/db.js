@@ -689,6 +689,12 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_rez_urun_depo ON stok_rezervasyonlar(urun_id, depo_id);
       CREATE INDEX IF NOT EXISTS idx_stok_rez_durum ON stok_rezervasyonlar(durum);
       CREATE INDEX IF NOT EXISTS idx_stok_rez_talep ON stok_rezervasyonlar(talep_id);
+      -- Hangi çıkış/iade fişi hangi rezervasyondan ne kadar tüketti (iptalde geri yüklemek için).
+      CREATE TABLE IF NOT EXISTS stok_rezervasyon_tuketim (
+        id TEXT PRIMARY KEY, rez_id TEXT NOT NULL, fis_id TEXT NOT NULL, miktar REAL DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_rez_tuketim_fis ON stok_rezervasyon_tuketim(fis_id);
     `);
   } catch(e) { console.error('stok rezervasyon tablosu:', e.message); }
 

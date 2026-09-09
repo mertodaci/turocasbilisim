@@ -1310,6 +1310,8 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
             const yeniKars = +((r.karsilanan || 0) + dus).toFixed(4);
             db.prepare("UPDATE stok_rezervasyonlar SET karsilanan=?, durum=?, updated_date=? WHERE id=?")
               .run(yeniKars, yeniKars >= (r.miktar || 0) - 1e-9 ? 'kullanildi' : 'acik', now, r.id);
+            db.prepare("INSERT INTO stok_rezervasyon_tuketim (id, rez_id, fis_id, miktar, created_date) VALUES (?,?,?,?,?)")
+              .run(_stokUUID(), r.id, fis.id, dus, now);
             kalan = +(kalan - dus).toFixed(4);
           }
         }
@@ -1336,6 +1338,16 @@ app.post('/api/stok/fis/:id/iptal', authMiddleware, (req, res) => {
       if (fis.durum === 'onayli') {
         stokFifoGeriAl(fis);
         db.prepare('DELETE FROM stok_hareketler WHERE fis_id=?').run(fis.id);
+        // Bu fişin tükettiği rezervasyonları geri yükle.
+        for (const t of db.prepare('SELECT * FROM stok_rezervasyon_tuketim WHERE fis_id=?').all(fis.id)) {
+          const r = db.prepare('SELECT * FROM stok_rezervasyonlar WHERE id=?').get(t.rez_id);
+          if (r) {
+            const yeniKars = Math.max(0, +((r.karsilanan || 0) - t.miktar).toFixed(4));
+            db.prepare("UPDATE stok_rezervasyonlar SET karsilanan=?, durum=?, updated_date=? WHERE id=?")
+              .run(yeniKars, r.durum === 'iptal' ? 'iptal' : (yeniKars >= (r.miktar || 0) - 1e-9 ? 'kullanildi' : 'acik'), now, r.id);
+          }
+        }
+        db.prepare('DELETE FROM stok_rezervasyon_tuketim WHERE fis_id=?').run(fis.id);
       }
       db.prepare("UPDATE stok_fisler SET durum='iptal', updated_date=? WHERE id=?").run(now, fis.id);
     })();
@@ -1358,7 +1370,7 @@ app.get('/api/stok/fis-ozet', authMiddleware, (req, res) => {
     const ND = "(is_deleted=0 OR is_deleted IS NULL)";
     const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_fisler WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
     res.json({
-      toplam: c(''), giris: c("tip='giris'"), cikis: c("tip='cikis'"), transfer: c("tip='transfer'"),
+      toplam: c(''), giris: c("tip='giris'"), cikis: c("tip='cikis'"), transfer: c("tip='transfer'"), iade: c("tip='iade'"),
       taslak: c("durum='taslak'"), onay_bekliyor: c("durum='onay_bekliyor'"),
       onayli: c("durum='onayli'"), iptal: c("durum='iptal'"),
     });

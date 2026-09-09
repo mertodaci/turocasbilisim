@@ -69,7 +69,7 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
   // Yol/Yemek/Ticket hak edişi: günlük × hak gün
   const kesByTur = { yol: kesYol, yemek: kesYemek, ticket: ticketKesilecek };
   const tanimlar = db.prepare("SELECT tur, aktif, baz_gun, aylik_tutar FROM ik_hakedis_tanim WHERE personel_id=? AND aktif=1").all(emp.id);
-  const hak = { yol: 0, yemek: 0, ticket: 0, yol_hak_gun: 0, yemek_hak_gun: 0, ticket_hak_gun: 0 };
+  const hak = { yol: 0, yemek: 0, ticket: 0, yol_hak_gun: 0, yemek_hak_gun: 0, ticket_hak_gun: 0, yol_kes: 0, yemek_kes: 0, ticket_kes: 0 };
   for (const tn of tanimlar) {
     const bazGun = tn.baz_gun > 0 ? tn.baz_gun : (ctx.varsayilanBazGun || 26);
     const kesGun = kesByTur[tn.tur] ?? kesOrtak;
@@ -77,6 +77,7 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
     const gunluk = bazGun > 0 ? tn.aylik_tutar / bazGun : 0;
     hak[tn.tur] = +(gunluk * hakGun).toFixed(2);
     hak[`${tn.tur}_hak_gun`] = hakGun;
+    hak[`${tn.tur}_kes`] = +(gunluk * Math.min(kesGun, bazGun)).toFixed(2);  // bilgi amaçlı: hak edişte uygulanan kesinti
   }
 
   const prim = Number(ctx.prim) || 0;
@@ -124,7 +125,7 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
     yol_hak_gun: hak.yol_hak_gun, yemek_hak_gun: hak.yemek_hak_gun, ticket_hak_gun: hak.ticket_hak_gun,
     resmi_toplam: resmiToplam, resmi_net: resmiNet,
     avans: kes.avans || 0, icra: kes.icra || 0, bes: kes.bes || 0, diger_kesinti: kes.diger || 0,
-    maas_puantaj_kes: maasPuantajKes, yol_kes: kes.gun_kes || 0, yemek_kes: 0, ticket_kes: 0,
+    maas_puantaj_kes: maasPuantajKes, yol_kes: hak.yol_kes, yemek_kes: hak.yemek_kes, ticket_kes: hak.ticket_kes,
     personel_masrafi: personelMasrafi,
     borc_maas: borcMaas, borc_yyt: borcYyt, borc_toplam: borcToplam,
     sahsi_hesap_net: sahsiNet, genel_net: genelNet,
@@ -225,7 +226,8 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
       fazla_mesai=excluded.fazla_mesai, yol=excluded.yol, yemek=excluded.yemek, ticket=excluded.ticket,
       yol_hak_gun=excluded.yol_hak_gun, yemek_hak_gun=excluded.yemek_hak_gun, ticket_hak_gun=excluded.ticket_hak_gun,
       resmi_toplam=excluded.resmi_toplam, resmi_net=excluded.resmi_net, avans=excluded.avans, icra=excluded.icra, bes=excluded.bes,
-      diger_kesinti=excluded.diger_kesinti, maas_puantaj_kes=excluded.maas_puantaj_kes, yol_kes=excluded.yol_kes,
+      diger_kesinti=excluded.diger_kesinti, maas_puantaj_kes=excluded.maas_puantaj_kes,
+      yol_kes=excluded.yol_kes, yemek_kes=excluded.yemek_kes, ticket_kes=excluded.ticket_kes,
       personel_masrafi=excluded.personel_masrafi,
       borc_maas=excluded.borc_maas, borc_yyt=excluded.borc_yyt, borc_toplam=excluded.borc_toplam,
       sahsi_hesap_net=excluded.sahsi_hesap_net, genel_net=excluded.genel_net, updated_date=excluded.updated_date

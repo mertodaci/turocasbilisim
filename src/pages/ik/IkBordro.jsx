@@ -63,6 +63,8 @@ export default function IkBordro() {
       Maaş: r.resmi_maas, Bayram: r.bayram, "Fazla Mesai": r.fazla_mesai, Prim: r.prim,
       Yol: r.yol, Yemek: r.yemek, Ticket: r.ticket, "Resmî Toplam": r.resmi_toplam, "Resmî Net": r.resmi_net,
       Avans: r.avans, İcra: r.icra, BES: r.bes, "Diğer Kesinti": r.diger_kesinti, "Personel Masrafı": r.personel_masrafi,
+      "Yol Kes.": r.yol_kes, "Yemek Kes.": r.yemek_kes, "Ticket Kes.": r.ticket_kes,
+      "Borç Maaş": r.borc_maas, "Borç Y/Y/T": r.borc_yyt, "Borç Toplam": r.borc_toplam,
       "Fesih Tazminatı": r.fesih_tazminati, "İhbar Tazminatı": r.ihbar_tazminati, "Kasa Tazminatı": r.kasa_tazminati,
       "Özel Sigorta": r.ozel_sigorta, "Şahsi Hesap": r.sahsi_hesap_net, "Genel Net": r.genel_net,
     })));

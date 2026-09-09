@@ -106,6 +106,10 @@ const ENTITY_MAP = {
   StokQnbBelge:      'stok_qnb_belgeler',
   StokQnbLog:        'stok_qnb_loglar',
   StokQnbCariSorgu:  'stok_qnb_cari_sorgu',
+  // ── İK / Özlük / Bordro ──
+  IkSube:            'ik_subeler',
+  IkBolum:           'ik_bolumler',
+  IkUcretGecmisi:    'ik_ucret_gecmisi',
 };
 
 function createEntityClient(entityName) {

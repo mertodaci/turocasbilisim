@@ -435,6 +435,26 @@ function initDb() {
     "ALTER TABLE customers ADD COLUMN is_customer INTEGER DEFAULT 1",
     // Seri no takibi: hareket satırına seri no (çıkışta "bu SN bu depoda mı" kontrolü için).
     "ALTER TABLE stok_hareketler ADD COLUMN seri_no TEXT",
+    // ── İK / Özlük / Bordro modülü — Faz 1: personel özlük + ücret genişletme ──
+    // SGK meslek kodu (ör. 4225.03), kanun_no = SGK teşvik no; ücretler resmî aylık +
+    // türetilmiş saatlik/dakikalık; sahsi_hesap = ayrı banka hesabına ödenen bileşen.
+    "ALTER TABLE employees ADD COLUMN sube_id TEXT",
+    "ALTER TABLE employees ADD COLUMN bolum_id TEXT",
+    "ALTER TABLE employees ADD COLUMN meslek_kodu TEXT",
+    "ALTER TABLE employees ADD COLUMN kanun_no TEXT",
+    "ALTER TABLE employees ADD COLUMN emekli_mi INTEGER DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN personel_adresi TEXT",
+    "ALTER TABLE employees ADD COLUMN aylik_ucret REAL DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN saatlik_ucret REAL DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN dakikalik_ucret REAL DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN ticket_aylik REAL DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN sahsi_hesap_aktif INTEGER DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN sahsi_hesap_tutar REAL DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN sahsi_hesap_banka TEXT",
+    "ALTER TABLE employees ADD COLUMN sahsi_hesap_iban TEXT",
+    "ALTER TABLE employees ADD COLUMN sahsi_hesap_aciklama TEXT",
+    "ALTER TABLE employees ADD COLUMN vip_mi INTEGER DEFAULT 0",
+    "ALTER TABLE employees ADD COLUMN vardiya_id TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -477,6 +497,9 @@ function initDb() {
       'stok_qnb',
       // Faz 14: Fiyat Araştır
       'stok_fiyat_arastir',
+      // ── İK / Özlük / Bordro modülü (önek: ikb_) ──────────────────
+      // Faz 1: şube, bölüm, personel özlük+ücret, zam, şahsi hesap
+      'ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak','ikb_cikis',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -871,6 +894,46 @@ function initDb() {
       db.prepare("UPDATE role_permissions SET can_view=1,can_add=1,can_edit=1,can_delete=1,updated_date=datetime('now') WHERE module LIKE 'stok_%' AND role_name='admin'").run();
     }
   } catch(e) { console.error('stok perms default:', e.message); }
+
+  // ── İK / Özlük / Bordro — Faz 1: şube, bölüm, ücret geçmişi ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_subeler (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, adres TEXT,
+        ip_araligi TEXT, gps_enlem REAL, gps_boylam REAL, sapma_metre REAL DEFAULT 0,
+        telefon TEXT, yetkili TEXT, sira REAL DEFAULT 0, aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS ik_bolumler (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, sube_id TEXT, sube_adi TEXT,
+        hedef_personel_sayisi INTEGER DEFAULT 0, aciklama TEXT, aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Resmî maaş / şahsi hesap değişimlerinin izi (zam sihirbazı + manuel)
+      CREATE TABLE IF NOT EXISTS ik_ucret_gecmisi (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        alan TEXT NOT NULL,            -- resmi_maas | sahsi_hesap | ticket
+        eski_tutar REAL DEFAULT 0, yeni_tutar REAL DEFAULT 0,
+        gecerlilik TEXT, aciklama TEXT,
+        kaynak TEXT DEFAULT 'manuel',  -- manuel | zam_sihirbazi | personel_karti | excel
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_bolumler_sube ON ik_bolumler(sube_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_ucret_gecmisi_personel ON ik_ucret_gecmisi(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_employees_sube ON employees(sube_id);
+    `);
+  } catch(e) { console.error('ik faz1 tablolari:', e.message); }
+
+  // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
+  // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
+  try {
+    const anyView = db.prepare("SELECT 1 FROM role_permissions WHERE module LIKE 'ikb_%' AND can_view=1 LIMIT 1").get();
+    if (!anyView) {
+      db.prepare("UPDATE role_permissions SET can_view=1,can_add=1,can_edit=1,can_delete=1,updated_date=datetime('now') WHERE module LIKE 'ikb_%' AND role_name='admin'").run();
+    }
+  } catch(e) { console.error('ikb perms default:', e.message); }
 
   // announcements tablosu
   try {

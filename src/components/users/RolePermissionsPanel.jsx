@@ -35,6 +35,8 @@ const CATEGORIES = [
   { label: "Stok — Satın Alma", keys: ["stok_satinalma", "stok_fiyat_arastir"] },
   { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
   { label: "Stok — e-Belge", keys: ["stok_qnb"] },
+  { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler"] },
+  { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_cikis"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

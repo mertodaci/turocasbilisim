@@ -73,6 +73,27 @@ export const allNavItems = [
   ]
 },
 {
+  labelKey: "ik_bordro", path: null, icon: Wallet, roles: ["admin", "yonetici", "ik"],
+  children: [
+    {
+      labelKey: "ik_bordro_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
+      children: [
+        { labelKey: "ikb_subeler", path: "/ik/subeler", icon: MapPin, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_bolumler", path: "/ik/bolumler", icon: Building2, roles: ["admin", "yonetici", "ik"] },
+      ]
+    },
+    {
+      labelKey: "ik_bordro_islem", path: null, icon: Users, roles: ["admin", "yonetici", "ik"],
+      children: [
+        { labelKey: "ikb_personel", path: "/ik/personel", icon: Users, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_zam", path: "/ik/zam", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_ozluk_evrak", path: "/ik/ozluk-evrak", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_cikis", path: "/ik/cikis", icon: LogOut, roles: ["admin", "yonetici", "ik"] },
+      ]
+    },
+  ]
+},
+{
   labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici", "satis"],
   children: [
     { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici", "satis"] },

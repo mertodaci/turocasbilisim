@@ -9,7 +9,8 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
-  'stok_personeller','stok_demirbaslar','stok_rezervasyonlar'];
+  'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
+  'ik_subeler','ik_bolumler'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -157,6 +158,10 @@ const TABLE_TO_MODULE = {
   stok_qnb_belge_satirlari: 'stok_qnb',
   stok_qnb_loglar: 'stok_qnb',
   stok_qnb_cari_sorgu: 'stok_qnb',
+  // ── İK / Özlük / Bordro (önek ikb_) ──
+  ik_subeler: 'ikb_subeler',
+  ik_bolumler: 'ikb_bolumler',
+  ik_ucret_gecmisi: 'ikb_personel',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -222,7 +227,7 @@ function effortLogOwnedBy(row, user) {
 // Tablo bazlı izin verilen kolonlar (SQL injection koruması)
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
-  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking'],
+  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking','sube_id','bolum_id','meslek_kodu','kanun_no','emekli_mi','personel_adresi','aylik_ucret','saatlik_ucret','dakikalik_ucret','ticket_aylik','sahsi_hesap_aktif','sahsi_hesap_tutar','sahsi_hesap_banka','sahsi_hesap_iban','sahsi_hesap_aciklama','vip_mi','vardiya_id'],
   customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_job_tracking','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
   activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','job_ticket_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
@@ -285,6 +290,10 @@ const ALLOWED_COLUMNS = {
   stok_qnb_belge_satirlari: ['belge_id','satici_urun_adi','satici_kodu','miktar','birim','birim_fiyat','eslesen_urun_id','eslesen_urun_adi'],
   stok_qnb_loglar: ['tarih','islem','durum','belge_id','mesaj'],
   stok_qnb_cari_sorgu: ['cari_id','cari_adi','vkn','tip','durum','alici_etiketi','aktif','tarih'],
+  // ── İK / Özlük / Bordro ──
+  ik_subeler: ['ad','adres','ip_araligi','gps_enlem','gps_boylam','sapma_metre','telefon','yetkili','sira','aktif','is_deleted'],
+  ik_bolumler: ['ad','sube_id','sube_adi','hedef_personel_sayisi','aciklama','aktif','is_deleted'],
+  ik_ucret_gecmisi: ['personel_id','personel_adi','alan','eski_tutar','yeni_tutar','gecerlilik','aciklama','kaynak'],
 };
 
 // Zorunlu alanlar
@@ -338,6 +347,9 @@ const REQUIRED_FIELDS = {
   stok_fiyat_gecmisi: ['urun_id'],
   stok_personeller: ['ad_soyad'],
   stok_demirbaslar: ['urun_id'],
+  ik_subeler: ['ad'],
+  ik_bolumler: ['ad'],
+  ik_ucret_gecmisi: ['personel_id','alan'],
 };
 
 function validateData(tableName, data, isUpdate = false) {
@@ -375,7 +387,8 @@ const ALLOWED_SORT_COLS = new Set([
   'title','sort_order','last_message_at','due_date','start_date','end_date',
   'priority','ticket_number','total_amount','day_count','half_day_period','offer_date','valid_until',
   'employee_name','customer_name','activity_type','last_message_at',
-  'kod','ad','sira','depo_adi','urun_adi','fis_no','tarih','tip','durum'
+  'kod','ad','sira','depo_adi','urun_adi','fis_no','tarih','tip','durum',
+  'sube_adi','personel_adi','aylik_ucret','hire_date'
 ]);
 
 function createEntityRouter(tableName) {

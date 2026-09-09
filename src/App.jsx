@@ -88,6 +88,9 @@ const StokEtiket = lazy(() => import('./pages/stok/StokEtiket'));
 const StokExcel = lazy(() => import('./pages/stok/StokExcel'));
 const StokQnb = lazy(() => import('./pages/stok/StokQnb'));
 const StokFiyatArastir = lazy(() => import('./pages/stok/StokFiyatArastir'));
+// ── İK / Özlük / Bordro ──
+const IkSubeler = lazy(() => import('./pages/ik/IkSubeler'));
+const IkBolumler = lazy(() => import('./pages/ik/IkBolumler'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -245,6 +248,8 @@ const AuthenticatedApp = () => {
         <Route path="/stok/qnb" element={guard("stok_qnb", <StokQnb />)} />
         {/* Faz 14: Fiyat Araştır */}
         <Route path="/stok/fiyat-arastir" element={guard("stok_fiyat_arastir", <StokFiyatArastir />)} />
+        <Route path="/ik/subeler" element={guard("ikb_subeler", <IkSubeler />)} />
+        <Route path="/ik/bolumler" element={guard("ikb_bolumler", <IkBolumler />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -196,6 +196,11 @@ app.use('/api/entities/stok_qnb_belge_satirlari', createEntityRouter('stok_qnb_b
 app.use('/api/entities/stok_qnb_loglar',        createEntityRouter('stok_qnb_loglar'));
 app.use('/api/entities/stok_qnb_cari_sorgu',    createEntityRouter('stok_qnb_cari_sorgu'));
 
+// ── İK / Özlük / Bordro modülü ──
+app.use('/api/entities/ik_subeler',            createEntityRouter('ik_subeler'));
+app.use('/api/entities/ik_bolumler',           createEntityRouter('ik_bolumler'));
+app.use('/api/entities/ik_ucret_gecmisi',      createEntityRouter('ik_ucret_gecmisi'));
+
 // Dosya yükleme
 const multer = require('multer');
 const path = require('path');

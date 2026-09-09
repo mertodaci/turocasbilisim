@@ -328,7 +328,7 @@ const ALLOWED_COLUMNS = {
   ik_puantaj: ['personel_id','personel_adi','tarih','sube_id','vardiya_id','giris_saat','cikis_saat','mesai_dk','gec_dk','erken_dk','eksik_dk','fazla_mesai_dk','durum_kodu','kayit_tipi','ozet','duzeltme_notu','kaynak'],
   ik_puantaj_duzeltme_log: ['puantaj_id','personel_id','tarih','alan','eski','yeni','aciklama','actor_email'],
   ik_mesai_kayitlari: ['personel_id','personel_adi','tarih','tur','katsayi','rt_tipi','sure_dk','saatlik_ucret','tutar','onay','kaynak','aciklama','onaylayan','onay_tarihi','donem_yil','donem_ay','is_deleted'],
-  ik_hakedis_genel_ayar: ['varsayilan_baz_gun','ticket_qr_yoksa_kes','ticket_e_kes','ticket_izin_rapor_kes','ticket_rt_kesme','ticket_cumartesi_yemek_kurali'],
+  ik_hakedis_genel_ayar: ['varsayilan_baz_gun','ticket_qr_yoksa_kes','ticket_e_kes','ticket_izin_rapor_kes','ticket_rt_kesme','ticket_cumartesi_yemek_kurali','cumartesi_tatil'],
   ik_hakedis_tanim: ['personel_id','personel_adi','tur','aktif','baz_gun','aylik_tutar'],
   ik_bordro_yemek_kural: ['personel_id','personel_adi','cumartesi_kurali','kesinti_tipi','aciklama','aktif'],
   ik_kesinti_planlari: ['personel_id','personel_adi','tur','toplam_tutar','baslangic_yil','baslangic_ay','taksit_sayisi','aylik_taksit','referans_maas','kalan_bakiye','aktif','aciklama','is_deleted'],

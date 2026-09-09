@@ -44,6 +44,7 @@ export default function IkHakedisAyar() {
   const genelKaydet = useMutation({
     mutationFn: () => flowApi.entities.IkHakedisAyar.update(1, {
       varsayilan_baz_gun: Number(g.varsayilan_baz_gun) || 26,
+      cumartesi_tatil: g.cumartesi_tatil === 0 ? 0 : 1,
       ...Object.fromEntries(GENEL_ALANLAR.map(([k]) => [k, g[k] ? 1 : 0])),
     }),
     onSuccess: () => { invalidate(); toast.success("Genel kurallar kaydedildi"); },
@@ -65,10 +66,14 @@ export default function IkHakedisAyar() {
       </div>
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">
-        <p className="text-sm font-semibold">Genel Ticket Kesinti Kuralları</p>
+        <p className="text-sm font-semibold">Genel Kurallar</p>
         <div className="flex items-center gap-3">
           <Label className="text-xs">Varsayılan Baz Gün</Label>
           <Input type="number" className="w-24" value={g.varsayilan_baz_gun ?? 26} onChange={(e) => setGenelForm({ ...g, varsayilan_baz_gun: e.target.value })} />
+        </div>
+        <div className="flex items-center gap-3">
+          <Switch checked={g.cumartesi_tatil !== 0} onCheckedChange={(v) => setGenelForm({ ...g, cumartesi_tatil: v ? 1 : 0 })} />
+          <Label className="text-xs">İşyeri cumartesi çalışmıyor — puantajda kart geçişi yoksa "Cumartesi (CT)", "Gelmedi (E)" değil. (Kişi bazlı istisna: Bordro Yemek &amp; Cumartesi ekranı)</Label>
         </div>
         {GENEL_ALANLAR.map(([k, l]) => (
           <div key={k} className="flex items-center gap-3">

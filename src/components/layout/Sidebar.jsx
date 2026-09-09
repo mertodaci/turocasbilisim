@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, Search, Undo2, BookmarkCheck, CalendarClock } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, Search, Undo2, BookmarkCheck, CalendarClock, Calculator, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -85,6 +85,7 @@ export const allNavItems = [
         { labelKey: "ikb_tatil_sihirbazi", path: "/ik/tatil-sihirbazi", icon: CalendarDays, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_hakedis_ayar", path: "/ik/hakedis-ayar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_bordro_yemek", path: "/ik/bordro-yemek", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_sirket", path: "/ik/sirket", icon: Building2, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
@@ -97,6 +98,8 @@ export const allNavItems = [
         { labelKey: "ikb_kesinti", path: "/ik/kesinti", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ic_borc", path: "/ik/ic-borc", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_personel_masraf", path: "/ik/personel-masraf", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_bordro", path: "/ik/bordro", icon: Calculator, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_ay_kapanis", path: "/ik/ay-kapanis", icon: Lock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_vardiya_atama", path: "/ik/vardiya-transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ozluk_evrak", path: "/ik/ozluk-evrak", icon: FileText, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_cikis", path: "/ik/cikis", icon: LogOut, roles: ["admin", "yonetici", "ik"] },
@@ -106,6 +109,7 @@ export const allNavItems = [
       labelKey: "ik_bordro_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
       children: [
         { labelKey: "ikb_puantaj_rapor", path: "/ik/puantaj-rapor", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_maas_ozet", path: "/ik/maas-ozet", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
       ]
     },
   ]

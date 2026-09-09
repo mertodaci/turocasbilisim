@@ -1140,6 +1140,58 @@ function initDb() {
     `);
   } catch(e) { console.error('ik faz7 tablolari:', e.message); }
 
+  // ── İK / Özlük / Bordro — Faz 9-10: bordro motoru + ay kapanışı ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_bordro_donemleri (
+        id TEXT PRIMARY KEY, yil INTEGER NOT NULL, ay INTEGER NOT NULL,
+        durum TEXT DEFAULT 'taslak',            -- taslak | onayli | kapali
+        olusturan TEXT, onaylayan TEXT, onay_tarihi TEXT, kapatan TEXT, kapanis_tarihi TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(yil, ay)
+      );
+      CREATE TABLE IF NOT EXISTS ik_bordro_satirlari (
+        id TEXT PRIMARY KEY, donem_id TEXT NOT NULL, personel_id TEXT NOT NULL, personel_adi TEXT,
+        sube_id TEXT, sube_adi TEXT, tc TEXT, gorev TEXT,
+        aylik_ucret REAL DEFAULT 0, saatlik_ucret REAL DEFAULT 0, dakikalik_ucret REAL DEFAULT 0,
+        calisilan_gun REAL DEFAULT 0, eksik_gun REAL DEFAULT 0,
+        resmi_maas REAL DEFAULT 0, bayram REAL DEFAULT 0, fazla_mesai REAL DEFAULT 0, prim REAL DEFAULT 0,
+        yol REAL DEFAULT 0, yemek REAL DEFAULT 0, ticket REAL DEFAULT 0,
+        yol_hak_gun REAL DEFAULT 0, yemek_hak_gun REAL DEFAULT 0, ticket_hak_gun REAL DEFAULT 0,
+        resmi_toplam REAL DEFAULT 0, resmi_net REAL DEFAULT 0,
+        avans REAL DEFAULT 0, icra REAL DEFAULT 0, bes REAL DEFAULT 0, diger_kesinti REAL DEFAULT 0,
+        maas_puantaj_kes REAL DEFAULT 0, yol_kes REAL DEFAULT 0, yemek_kes REAL DEFAULT 0, ticket_kes REAL DEFAULT 0,
+        personel_masrafi REAL DEFAULT 0,
+        borc_maas REAL DEFAULT 0, borc_yyt REAL DEFAULT 0, borc_toplam REAL DEFAULT 0,
+        sahsi_hesap_net REAL DEFAULT 0,
+        fesih_tazminati REAL DEFAULT 0, ihbar_tazminati REAL DEFAULT 0, kasa_tazminati REAL DEFAULT 0,
+        ozel_sigorta REAL DEFAULT 0, ozel_sigorta_es_cocuk REAL DEFAULT 0,
+        genel_net REAL DEFAULT 0, manuel_override INTEGER DEFAULT 0, hesap_notu TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(donem_id, personel_id)
+      );
+      -- Kapsam bazlı şirket bilgileri (Puantaj CSV başlığı)
+      CREATE TABLE IF NOT EXISTS ik_sirket_bilgileri (
+        id TEXT PRIMARY KEY, kapsam TEXT DEFAULT 'genel',  -- genel | sube:<id>
+        bolum_adi TEXT, unvan TEXT, vergi_dairesi TEXT, vergi_no TEXT, sgk_sicil TEXT, mersis TEXT,
+        adres TEXT, merkez_adres TEXT, web TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(kapsam)
+      );
+      INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turocas Bilişim');
+      -- Toplu Excel yükleme kayıtları (geri alınabilir)
+      CREATE TABLE IF NOT EXISTS ik_toplu_yukleme (
+        id TEXT PRIMARY KEY, tur TEXT,        -- temel_bilgi | donem_hakedis
+        dosya_adi TEXT, donem_yil INTEGER, donem_ay INTEGER,
+        toplam INTEGER DEFAULT 0, eslesen INTEGER DEFAULT 0, uygulanan INTEGER DEFAULT 0, hatali INTEGER DEFAULT 0,
+        onizleme_json TEXT DEFAULT '[]', durum TEXT DEFAULT 'onizleme',  -- onizleme | uygulandi | geri_alindi
+        geri_alma_json TEXT DEFAULT '[]',
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_bordro_satir_donem ON ik_bordro_satirlari(donem_id);
+    `);
+  } catch(e) { console.error('ik faz9 tablolari:', e.message); }
+
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
   try {

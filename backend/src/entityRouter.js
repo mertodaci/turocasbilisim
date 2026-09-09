@@ -31,6 +31,7 @@ const JSON_COLUMNS = {
   hakedisler: ['tahsilat'],
   stok_etiket_fisleri: ['satirlar_json'],
   ik_vardiya_planlari: ['adimlar_json', 'personel_ids_json'],
+  ik_toplu_yukleme: ['onizleme_json', 'geri_alma_json'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -179,6 +180,10 @@ const TABLE_TO_MODULE = {
   ik_ic_borclar: 'ikb_ic_borc',
   ik_ic_borc_tahsilat: 'ikb_ic_borc',
   ik_personel_masraf: 'ikb_personel_masraf',
+  ik_bordro_donemleri: 'ikb_bordro',
+  ik_bordro_satirlari: 'ikb_bordro',
+  ik_sirket_bilgileri: 'ikb_sirket',
+  ik_toplu_yukleme: 'ikb_toplu_yukleme',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -326,6 +331,10 @@ const ALLOWED_COLUMNS = {
   ik_ic_borclar: ['personel_id','personel_adi','acilis_tutar','kalan_bakiye','varsayilan_kaynak','tarih','aciklama','durum','is_deleted'],
   ik_ic_borc_tahsilat: ['borc_id','personel_id','donem_yil','donem_ay','tutar','kaynak','bordro_satir_id'],
   ik_personel_masraf: ['personel_id','personel_adi','donem_yil','donem_ay','tutar','aciklama','kesinti_kaynagi','kilitli','is_deleted'],
+  ik_bordro_donemleri: ['yil','ay','durum','olusturan','onaylayan','onay_tarihi','kapatan','kapanis_tarihi'],
+  ik_bordro_satirlari: ['donem_id','personel_id','personel_adi','sube_id','sube_adi','tc','gorev','aylik_ucret','saatlik_ucret','dakikalik_ucret','calisilan_gun','eksik_gun','resmi_maas','bayram','fazla_mesai','prim','yol','yemek','ticket','yol_hak_gun','yemek_hak_gun','ticket_hak_gun','resmi_toplam','resmi_net','avans','icra','bes','diger_kesinti','maas_puantaj_kes','yol_kes','yemek_kes','ticket_kes','personel_masrafi','borc_maas','borc_yyt','borc_toplam','sahsi_hesap_net','fesih_tazminati','ihbar_tazminati','kasa_tazminati','ozel_sigorta','ozel_sigorta_es_cocuk','genel_net','manuel_override','hesap_notu'],
+  ik_sirket_bilgileri: ['kapsam','bolum_adi','unvan','vergi_dairesi','vergi_no','sgk_sicil','mersis','adres','merkez_adres','web'],
+  ik_toplu_yukleme: ['tur','dosya_adi','donem_yil','donem_ay','toplam','eslesen','uygulanan','hatali','onizleme_json','durum','geri_alma_json'],
 };
 
 // Zorunlu alanlar
@@ -390,6 +399,7 @@ const REQUIRED_FIELDS = {
   ik_mesai_kayitlari: ['personel_id','tarih'],
   ik_hakedis_tanim: ['personel_id','tur'],
   ik_bordro_yemek_kural: ['personel_id'],
+  ik_bordro_donemleri: ['yil','ay'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

@@ -215,6 +215,10 @@ app.use('/api/entities/ik_kesintiler',         createEntityRouter('ik_kesintiler
 app.use('/api/entities/ik_ic_borclar',         createEntityRouter('ik_ic_borclar'));
 app.use('/api/entities/ik_ic_borc_tahsilat',   createEntityRouter('ik_ic_borc_tahsilat'));
 app.use('/api/entities/ik_personel_masraf',    createEntityRouter('ik_personel_masraf'));
+app.use('/api/entities/ik_bordro_donemleri',   createEntityRouter('ik_bordro_donemleri'));
+app.use('/api/entities/ik_bordro_satirlari',   createEntityRouter('ik_bordro_satirlari'));
+app.use('/api/entities/ik_sirket_bilgileri',   createEntityRouter('ik_sirket_bilgileri'));
+app.use('/api/entities/ik_toplu_yukleme',      createEntityRouter('ik_toplu_yukleme'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -3011,6 +3015,239 @@ app.get('/api/ik/kesinti/donem', authMiddleware, (req, res) => {
   const rows = db.prepare(`SELECT * FROM ik_kesintiler WHERE donem_yil=? AND donem_ay=? AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY personel_adi, tur`).all(Number(donem_yil), Number(donem_ay));
   const ozet = rows.reduce((m, r) => { m[r.tur] = (m[r.tur] || 0) + (r.tutar || 0); m.toplam += (r.tutar || 0); return m; }, { toplam: 0 });
   res.json({ rows, ozet });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 9-10: Bordro motoru + Ay Kapanışı
+// ═══════════════════════════════════════════════════════════════════
+function ikDonemGetirYaOlustur(yil, ay, email) {
+  let d = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(yil, ay);
+  if (!d) {
+    const id = _stokUUID(), now = new Date().toISOString();
+    db.prepare("INSERT INTO ik_bordro_donemleri (id, yil, ay, durum, olusturan, created_date, updated_date) VALUES (?,?,?, 'taslak', ?, ?, ?)").run(id, yil, ay, email, now, now);
+    d = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE id=?').get(id);
+  }
+  return d;
+}
+
+// Bir personelin bir dönem bordro satırını hesapla (AŞAMA A hesap zinciri).
+function ikBordroSatirHesapla(emp, yil, ay, ctx) {
+  const t1 = `${yil}-${String(ay).padStart(2, '0')}-01`;
+  const t2 = `${yil}-${String(ay).padStart(2, '0')}-31`;
+
+  // Puantaj: çalışılan gün (N) ve ücretsiz/eksik gün (U + E)
+  const pnt = db.prepare(`SELECT
+      SUM(CASE WHEN durum_kodu='N' THEN 1 ELSE 0 END) n_gun,
+      SUM(CASE WHEN durum_kodu='U' THEN 1 ELSE 0 END) u_gun,
+      SUM(CASE WHEN durum_kodu='E' THEN 1 ELSE 0 END) e_gun,
+      SUM(CASE WHEN durum_kodu IN ('E','I','R','U','M','CT') THEN 1 ELSE 0 END) kesilecek_gun
+    FROM ik_puantaj WHERE personel_id=? AND tarih>=? AND tarih<=?`).get(emp.id, t1, t2)
+    || { n_gun: 0, u_gun: 0, e_gun: 0, kesilecek_gun: 0 };
+  const eksikGun = (pnt.u_gun || 0) + (pnt.e_gun || 0);
+  const calisilanGun = Math.max(0, 30 - eksikGun);
+
+  const aylik = Number(emp.aylik_ucret) || 0;
+  const resmiMaas = eksikGun > 0 ? +(aylik * calisilanGun / 30).toFixed(2) : aylik;
+
+  // Onaylı mesai kayıtları
+  const mesai = db.prepare(`SELECT
+      SUM(CASE WHEN tur='fazla' THEN tutar ELSE 0 END) fazla,
+      SUM(CASE WHEN tur='tatil' THEN tutar ELSE 0 END) bayram
+    FROM ik_mesai_kayitlari WHERE personel_id=? AND donem_yil=? AND donem_ay=? AND onay='onayli' AND is_deleted!=1`).get(emp.id, yil, ay)
+    || { fazla: 0, bayram: 0 };
+
+  // Yol/Yemek/Ticket hak edişi: günlük × hak gün (baz gün − kesilecek gün)
+  const tanimlar = db.prepare("SELECT tur, aktif, baz_gun, aylik_tutar FROM ik_hakedis_tanim WHERE personel_id=? AND aktif=1").all(emp.id);
+  const hak = { yol: 0, yemek: 0, ticket: 0, yol_hak_gun: 0, yemek_hak_gun: 0, ticket_hak_gun: 0 };
+  for (const tn of tanimlar) {
+    const bazGun = tn.baz_gun > 0 ? tn.baz_gun : (ctx.varsayilanBazGun || 26);
+    const hakGun = Math.max(0, bazGun - (pnt.kesilecek_gun || 0));
+    const gunluk = bazGun > 0 ? tn.aylik_tutar / bazGun : 0;
+    hak[tn.tur] = +(gunluk * hakGun).toFixed(2);
+    hak[`${tn.tur}_hak_gun`] = hakGun;
+  }
+
+  const resmiToplam = +(resmiMaas + (mesai.bayram || 0) + (mesai.fazla || 0) + hak.yol + hak.yemek + hak.ticket).toFixed(2);
+  const resmiNet = resmiToplam; // SGK/vergi tevkifatı yok
+
+  // Kesintiler (dönem)
+  const kes = db.prepare(`SELECT
+      SUM(CASE WHEN tur='avans' THEN tutar ELSE 0 END) avans,
+      SUM(CASE WHEN tur='icra' THEN tutar ELSE 0 END) icra,
+      SUM(CASE WHEN tur='bes' THEN tutar ELSE 0 END) bes,
+      SUM(CASE WHEN tur='diger' THEN tutar ELSE 0 END) diger,
+      SUM(CASE WHEN tur='gun_kes' THEN tutar ELSE 0 END) gun_kes
+    FROM ik_kesintiler WHERE personel_id=? AND donem_yil=? AND donem_ay=? AND is_deleted!=1`).get(emp.id, yil, ay)
+    || { avans: 0, icra: 0, bes: 0, diger: 0, gun_kes: 0 };
+
+  // Personel masrafı (bu dönem, "sadece_not" hariç net'ten düşer)
+  const masrafRows = db.prepare("SELECT tutar, kesinti_kaynagi FROM ik_personel_masraf WHERE personel_id=? AND donem_yil=? AND donem_ay=? AND is_deleted!=1").all(emp.id, yil, ay);
+  const personelMasrafi = masrafRows.filter((m) => m.kesinti_kaynagi !== 'sadece_not').reduce((a, m) => a + (m.tutar || 0), 0);
+
+  // İç borç tahsilatı (aylık taksit ~ kalan bakiyenin makul kısmı; basit: bu dönem tahsilat kaydı varsa onu al, yoksa 0)
+  const borcTah = db.prepare("SELECT COALESCE(SUM(tutar),0) t FROM ik_ic_borc_tahsilat WHERE personel_id=? AND donem_yil=? AND donem_ay=?").get(emp.id, yil, ay);
+  const borcToplam = borcTah?.t || 0;
+
+  const sahsiNet = emp.sahsi_hesap_aktif ? (Number(emp.sahsi_hesap_tutar) || 0) : 0;
+
+  // gun_kes: yol/yemek kesintisi hak edişte zaten uygulandı → burada bilgi olarak yol_kes'e yaz, net'ten TEKRAR düşme
+  const genelNet = +(resmiNet + sahsiNet - (kes.avans || 0) - (kes.bes || 0) - (kes.diger || 0) - personelMasrafi - borcToplam).toFixed(2);
+
+  return {
+    personel_id: emp.id, personel_adi: emp.full_name, sube_id: emp.sube_id || null, tc: emp.tc || null, gorev: emp.position || emp.meslek_kodu || null,
+    aylik_ucret: aylik, saatlik_ucret: Number(emp.saatlik_ucret) || 0, dakikalik_ucret: Number(emp.dakikalik_ucret) || 0,
+    calisilan_gun: calisilanGun, eksik_gun: eksikGun,
+    resmi_maas: resmiMaas, bayram: mesai.bayram || 0, fazla_mesai: mesai.fazla || 0, prim: 0,
+    yol: hak.yol, yemek: hak.yemek, ticket: hak.ticket,
+    yol_hak_gun: hak.yol_hak_gun, yemek_hak_gun: hak.yemek_hak_gun, ticket_hak_gun: hak.ticket_hak_gun,
+    resmi_toplam: resmiToplam, resmi_net: resmiNet,
+    avans: kes.avans || 0, icra: kes.icra || 0, bes: kes.bes || 0, diger_kesinti: kes.diger || 0,
+    maas_puantaj_kes: 0, yol_kes: kes.gun_kes || 0, yemek_kes: 0, ticket_kes: 0,
+    personel_masrafi: personelMasrafi,
+    borc_maas: 0, borc_yyt: 0, borc_toplam: borcToplam,
+    sahsi_hesap_net: sahsiNet, genel_net: genelNet,
+  };
+}
+
+app.post('/api/ik/bordro/hesapla', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { yil, ay, personel_id, force } = req.body || {};
+  if (!yil || !ay) return res.status(400).json({ error: 'Yıl/ay gerekli' });
+  const donem = ikDonemGetirYaOlustur(Number(yil), Number(ay), req.user.email);
+  if (donem.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem yeniden hesaplanamaz' });
+
+  const genelAyar = db.prepare('SELECT varsayilan_baz_gun FROM ik_hakedis_genel_ayar WHERE id=1').get();
+  const ctx = { varsayilanBazGun: genelAyar?.varsayilan_baz_gun || 26 };
+
+  const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'"];
+  const params = [];
+  if (personel_id) { cond.push('id=?'); params.push(personel_id); }
+  else cond.push("(status IS NULL OR status != 'pasif')");
+  const emps = db.prepare(`SELECT id, full_name, sube_id, tc, position, meslek_kodu, aylik_ucret, saatlik_ucret, dakikalik_ucret, sahsi_hesap_aktif, sahsi_hesap_tutar FROM employees WHERE ${cond.join(' AND ')}`).all(...params);
+
+  const ins = db.prepare(`INSERT INTO ik_bordro_satirlari
+    (id, donem_id, personel_id, personel_adi, sube_id, tc, gorev, aylik_ucret, saatlik_ucret, dakikalik_ucret, calisilan_gun, eksik_gun,
+     resmi_maas, bayram, fazla_mesai, prim, yol, yemek, ticket, yol_hak_gun, yemek_hak_gun, ticket_hak_gun, resmi_toplam, resmi_net,
+     avans, icra, bes, diger_kesinti, maas_puantaj_kes, yol_kes, yemek_kes, ticket_kes, personel_masrafi, borc_maas, borc_yyt, borc_toplam,
+     sahsi_hesap_net, genel_net, created_date, updated_date)
+    VALUES (@id,@donem_id,@personel_id,@personel_adi,@sube_id,@tc,@gorev,@aylik_ucret,@saatlik_ucret,@dakikalik_ucret,@calisilan_gun,@eksik_gun,
+     @resmi_maas,@bayram,@fazla_mesai,@prim,@yol,@yemek,@ticket,@yol_hak_gun,@yemek_hak_gun,@ticket_hak_gun,@resmi_toplam,@resmi_net,
+     @avans,@icra,@bes,@diger_kesinti,@maas_puantaj_kes,@yol_kes,@yemek_kes,@ticket_kes,@personel_masrafi,@borc_maas,@borc_yyt,@borc_toplam,
+     @sahsi_hesap_net,@genel_net,@now,@now)
+    ON CONFLICT(donem_id, personel_id) DO UPDATE SET
+      aylik_ucret=excluded.aylik_ucret, saatlik_ucret=excluded.saatlik_ucret, dakikalik_ucret=excluded.dakikalik_ucret,
+      calisilan_gun=excluded.calisilan_gun, eksik_gun=excluded.eksik_gun, resmi_maas=excluded.resmi_maas, bayram=excluded.bayram,
+      fazla_mesai=excluded.fazla_mesai, yol=excluded.yol, yemek=excluded.yemek, ticket=excluded.ticket,
+      yol_hak_gun=excluded.yol_hak_gun, yemek_hak_gun=excluded.yemek_hak_gun, ticket_hak_gun=excluded.ticket_hak_gun,
+      resmi_toplam=excluded.resmi_toplam, resmi_net=excluded.resmi_net, avans=excluded.avans, icra=excluded.icra, bes=excluded.bes,
+      diger_kesinti=excluded.diger_kesinti, yol_kes=excluded.yol_kes, personel_masrafi=excluded.personel_masrafi,
+      borc_toplam=excluded.borc_toplam, sahsi_hesap_net=excluded.sahsi_hesap_net, genel_net=excluded.genel_net, updated_date=excluded.updated_date
+    WHERE ik_bordro_satirlari.manuel_override=0 ${force ? "OR 1=1" : ""}`);
+  try {
+    const now = new Date().toISOString();
+    let n = 0;
+    db.transaction(() => {
+      for (const emp of emps) {
+        const row = ikBordroSatirHesapla(emp, Number(yil), Number(ay), ctx);
+        ins.run({ ...row, id: _stokUUID(), donem_id: donem.id, now });
+        n++;
+      }
+    })();
+    res.json({ ok: true, donem_id: donem.id, satir: n });
+  } catch (err) { console.error('[ik] bordro hesapla:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/ik/bordro/liste', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_bordro', 'ikb_maas_ozet')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { yil, ay, sube_id } = req.query;
+  if (!yil || !ay) return res.status(400).json({ error: 'Yıl/ay gerekli' });
+  const donem = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
+  if (!donem) return res.json({ donem: null, rows: [], ozet: {} });
+  const cond = ['donem_id=?'], params = [donem.id];
+  if (sube_id) { cond.push('sube_id=?'); params.push(sube_id); }
+  const rows = db.prepare(`SELECT b.*, s.ad sube_adi FROM ik_bordro_satirlari b LEFT JOIN ik_subeler s ON s.id=b.sube_id WHERE ${cond.join(' AND ')} ORDER BY personel_adi`).all(...params);
+  const ozet = rows.reduce((m, r) => ({
+    resmi_net: m.resmi_net + (r.resmi_net || 0), sahsi_net: m.sahsi_net + (r.sahsi_hesap_net || 0),
+    genel_net: m.genel_net + (r.genel_net || 0),
+  }), { resmi_net: 0, sahsi_net: 0, genel_net: 0 });
+  res.json({ donem, rows, ozet });
+});
+
+app.put('/api/ik/bordro/satir/:id', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const row = db.prepare('SELECT * FROM ik_bordro_satirlari WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Satır bulunamadı' });
+  const donem = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE id=?').get(row.donem_id);
+  if (donem?.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem satırı düzenlenemez' });
+  const b = req.body || {};
+  const alanlar = ['resmi_maas', 'bayram', 'fazla_mesai', 'prim', 'yol', 'yemek', 'ticket', 'yol_hak_gun', 'yemek_hak_gun', 'ticket_hak_gun',
+    'fesih_tazminati', 'ihbar_tazminati', 'kasa_tazminati', 'ozel_sigorta', 'ozel_sigorta_es_cocuk', 'hesap_notu'];
+  const upd = {};
+  for (const a of alanlar) if (a in b) upd[a] = a === 'hesap_notu' ? b[a] : (Number(b[a]) || 0);
+  const m = { ...row, ...upd };
+  const resmiToplam = +(m.resmi_maas + m.bayram + m.fazla_mesai + m.prim + m.yol + m.yemek + m.ticket).toFixed(2);
+  const genelNet = +(resmiToplam + m.sahsi_hesap_net - m.avans - m.bes - m.diger_kesinti - m.personel_masrafi - m.borc_toplam
+    + m.fesih_tazminati + m.ihbar_tazminati + m.kasa_tazminati + m.ozel_sigorta + m.ozel_sigorta_es_cocuk).toFixed(2);
+  upd.resmi_toplam = resmiToplam; upd.resmi_net = resmiToplam; upd.genel_net = genelNet;
+  upd.manuel_override = 1; upd.updated_date = new Date().toISOString();
+  const setSql = Object.keys(upd).map((k) => `${k}=@${k}`).join(', ');
+  db.prepare(`UPDATE ik_bordro_satirlari SET ${setSql} WHERE id=@id`).run({ ...upd, id: row.id });
+  res.json({ ok: true, satir: db.prepare('SELECT * FROM ik_bordro_satirlari WHERE id=?').get(row.id) });
+});
+
+app.post('/api/ik/bordro/onayla', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { yil, ay } = req.body || {};
+  const donem = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
+  if (!donem) return res.status(404).json({ error: 'Dönem yok' });
+  if (donem.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem' });
+  const now = new Date().toISOString();
+  db.prepare("UPDATE ik_bordro_donemleri SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
+  res.json({ ok: true });
+});
+
+// Ay Kapanışı — dönemi kilitle (geri alınabilir)
+app.post('/api/ik/bordro/kapat', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_ay_kapanis', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { yil, ay, geri_al } = req.body || {};
+  const donem = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
+  if (!donem) return res.status(404).json({ error: 'Dönem yok' });
+  const now = new Date().toISOString();
+  if (geri_al) {
+    db.prepare("UPDATE ik_bordro_donemleri SET durum='onayli', kapatan=NULL, kapanis_tarihi=NULL, updated_date=? WHERE id=?").run(now, donem.id);
+    return res.json({ ok: true, durum: 'onayli' });
+  }
+  db.prepare("UPDATE ik_bordro_donemleri SET durum='kapali', kapatan=?, kapanis_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
+  res.json({ ok: true, durum: 'kapali' });
+});
+
+// SGK Puantaj CSV (devam kodları + eksik gün nedenleri)
+app.get('/api/ik/bordro/sgk-csv', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_ay_kapanis', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { yil, ay, sube_id } = req.query;
+  if (!yil || !ay) return res.status(400).json({ error: 'Yıl/ay gerekli' });
+  const gunSayisi = new Date(Number(yil), Number(ay), 0).getDate();
+  const t1 = `${yil}-${String(ay).padStart(2, '0')}-01`, t2 = `${yil}-${String(ay).padStart(2, '0')}-31`;
+  const cond = ['p.tarih>=?', 'p.tarih<=?'], params = [t1, t2];
+  if (sube_id) { cond.push('p.sube_id=?'); params.push(sube_id); }
+  const rows = db.prepare(`SELECT p.personel_id, MAX(p.personel_adi) ad, MAX(e.tc) tc,
+      SUM(CASE WHEN p.durum_kodu='N' THEN 1 ELSE 0 END) calisilan,
+      SUM(CASE WHEN p.durum_kodu='U' THEN 1 ELSE 0 END) ucretsiz,
+      SUM(CASE WHEN p.durum_kodu='R' THEN 1 ELSE 0 END) rapor,
+      SUM(CASE WHEN p.durum_kodu='E' THEN 1 ELSE 0 END) devamsiz
+    FROM ik_puantaj p LEFT JOIN employees e ON e.id=p.personel_id
+    WHERE ${cond.join(' AND ')} GROUP BY p.personel_id ORDER BY ad`).all(...params);
+  const head = ['TC', 'Ad Soyad', 'Çalışılan Gün', 'Eksik Gün', 'Eksik Gün Nedeni', ...Array.from({ length: 31 }, (_, i) => `${i + 1}`)];
+  const lines = [head.join(';')];
+  for (const r of rows) {
+    const eksik = (r.ucretsiz || 0) + (r.rapor || 0) + (r.devamsiz || 0);
+    const neden = r.ucretsiz ? '01-Ücretsiz İzin' : r.rapor ? '02-İstirahat' : r.devamsiz ? '18-Devamsızlık' : '';
+    const gunKol = Array.from({ length: 31 }, (_, i) => (i < gunSayisi ? '' : ''));
+    lines.push([r.tc || '', r.ad || '', r.calisilan || 0, eksik, neden, ...gunKol].join(';'));
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="sgk-puantaj-${yil}-${ay}.csv"`);
+  res.send('﻿' + lines.join('\r\n'));
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

@@ -88,6 +88,7 @@ const StokDashboard = lazy(() => import('./pages/stok/StokDashboard'));
 const StokMobil = lazy(() => import('./pages/stok/StokMobil'));
 const StokEtiket = lazy(() => import('./pages/stok/StokEtiket'));
 const StokExcel = lazy(() => import('./pages/stok/StokExcel'));
+const StokQnb = lazy(() => import('./pages/stok/StokQnb'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -243,6 +244,8 @@ const AuthenticatedApp = () => {
         <Route path="/stok/mobil" element={guard("stok_mobil", <StokMobil />)} />
         <Route path="/stok/etiket" element={guard("stok_etiket", <StokEtiket />)} />
         <Route path="/stok/excel" element={guard("stok_excel", <StokExcel />)} />
+        {/* Faz 13: QNB e-Belge */}
+        <Route path="/stok/qnb" element={guard("stok_qnb", <StokQnb />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

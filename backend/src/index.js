@@ -189,6 +189,12 @@ app.use('/api/entities/stok_zimmetler',         createEntityRouter('stok_zimmetl
 // Faz 10: Etiket + Excel
 app.use('/api/entities/stok_etiket_fisleri',    createEntityRouter('stok_etiket_fisleri'));
 app.use('/api/entities/stok_excel_yuklemeler',  createEntityRouter('stok_excel_yuklemeler'));
+// Faz 13: QNB e-Belge
+app.use('/api/entities/stok_qnb_ayarlar',       createEntityRouter('stok_qnb_ayarlar'));
+app.use('/api/entities/stok_qnb_belgeler',      createEntityRouter('stok_qnb_belgeler'));
+app.use('/api/entities/stok_qnb_belge_satirlari', createEntityRouter('stok_qnb_belge_satirlari'));
+app.use('/api/entities/stok_qnb_loglar',        createEntityRouter('stok_qnb_loglar'));
+app.use('/api/entities/stok_qnb_cari_sorgu',    createEntityRouter('stok_qnb_cari_sorgu'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2018,6 +2024,96 @@ app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
       is_kuyrugu: { bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep, sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan },
       son_hareket: sonHareket, en_cok_calisan: enCokCalisan || null,
     });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 13: QNB e-Belge (test / taslak modu — gerçek QNB API'si bağlı değil)
+// ═══════════════════════════════════════════════════════════════════
+function stokQnbPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_qnb', action || 'can_view');
+}
+function stokQnbLog(islem, durum, belgeId, mesaj) {
+  try {
+    db.prepare("INSERT INTO stok_qnb_loglar (id, tarih, islem, durum, belge_id, mesaj) VALUES (?,?,?,?,?,?)")
+      .run(_stokUUID(), new Date().toISOString(), islem, durum, belgeId || null, mesaj || null);
+  } catch (e) {}
+}
+
+app.get('/api/stok/qnb/panel', authMiddleware, (req, res) => {
+  if (!stokQnbPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_qnb_belgeler WHERE (is_deleted=0 OR is_deleted IS NULL)${w ? ' AND ' + w : ''}`).get().n;
+    const ayar = db.prepare('SELECT ortam, aktif FROM stok_qnb_ayarlar WHERE id=1').get() || {};
+    res.json({
+      ortam: ayar.ortam || 'test', aktif: ayar.aktif || 0,
+      bekleyen_gelen: c("yon='gelen' AND durum='taslak'"),
+      stok_girise_aktarilan: c("yon='gelen' AND stok_fis_id IS NOT NULL"),
+      giden_taslak: c("yon='giden' AND durum='taslak'"),
+      irsaliye_taslak: c("tur='e_irsaliye' AND durum='taslak'"),
+      toplam_belge: c(''),
+      log_7gun: db.prepare("SELECT COUNT(*) n FROM stok_qnb_loglar WHERE tarih >= date('now','-7 days')").get().n,
+      son_belgeler: db.prepare("SELECT belge_no, yon, tur, cari_adi, tarih, durum FROM stok_qnb_belgeler ORDER BY created_date DESC LIMIT 10").all(),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Gelen e-Fatura satırlarını stok kartıyla eşleştir -> stok giriş fişi oluştur + onayla
+app.post('/api/stok/qnb/gelen-aktar', authMiddleware, (req, res) => {
+  if (!stokQnbPerm(req, 'can_add')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { belge = {}, satirlar = [], depo_id } = req.body || {};
+  if (!depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
+  const mapli = (satirlar || []).filter((s) => s.eslesen_urun_id && Number(s.miktar) > 0);
+  if (!mapli.length) return res.status(400).json({ error: 'Eşleştirilmiş satır yok' });
+  try {
+    const depo = db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(depo_id);
+    const now = new Date().toISOString();
+    const belgeId = _stokUUID();
+    let fis;
+    db.transaction(() => {
+      const urunAdi = (id) => db.prepare('SELECT ad, ana_birim FROM stok_urunler WHERE id=?').get(id) || {};
+      fis = insertStokFis(_stokUUID(), {
+        tip: 'giris', tarih: belge.tarih || now.slice(0, 10), hedef_depo_id: depo_id, hedef_depo_adi: depo?.ad,
+        cari_id: belge.cari_id || null, cari_adi: belge.cari_adi || null,
+        fatura_no: belge.belge_no || null, belge_no: belge.belge_no || null,
+        aciklama: `QNB gelen e-Fatura aktarımı (${belge.belge_no || '—'})`,
+      }, mapli.map((s) => { const u = urunAdi(s.eslesen_urun_id); return { urun_id: s.eslesen_urun_id, urun_adi: u.ad || s.satici_urun_adi, birim: s.birim || u.ana_birim || 'ADET', carpan: 1, miktar: Number(s.miktar), birim_fiyat: Number(s.birim_fiyat) || 0, raf_omru_durumu: 'Raf ömrü uygulanmaz' }; }), req.user.email);
+      const fSat = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(fis.id);
+      const hGenel = stokGenelRaf(depo_id);
+      for (const s of fSat) if (!s.hedef_raf_id && hGenel.id) { s.hedef_raf_id = hGenel.id; s.hedef_raf_adi = hGenel.ad; }
+      const insHrk = db.prepare(`INSERT INTO stok_hareketler (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet, fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      for (const s of fSat) insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, depo_id, depo?.ad, s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat, fis.id, fis.fis_no, 'giris', s.id, belge.cari_id || null, null, fis.tarih, req.user.email, now, now);
+      const fisFull = { ...fis, tip: 'giris', hedef_depo_id: depo_id, hedef_depo_adi: depo?.ad, cari_id: belge.cari_id || null, cari_adi: belge.cari_adi || null };
+      stokFifoUygula(fisFull, fSat, req.user.email);
+      stokFiyatGecmisiYaz(fisFull, fSat, req.user.email);
+      db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, fis.id);
+      const tutar = mapli.reduce((a, s) => a + Number(s.miktar) * (Number(s.birim_fiyat) || 0), 0);
+      db.prepare(`INSERT INTO stok_qnb_belgeler (id, belge_no, yon, tur, cari_id, cari_adi, vkn, tarih, tutar, durum, stok_fis_id, stok_fis_no, satir_sayisi, created_by, created_date, updated_date)
+        VALUES (?,?, 'gelen','e_fatura', ?,?,?,?,?, 'kabul', ?,?,?,?,?,?)`).run(belgeId, belge.belge_no || ('GELEN-' + Date.now()), belge.cari_id || null, belge.cari_adi || null, belge.vkn || null, belge.tarih || now.slice(0, 10), tutar, fis.id, fis.fis_no, mapli.length, req.user.email, now, now);
+      const insS = db.prepare("INSERT INTO stok_qnb_belge_satirlari (id, belge_id, satici_urun_adi, satici_kodu, miktar, birim, birim_fiyat, eslesen_urun_id, eslesen_urun_adi, created_by, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+      for (const s of mapli) insS.run(_stokUUID(), belgeId, s.satici_urun_adi || null, s.satici_kodu || null, Number(s.miktar), s.birim || null, Number(s.birim_fiyat) || 0, s.eslesen_urun_id, urunAdi(s.eslesen_urun_id).ad || null, req.user.email, now, now);
+    })();
+    stokQnbLog('gelen_efatura_aktar', 'basarili', belgeId, `Stok giriş fişi ${fis.fis_no} oluşturuldu (${mapli.length} satır)`);
+    res.status(201).json({ ok: true, stok_fis_no: fis.fis_no, belge_id: belgeId });
+  } catch (err) { stokQnbLog('gelen_efatura_aktar', 'hata', null, err.message); console.error('[stok] qnb gelen aktar:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Stok çıkış / transfer fişinden taslak belge (e-fatura / e-arşiv / e-irsaliye)
+app.post('/api/stok/qnb/taslak', authMiddleware, (req, res) => {
+  if (!stokQnbPerm(req, 'can_add')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { fis_id, tur } = req.body || {};
+  if (!fis_id || !['e_fatura', 'e_arsiv', 'e_irsaliye'].includes(tur)) return res.status(400).json({ error: 'Fiş ve belge türü zorunlu' });
+  const f = db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(fis_id);
+  if (!f) return res.status(404).json({ error: 'Fiş bulunamadı' });
+  try {
+    const now = new Date().toISOString();
+    const id = _stokUUID();
+    const belgeNo = `${tur === 'e_irsaliye' ? 'IRS' : 'FTR'}-TASLAK-${Date.now().toString().slice(-8)}`;
+    const tutar = db.prepare("SELECT COALESCE(SUM(tutar),0) t FROM stok_fis_satirlari WHERE fis_id=?").get(f.id).t;
+    db.prepare(`INSERT INTO stok_qnb_belgeler (id, belge_no, yon, tur, cari_id, cari_adi, tarih, tutar, durum, kaynak_fis_id, kaynak_fis_no, satir_sayisi, aciklama, created_by, created_date, updated_date)
+      VALUES (?,?, 'giden', ?, ?,?,?,?, 'taslak', ?,?,?,?,?,?,?)`).run(id, belgeNo, tur, f.cari_id || null, f.cari_adi || null, now.slice(0, 10), tutar, f.id, f.fis_no, f.satir_sayisi, `${f.fis_no} fişinden taslak`, req.user.email, now, now);
+    stokQnbLog('giden_taslak', 'basarili', id, `${belgeNo} (${tur})`);
+    res.status(201).json(db.prepare('SELECT * FROM stok_qnb_belgeler WHERE id=?').get(id));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

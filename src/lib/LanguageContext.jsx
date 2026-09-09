@@ -90,6 +90,7 @@ const translations = {
     stok_raporlar: "Stok Raporları",
     stok_satinalma: "Satın Alma",
     stok_zimmet: "El Aletleri & Zimmet",
+    stok_qnb: "QNB e-Belge",
   },
   en: {
     dashboard: "Dashboard",
@@ -170,6 +171,7 @@ const translations = {
     stok_raporlar: "Inventory Reports",
     stok_satinalma: "Purchasing",
     stok_zimmet: "Tools & Assignment",
+    stok_qnb: "QNB e-Document",
   },
 };
 

@@ -34,6 +34,7 @@ const CATEGORIES = [
   { label: "Stok — Raporlar", keys: ["stok_raporlar"] },
   { label: "Stok — Satın Alma", keys: ["stok_satinalma"] },
   { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
+  { label: "Stok — e-Belge", keys: ["stok_qnb"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

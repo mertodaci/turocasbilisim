@@ -415,6 +415,8 @@ function initDb() {
       'stok_zimmet',
       // Faz 9-11: Mobil, Etiket, Excel, Dashboard
       'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
+      // Faz 13: QNB e-Belge
+      'stok_qnb',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -732,6 +734,47 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_excel_fis ON stok_excel_yuklemeler(olusan_fis_id);
     `);
   } catch(e) { console.error('stok faz10 tablolari:', e.message); }
+
+  // ── Stok Faz 13: QNB e-Belge entegrasyonu (test/taslak modu) ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_qnb_ayarlar (
+        id INTEGER PRIMARY KEY CHECK (id=1), ortam TEXT DEFAULT 'test',
+        genel_url TEXT, efatura_url TEXT, earsiv_url TEXT, eirsaliye_url TEXT,
+        api_kullanici TEXT, api_sifre TEXT,
+        firma_unvan TEXT, vkn TEXT, vergi_dairesi TEXT, adres TEXT, il TEXT, ilce TEXT, eposta TEXT, telefon TEXT,
+        para_birimi TEXT DEFAULT 'TRY', log_saklama_gun INTEGER DEFAULT 90, gecici_eslesme_gun INTEGER DEFAULT 30,
+        alis_fiyat_gecmisine_isle INTEGER DEFAULT 1, aktif INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      INSERT OR IGNORE INTO stok_qnb_ayarlar (id) VALUES (1);
+      CREATE TABLE IF NOT EXISTS stok_qnb_belgeler (
+        id TEXT PRIMARY KEY, belge_no TEXT, yon TEXT, tur TEXT,   -- yon: gelen|giden ; tur: e_fatura|e_arsiv|e_irsaliye
+        cari_id TEXT, cari_adi TEXT, vkn TEXT, tarih TEXT, tutar REAL DEFAULT 0,
+        durum TEXT DEFAULT 'taslak',  -- taslak | gonderildi | kabul | red | arsiv
+        uuid TEXT, dosya_url TEXT, kaynak_fis_id TEXT, kaynak_fis_no TEXT, stok_fis_id TEXT, stok_fis_no TEXT,
+        satir_sayisi INTEGER DEFAULT 0, aciklama TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_qnb_belge_satirlari (
+        id TEXT PRIMARY KEY, belge_id TEXT NOT NULL, satici_urun_adi TEXT, satici_kodu TEXT,
+        miktar REAL DEFAULT 0, birim TEXT, birim_fiyat REAL DEFAULT 0,
+        eslesen_urun_id TEXT, eslesen_urun_adi TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_qnb_loglar (
+        id TEXT PRIMARY KEY, tarih TEXT, islem TEXT, durum TEXT, belge_id TEXT, mesaj TEXT,
+        created_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_qnb_cari_sorgu (
+        id TEXT PRIMARY KEY, cari_id TEXT, cari_adi TEXT, vkn TEXT, tip TEXT,
+        durum TEXT, alici_etiketi TEXT, aktif INTEGER DEFAULT 1, tarih TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_qnb_belge_yon ON stok_qnb_belgeler(yon);
+      CREATE INDEX IF NOT EXISTS idx_stok_qnb_belge_sat ON stok_qnb_belge_satirlari(belge_id);
+    `);
+  } catch(e) { console.error('stok faz13 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

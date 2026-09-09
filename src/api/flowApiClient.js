@@ -102,6 +102,10 @@ const ENTITY_MAP = {
   StokZimmet:        'stok_zimmetler',
   StokEtiketFis:     'stok_etiket_fisleri',
   StokExcelYukleme:  'stok_excel_yuklemeler',
+  StokQnbAyar:       'stok_qnb_ayarlar',
+  StokQnbBelge:      'stok_qnb_belgeler',
+  StokQnbLog:        'stok_qnb_loglar',
+  StokQnbCariSorgu:  'stok_qnb_cari_sorgu',
 };
 
 function createEntityClient(entityName) {
@@ -310,6 +314,9 @@ export const stok = {
   async excelYukle(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle`, _sjson('POST', body))); },
   async excelGeriAl(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle/${id}/geri-al`, _sjson('POST'))); },
   async dashboard() { return handleResponse(await fetch(`${BASE_URL}/api/stok/dashboard`, { credentials: 'include' })); },
+  async qnbPanel() { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/panel`, { credentials: 'include' })); },
+  async qnbGelenAktar(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/gelen-aktar`, _sjson('POST', body))); },
+  async qnbTaslak(fis_id, tur) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/taslak`, _sjson('POST', { fis_id, tur }))); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

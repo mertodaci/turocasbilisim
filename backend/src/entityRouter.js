@@ -149,6 +149,11 @@ const TABLE_TO_MODULE = {
   stok_excel_yuklemeler: 'stok_excel',
   stok_dashboard: 'stok_dashboard',
   stok_mobil: 'stok_mobil',
+  stok_qnb_ayarlar: 'stok_qnb',
+  stok_qnb_belgeler: 'stok_qnb',
+  stok_qnb_belge_satirlari: 'stok_qnb',
+  stok_qnb_loglar: 'stok_qnb',
+  stok_qnb_cari_sorgu: 'stok_qnb',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -271,6 +276,11 @@ const ALLOWED_COLUMNS = {
   stok_zimmetler: ['zimmet_no','demirbas_id','demirbas_adi','varlik_kodu','personel_id','personel_adi','saha_id','saha_adi','teslim_tarihi','termin_tarihi','teslim_notu','iade_tarihi','iade_notu','durum'],
   stok_etiket_fisleri: ['fis_no','tarih','kullanici','dizayn','satirlar_json','toplam_etiket','durum','is_deleted'],
   stok_excel_yuklemeler: ['yukleme_no','dosya_adi','yukleyen','depo_id','depo_adi','olusan_fis_id','olusan_fis_no','satir_toplam','satir_yeni','satir_atlanan','durum','tarih','is_deleted'],
+  stok_qnb_ayarlar: ['ortam','genel_url','efatura_url','earsiv_url','eirsaliye_url','api_kullanici','api_sifre','firma_unvan','vkn','vergi_dairesi','adres','il','ilce','eposta','telefon','para_birimi','log_saklama_gun','gecici_eslesme_gun','alis_fiyat_gecmisine_isle','aktif'],
+  stok_qnb_belgeler: ['belge_no','yon','tur','cari_id','cari_adi','vkn','tarih','tutar','durum','uuid','dosya_url','kaynak_fis_id','kaynak_fis_no','stok_fis_id','stok_fis_no','satir_sayisi','aciklama','is_deleted'],
+  stok_qnb_belge_satirlari: ['belge_id','satici_urun_adi','satici_kodu','miktar','birim','birim_fiyat','eslesen_urun_id','eslesen_urun_adi'],
+  stok_qnb_loglar: ['tarih','islem','durum','belge_id','mesaj'],
+  stok_qnb_cari_sorgu: ['cari_id','cari_adi','vkn','tip','durum','alici_etiketi','aktif','tarih'],
 };
 
 // Zorunlu alanlar

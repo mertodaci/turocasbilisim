@@ -2508,7 +2508,7 @@ app.post('/api/ik/zam-uygula', authMiddleware, (req, res) => {
   const deger = Number(b.deger);
   if (!Number.isFinite(deger)) return res.status(400).json({ error: 'Geçerli bir değer girin' });
 
-  const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'"];
+  const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'", "(status IS NULL OR status != 'pasif')"];
   const params = [];
   if (hedef === 'tek_personel') { if (!b.personel_id) return res.status(400).json({ error: 'Personel seçin' }); cond.push('id=?'); params.push(b.personel_id); }
   else if (hedef === 'meslek_grubu') { if (!b.meslek_kodu) return res.status(400).json({ error: 'Meslek kodu seçin' }); cond.push('meslek_kodu=?'); params.push(b.meslek_kodu); }
@@ -2588,6 +2588,8 @@ app.post('/api/ik/vardiya-transfer', authMiddleware, (req, res) => {
   if (!v) return res.status(404).json({ error: 'Vardiya bulunamadı' });
   try {
     const now = new Date().toISOString();
+    const bugun = now.slice(0, 10);
+    const gelecek = transfer_tarihi > bugun;   // ileri tarihli transfer: yalnız tarihsel kayıt, vardiya_id bugün değişmez
     const ins = db.prepare(`INSERT INTO ik_vardiya_atamalari (id, personel_id, personel_adi, vardiya_id, vardiya_adi, baslangic_tarihi, aciklama, created_by, created_date)
       VALUES (?,?,?,?,?,?,?,?,?)`);
     let n = 0;
@@ -2596,11 +2598,11 @@ app.post('/api/ik/vardiya-transfer', authMiddleware, (req, res) => {
         const emp = db.prepare('SELECT id, full_name FROM employees WHERE id=?').get(pid);
         if (!emp) continue;
         ins.run(_stokUUID(), pid, emp.full_name, v.id, v.ad, transfer_tarihi, aciklama || null, req.user.email, now);
-        db.prepare('UPDATE employees SET vardiya_id=?, updated_date=? WHERE id=?').run(v.id, now, pid);
+        if (!gelecek) db.prepare('UPDATE employees SET vardiya_id=?, updated_date=? WHERE id=?').run(v.id, now, pid);
         n++;
       }
     })();
-    res.json({ ok: true, transfer: n });
+    res.json({ ok: true, transfer: n, ileri_tarihli: gelecek });
   } catch (err) { console.error('[ik] vardiya transfer:', err); res.status(500).json({ error: err.message }); }
 });
 
@@ -2641,9 +2643,9 @@ function ikGunPuantajHesapla(emp, tarih, ctx) {
   const d = new Date(tarih + 'T00:00:00');
   const haftaGunu = d.getDay(); // 0 pazar, 6 cumartesi
 
-  // 1) İzin/rapor var mı?
+  // 1) İzin/rapor var mı? (yalnız ONAYLI izinler puantaja yansır)
   const izin = db.prepare(`SELECT leave_type FROM leave_requests
-    WHERE employee_id=? AND status NOT IN ('reddedildi','iptal','beklemede')
+    WHERE employee_id=? AND status='onaylandi'
       AND date(start_date) <= date(?) AND date(end_date) >= date(?) LIMIT 1`).get(emp.id, tarih, tarih);
 
   // 2) Card log hareketleri (o güne ait)
@@ -2674,6 +2676,9 @@ function ikGunPuantajHesapla(emp, tarih, ctx) {
     durum = tatil.tip === 'yarim' ? 'RT' : 'T'; kayitTipi = 'tatil'; ozet = tatil.ad;
   } else if (haftaGunu === 0) {
     durum = 'H'; kayitTipi = 'tatil'; ozet = 'Hafta tatili';
+  } else if (haftaGunu === 6 && ctx.cumartesiTatil !== false) {
+    // Cumartesi çalışmayan işyeri (varsayılan): kart geçişi yoksa hafta tatili — "Gelmedi" DEĞİL.
+    durum = 'CT'; kayitTipi = 'tatil'; ozet = 'Cumartesi (çalışılmıyor)';
   } else {
     durum = 'E'; ozet = 'Gelmedi';
   }
@@ -2695,21 +2700,27 @@ function ikGunPuantajHesapla(emp, tarih, ctx) {
 app.post('/api/ik/puantaj/hesapla', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const { tarih, t1, t2, sube_id, force } = req.body || {};
-  const bas = t1 || tarih, bit = t2 || tarih;
+  const bas = t1 || tarih;
+  let bit = t2 || tarih;
   if (!bas || !bit) return res.status(400).json({ error: 'Tarih veya tarih aralığı gerekli' });
+  // Gelecek günler için puantaj üretilmez (hepsi "Gelmedi" olurdu) — bitişi bugüne sınırla.
+  const bugun = new Date().toISOString().slice(0, 10);
+  if (bit > bugun) bit = bugun;
+  if (bas > bit) return res.status(400).json({ error: 'Başlangıç bugünden ileride — üretilecek gün yok' });
 
   const vardiyaMap = {};
   for (const v of db.prepare('SELECT * FROM ik_vardiyalar').all()) vardiyaMap[v.id] = v;
   const defV = db.prepare('SELECT id FROM ik_vardiyalar WHERE varsayilan=1 LIMIT 1').get();
   const tatilMap = {};
   for (const t of db.prepare("SELECT tarih, ad, tip FROM ik_resmi_tatiller WHERE aktif=1").all()) tatilMap[t.tarih] = t;
+  const gAyar = db.prepare('SELECT cumartesi_tatil FROM ik_hakedis_genel_ayar WHERE id=1').get();
 
   const empCond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'", "(status IS NULL OR status != 'pasif')"];
   const empParams = [];
   if (sube_id) { empCond.push('sube_id=?'); empParams.push(sube_id); }
   const emps = db.prepare(`SELECT id, full_name, sube_id, vardiya_id, hire_date, exit_date FROM employees WHERE ${empCond.join(' AND ')}`).all(...empParams);
 
-  const ctx = { vardiyaMap, tatilMap, defVardiyaId: defV?.id || null };
+  const ctx = { vardiyaMap, tatilMap, defVardiyaId: defV?.id || null, cumartesiTatil: gAyar ? gAyar.cumartesi_tatil !== 0 : true };
   const ins = db.prepare(`INSERT INTO ik_puantaj
     (id, personel_id, personel_adi, tarih, sube_id, vardiya_id, giris_saat, cikis_saat, mesai_dk, gec_dk, erken_dk, eksik_dk, fazla_mesai_dk, durum_kodu, kayit_tipi, ozet, kaynak, created_by, created_date, updated_date)
     VALUES (@id,@personel_id,@personel_adi,@tarih,@sube_id,@vardiya_id,@giris_saat,@cikis_saat,@mesai_dk,@gec_dk,@erken_dk,@eksik_dk,@fazla_mesai_dk,@durum_kodu,@kayit_tipi,@ozet,'motor',@by,@now,@now)

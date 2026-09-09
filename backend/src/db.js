@@ -455,6 +455,9 @@ function initDb() {
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_aciklama TEXT",
     "ALTER TABLE employees ADD COLUMN vip_mi INTEGER DEFAULT 0",
     "ALTER TABLE employees ADD COLUMN vardiya_id TEXT",
+    // İK Faz 12 gözden geçirme: cumartesi çalışılmayan işyeri varsayılanı + iç borç aylık taksiti
+    "ALTER TABLE ik_hakedis_genel_ayar ADD COLUMN cumartesi_tatil INTEGER DEFAULT 1",
+    "ALTER TABLE ik_ic_borclar ADD COLUMN aylik_taksit REAL DEFAULT 0",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -1064,6 +1067,7 @@ function initDb() {
         ticket_izin_rapor_kes INTEGER DEFAULT 1,
         ticket_rt_kesme INTEGER DEFAULT 1,
         ticket_cumartesi_yemek_kurali INTEGER DEFAULT 1,
+        cumartesi_tatil INTEGER DEFAULT 1,          -- 1: cumartesi çalışılmıyor (kart yoksa CT) · 0: çalışılıyor (kart yoksa E)
         updated_date TEXT DEFAULT (datetime('now'))
       );
       INSERT OR IGNORE INTO ik_hakedis_genel_ayar (id) VALUES (1);

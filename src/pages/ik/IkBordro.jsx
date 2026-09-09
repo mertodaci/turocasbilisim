@@ -133,7 +133,7 @@ export default function IkBordro() {
                   <td className="px-3 py-2 text-right">{nf(r.fazla_mesai + r.bayram)}</td>
                   <td className="px-3 py-2 text-right">{nf(r.yol + r.yemek + r.ticket)}</td>
                   <td className="px-3 py-2 text-right font-medium">{nf(r.resmi_net)}</td>
-                  <td className="px-3 py-2 text-right text-red-600">{nf(r.avans + r.bes + r.diger_kesinti + r.personel_masrafi + r.borc_toplam)}</td>
+                  <td className="px-3 py-2 text-right text-red-600">{nf(r.avans + r.icra + r.bes + r.diger_kesinti + r.personel_masrafi + r.borc_toplam)}</td>
                   <td className="px-3 py-2 text-right">{nf(r.sahsi_hesap_net)}</td>
                   <td className="px-3 py-2 text-right font-bold">{nf(r.genel_net)}</td>
                   <td className="px-3 py-2">

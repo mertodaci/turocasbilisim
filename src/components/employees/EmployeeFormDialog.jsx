@@ -173,15 +173,13 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
       payload.education_department = form.education_history[0].department || "";
       payload.graduation_date = form.education_history[0].graduation_date || "";
     }
-    // Özlük & Ücret — sayısallaştır + şube/bölüm adını denormalize et
+    // Özlük & Ücret — sayısallaştır (şube/bölüm adı denormalize edilmez; bordro sube_id ile JOIN eder)
     payload.aylik_ucret = Number(form.aylik_ucret) || 0;
     payload.ticket_aylik = Number(form.ticket_aylik) || 0;
     payload.sahsi_hesap_tutar = Number(form.sahsi_hesap_tutar) || 0;
     payload.emekli_mi = form.emekli_mi ? 1 : 0;
     payload.vip_mi = form.vip_mi ? 1 : 0;
     payload.sahsi_hesap_aktif = form.sahsi_hesap_aktif ? 1 : 0;
-    payload.sube_adi = subeler.find((s) => s.id === form.sube_id)?.ad || null;
-    payload.bolum_adi = bolumler.find((b) => b.id === form.bolum_id)?.ad || null;
     onSubmit(payload);
   };
 

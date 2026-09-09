@@ -1193,7 +1193,7 @@ app.get('/api/stok/partiler', authMiddleware, (req, res) => {
     if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
     if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
     if (durum === 'acik') cond.push("durum!='kapali' AND kalan_bakiye>0");
-    else if (durum) { cond.push('durum=?'); params.push(durum); }
+    else if (durum && durum !== 'hepsi') { cond.push('durum=?'); params.push(durum); }
     if (skt1) { cond.push('skt>=?'); params.push(skt1); }
     if (skt2) { cond.push('skt<=?'); params.push(skt2); }
     if (q) { cond.push('(lot_no LIKE ? OR urun_adi LIKE ? OR tedarikci_adi LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }

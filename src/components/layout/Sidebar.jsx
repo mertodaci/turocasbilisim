@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Lightbulb, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, TrendingUp, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2 } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -13,11 +13,10 @@ import { useLanguage } from "@/lib/LanguageContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
 
 import { flowApi } from "@/api/flowApiClient";
+import { useQuery } from "@tanstack/react-query";
 
 export const allNavItems = [
 { labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici", "satis"] },
-{ labelKey: "yonetici_masasi", path: "/yonetici-masasi", icon: LayoutDashboard, roles: ["admin", "yonetici"] },
-{ labelKey: "calendar", path: "/takvim", icon: CalendarDays, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
 
 {
   labelKey: "taskqube_v3", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
@@ -32,12 +31,8 @@ export const allNavItems = [
 {
   labelKey: "support_center", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"],
   children: [
-    { labelKey: "control_panel", path: "/takvim-v2", icon: CalendarDays, roles: ["admin", "yonetici", "kullanici"] },
-    { labelKey: "work_tracking", path: "/is-takip", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici"] },
-    { labelKey: "activities", path: "/aktiviteler", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "satis"] },
     { labelKey: "messages", path: "/mesajlar", icon: MessageCircle, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
     { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici", "satis"] },
-    { labelKey: "project_planning", path: "/proje-planlama", icon: BarChart3, roles: ["admin", "yonetici"] },
     { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik", "satis"] },
     { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
   ]
@@ -76,14 +71,6 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "satis", path: null, icon: TrendingUp, roles: ["admin", "yonetici", "satis"],
-  children: [
-    { labelKey: "satis_masasi", path: "/satis-raporlari", icon: BarChart3, roles: ["admin", "yonetici", "satis"] },
-    { labelKey: "satis_aktivite_ekle", path: "/satis-aktivite-ekle", icon: ClipboardList, roles: ["admin", "yonetici", "satis"] },
-    { labelKey: "satis_teklifleri", path: "/satis-teklifleri", icon: FileText, roles: ["admin", "yonetici", "satis"] }
-  ]
-},
-{
   labelKey: "reports", path: null, icon: BarChart3, roles: ["admin", "yonetici", "kullanici", "ik"],
   children: [
 
@@ -102,9 +89,6 @@ export const allNavItems = [
     { labelKey: "announcements", path: "/duyurular", icon: Megaphone, roles: ["admin", "yonetici"] },
     { labelKey: "app_version", path: "/versiyon", icon: Info, roles: ["admin", "yonetici", "kullanici", "ik", "stajer", "musteri"] }
   ]
-},
-{
-  labelKey: "ideas", path: "/fikirler", icon: Lightbulb, roles: ["admin", "yonetici", "kullanici"]
 },
 {
   labelKey: "stok_yonetimi", path: null, icon: Boxes, roles: ["admin", "yonetici", "kullanici"],
@@ -148,6 +132,80 @@ function getAllLeafItems() {
   }
   walk(allNavItems);
   return items;
+}
+
+function SidebarUserMenu({ collapsed }) {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (open) { const t = setTimeout(() => setOpen(false), 5000); return () => clearTimeout(t); } }, [open]);
+
+  const { data: employeeRecord } = useQuery({
+    queryKey: ["sidebar-employee", user?.email],
+    queryFn: () => flowApi.entities.Employee.filter({ email: user.email }),
+    enabled: !!user?.email,
+    select: (data) => data[0],
+  });
+
+  const roleLabels = { admin: "Admin", yonetici: "Yönetici", kullanici: "Kullanıcı" };
+  const roleLabel = roleLabels[user?.role] || user?.role || "";
+
+  return (
+    <div className="relative">
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 bottom-full mb-2 w-56 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="px-4 py-3 border-b">
+              <p className="text-sm font-semibold truncate">{user?.full_name || "Kullanıcı"}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-xs text-primary font-medium mt-0.5">{roleLabel}</p>
+            </div>
+            <div className="p-1">
+              <Link
+                to="/profil"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors"
+              >
+                <UserCircle2 className="w-4 h-4 text-muted-foreground" />
+                Profilim
+              </Link>
+              <button
+                onClick={() => { setOpen(false); logout(); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-sidebar-accent transition-colors",
+          collapsed && "justify-center"
+        )}
+      >
+        <div className="w-7 h-7 rounded-lg bg-sidebar-primary/20 flex items-center justify-center overflow-hidden shrink-0">
+          {employeeRecord?.avatar_url ? (
+            <img src={employeeRecord.avatar_url} alt={user?.full_name} className="w-full h-full object-cover" />
+          ) : (
+            <UserCircle2 className="w-4 h-4 text-sidebar-primary" />
+          )}
+        </div>
+        {!collapsed && (
+          <>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-xs font-semibold leading-tight text-sidebar-foreground truncate">{user?.full_name || user?.email}</p>
+              <p className="text-[10px] text-sidebar-foreground/50 leading-tight">{roleLabel}</p>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-sidebar-foreground/50 shrink-0" />
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
 
 export default function Sidebar() {
@@ -437,11 +495,12 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {!collapsed && (
-          <div className="px-6 py-4 border-t border-sidebar-border/30">
-            <p className="text-[10px] text-sidebar-foreground/30 text-center">Turocas v3.0</p>
-          </div>
-        )}
+        <div className={cn("px-2 py-2 border-t border-sidebar-border/30", collapsed && "px-1")}>
+          <SidebarUserMenu collapsed={collapsed} />
+          {!collapsed && (
+            <p className="text-[10px] text-sidebar-foreground/30 text-center mt-2">Turocas v3.0</p>
+          )}
+        </div>
       </aside>
     </>
   );

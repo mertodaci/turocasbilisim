@@ -22,9 +22,7 @@ const CardManagement = lazy(() => import('./pages/CardManagement'));
 const AddActivity = lazy(() => import('./pages/AddActivity'));
 const AddSalesActivity = lazy(() => import('./pages/AddSalesActivity'));
 const EmployeeDetail = lazy(() => import('./pages/EmployeeDetail'));
-const CalendarView = lazy(() => import('./pages/CalendarView'));
 const Profile = lazy(() => import('./pages/Profile'));
-const Ideas = lazy(() => import('./pages/Ideas'));
 const Customers = lazy(() => import('./pages/Customers'));
 const CustomerMap = lazy(() => import('./pages/CustomerMap'));
 const Activities = lazy(() => import('./pages/Activities'));
@@ -34,7 +32,6 @@ const Todos = lazy(() => import('./pages/Todos'));
 const Messages = lazy(() => import('./pages/Messages'));
 const LeaveRequests = lazy(() => import('./pages/LeaveRequests'));
 const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
-const CalendarV2 = lazy(() => import('./pages/CalendarV2'));
 const EmployeeReport = lazy(() => import('./pages/EmployeeReport'));
 const OrgChart = lazy(() => import('./pages/OrgChart'));
 const QuickReport = lazy(() => import('./pages/QuickReport'));
@@ -53,10 +50,8 @@ const MyLeaveRequests = lazy(() => import('./pages/MyLeaveRequests'));
 const IKLeaveRequests = lazy(() => import('./pages/IKLeaveRequests'));
 const IKExpenseRequests = lazy(() => import('./pages/IKExpenseRequests'));
 const LeaveAllowances = lazy(() => import('./pages/LeaveAllowances'));
-const ProjectPlanning = lazy(() => import('./pages/ProjectPlanning'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const SalesReportPage = lazy(() => import('./pages/SalesReportPage'));
-const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'));
 const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
@@ -163,11 +158,9 @@ const AuthenticatedApp = () => {
       <Route path="/landing" element={<Navigate to="/" replace />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={guard("dashboard", <Dashboard />)} />
-        <Route path="/takvim" element={guard("calendar", <CalendarView />)} />
         <Route path="/aktivite-ekle" element={guard("add_activity", <AddActivity />)} />
         <Route path="/satis-aktivite-ekle" element={guard("satis_aktivite_ekle", <AddSalesActivity />)} />
         <Route path="/profil" element={<Profile />} />
-        <Route path="/fikirler" element={guard("ideas", <Ideas />)} />
         <Route path="/musteriler" element={guard("customers", <Customers />)} />
         <Route path="/musteriler-haritasi" element={guard("customer_map", <CustomerMap />)} />
         <Route path="/aktiviteler" element={guard("activities", <Activities />)} />
@@ -180,14 +173,11 @@ const AuthenticatedApp = () => {
         <Route path="/ik-izin-yonetimi" element={guard("ik_leave_requests", <IKLeaveRequests />)} />
         <Route path="/ik-harcama-yonetimi" element={guard("ik_expense_requests", <IKExpenseRequests />)} />
         <Route path="/izin-haklari" element={guard("leave_allowances", <LeaveAllowances />)} />
-        <Route path="/proje-planlama" element={guard("project_planning", <ProjectPlanning />)} />
         <Route path="/satis-teklifleri" element={guard("satis_teklifleri", <OffersPage />)} />
         <Route path="/satis-raporlari" element={guard("satis_raporlari", <SalesReportPage />)} />
-        <Route path="/yonetici-masasi" element={guard("yonetici_masasi", <ExecutiveDashboard />)} />
         <Route path="/izin-turleri" element={guard("leave_types", <LeaveTypes />)} />
         <Route path="/harcamalar" element={guard("expenses", <Expenses />)} />
         <Route path="/kisisel-takvim" element={guard("personal_calendar", <PersonalCalendar />)} />
-        <Route path="/takvim-v2" element={guard("personal_calendar", <CalendarV2 />)} />
         <Route path="/calisanlar" element={guard("employees", <Employees />)} />
         <Route path="/calisan/:id" element={guard("employees", <EmployeeDetail />)} />
         <Route path="/calisan-raporu" element={guard("employee_report", <EmployeeReport />)} />

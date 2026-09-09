@@ -66,6 +66,29 @@ const TaskQubeDashboard = lazy(() => import('./pages/TaskQubeDashboard'));
 const TaskQubeTickets = lazy(() => import('./pages/TaskQubeTickets'));
 const TaskQubeKanban = lazy(() => import('./pages/TaskQubeKanban'));
 const TaskQubeSettings = lazy(() => import('./pages/TaskQubeSettings'));
+// Stok / Depo Yönetimi — Faz 1: Tanımlar
+const StokUrunler = lazy(() => import('./pages/stok/StokUrunler'));
+const StokGruplar = lazy(() => import('./pages/stok/StokGruplar'));
+const StokDepolar = lazy(() => import('./pages/stok/StokDepolar'));
+const StokRaflar = lazy(() => import('./pages/stok/StokRaflar'));
+const StokUrunRaf = lazy(() => import('./pages/stok/StokUrunRaf'));
+const StokSahalar = lazy(() => import('./pages/stok/StokSahalar'));
+const StokTedarikciler = lazy(() => import('./pages/stok/StokTedarikciler'));
+const StokGiris = lazy(() => import('./pages/stok/StokGiris'));
+const StokCikis = lazy(() => import('./pages/stok/StokCikis'));
+const StokTransfer = lazy(() => import('./pages/stok/StokTransfer'));
+const StokFisListesi = lazy(() => import('./pages/stok/StokFisListesi'));
+const StokPartiTakibi = lazy(() => import('./pages/stok/StokPartiTakibi'));
+const StokSayim = lazy(() => import('./pages/stok/StokSayim'));
+const StokTalep = lazy(() => import('./pages/stok/StokTalep'));
+const StokRaporlar = lazy(() => import('./pages/stok/StokRaporlar'));
+const StokSatinAlma = lazy(() => import('./pages/stok/StokSatinAlma'));
+const StokZimmet = lazy(() => import('./pages/stok/StokZimmet'));
+const StokDashboard = lazy(() => import('./pages/stok/StokDashboard'));
+const StokMobil = lazy(() => import('./pages/stok/StokMobil'));
+const StokEtiket = lazy(() => import('./pages/stok/StokEtiket'));
+const StokExcel = lazy(() => import('./pages/stok/StokExcel'));
+const StokQnb = lazy(() => import('./pages/stok/StokQnb'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -191,6 +214,38 @@ const AuthenticatedApp = () => {
         <Route path="/taskqube-v3/tickets" element={guard("taskqube_tickets", <TaskQubeTickets />)} />
         <Route path="/taskqube-v3/kanban" element={guard("taskqube_kanban", <TaskQubeKanban />)} />
         <Route path="/taskqube-v3/tanimlar" element={guard("taskqube_settings", <TaskQubeSettings />)} />
+        {/* Stok / Depo Yönetimi — Faz 1: Tanımlar */}
+        <Route path="/stok/urunler" element={guard("stok_urunler", <StokUrunler />)} />
+        <Route path="/stok/gruplar" element={guard("stok_gruplar", <StokGruplar />)} />
+        <Route path="/stok/depolar" element={guard("stok_depolar", <StokDepolar />)} />
+        <Route path="/stok/raflar" element={guard("stok_raflar", <StokRaflar />)} />
+        <Route path="/stok/urun-raf" element={guard("stok_urun_raf", <StokUrunRaf />)} />
+        <Route path="/stok/sahalar" element={guard("stok_sahalar", <StokSahalar />)} />
+        <Route path="/stok/tedarikciler" element={guard("stok_tedarikciler", <StokTedarikciler />)} />
+        {/* Faz 2: Hareket fişleri */}
+        <Route path="/stok/giris" element={guard("stok_giris", <StokGiris />)} />
+        <Route path="/stok/cikis" element={guard("stok_cikis", <StokCikis />)} />
+        <Route path="/stok/transfer" element={guard("stok_transfer", <StokTransfer />)} />
+        <Route path="/stok/fisler" element={guard("stok_fisler", <StokFisListesi />)} />
+        {/* Faz 3: FIFO / parti */}
+        <Route path="/stok/partiler" element={guard("stok_parti_takibi", <StokPartiTakibi />)} />
+        {/* Faz 4: Sayım */}
+        <Route path="/stok/sayim" element={guard("stok_sayim", <StokSayim />)} />
+        {/* Faz 5: Malzeme Talep */}
+        <Route path="/stok/talep" element={guard("stok_talep", <StokTalep />)} />
+        {/* Faz 6: Raporlar */}
+        <Route path="/stok/raporlar" element={guard("stok_raporlar", <StokRaporlar />)} />
+        {/* Faz 7: Satın Alma */}
+        <Route path="/stok/satin-alma" element={guard("stok_satinalma", <StokSatinAlma />)} />
+        {/* Faz 8: Zimmet */}
+        <Route path="/stok/zimmet" element={guard("stok_zimmet", <StokZimmet />)} />
+        {/* Faz 9-11: Mobil, Etiket, Excel, Dashboard */}
+        <Route path="/stok" element={guard("stok_dashboard", <StokDashboard />)} />
+        <Route path="/stok/mobil" element={guard("stok_mobil", <StokMobil />)} />
+        <Route path="/stok/etiket" element={guard("stok_etiket", <StokEtiket />)} />
+        <Route path="/stok/excel" element={guard("stok_excel", <StokExcel />)} />
+        {/* Faz 13: QNB e-Belge */}
+        <Route path="/stok/qnb" element={guard("stok_qnb", <StokQnb />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

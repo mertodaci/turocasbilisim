@@ -7,7 +7,9 @@ const { ensureUserForEmployee } = require('./userProvision');
 const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
-const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities'];
+const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
+  'stok_personeller','stok_demirbaslar'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -25,6 +27,7 @@ const JSON_COLUMNS = {
   tq_kanban_boards: ['columns'],
   tq_ticket_statuses: ['board_ids'],
   hakedisler: ['tahsilat'],
+  stok_etiket_fisleri: ['satirlar_json'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -114,6 +117,43 @@ const TABLE_TO_MODULE = {
   customer_projects: 'customer_projects',
   sales_activities: 'satis',
   hakedisler: 'hakedisler',
+  // ── Stok / Depo Yönetimi ──
+  stok_urunler: 'stok_urunler',
+  stok_urun_gruplari: 'stok_gruplar',
+  stok_urun_birimleri: 'stok_urunler',
+  stok_urun_barkodlari: 'stok_urunler',
+  stok_depolar: 'stok_depolar',
+  stok_raflar: 'stok_raflar',
+  stok_urun_raf: 'stok_urun_raf',
+  stok_sahalar: 'stok_sahalar',
+  stok_teslimat_adresleri: 'stok_depolar',
+  stok_fisler: 'stok_fisler',
+  stok_fis_satirlari: 'stok_fisler',
+  stok_hareketler: 'stok_fisler',
+  // Tablosu olmayan modül anahtarları (checkPermission bunlarla da çağrılıyor)
+  stok_giris: 'stok_giris',
+  stok_cikis: 'stok_cikis',
+  stok_transfer: 'stok_transfer',
+  stok_partiler: 'stok_parti_takibi',
+  stok_parti_tahsis: 'stok_parti_takibi',
+  stok_sayimlar: 'stok_sayim',
+  stok_sayim_satirlari: 'stok_sayim',
+  stok_talepler: 'stok_talep',
+  stok_talep_satirlari: 'stok_talep',
+  stok_urun_tedarikci: 'stok_satinalma',
+  stok_fiyat_gecmisi: 'stok_satinalma',
+  stok_personeller: 'stok_zimmet',
+  stok_demirbaslar: 'stok_zimmet',
+  stok_zimmetler: 'stok_zimmet',
+  stok_etiket_fisleri: 'stok_etiket',
+  stok_excel_yuklemeler: 'stok_excel',
+  stok_dashboard: 'stok_dashboard',
+  stok_mobil: 'stok_mobil',
+  stok_qnb_ayarlar: 'stok_qnb',
+  stok_qnb_belgeler: 'stok_qnb',
+  stok_qnb_belge_satirlari: 'stok_qnb',
+  stok_qnb_loglar: 'stok_qnb',
+  stok_qnb_cari_sorgu: 'stok_qnb',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -180,7 +220,7 @@ function effortLogOwnedBy(row, user) {
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
   employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_taskqube'],
-  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date'],
+  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
   activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','taskqube_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
   leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],
@@ -210,6 +250,37 @@ const ALLOWED_COLUMNS = {
   tq_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
   sales_activities: ['customer_id','customer_name','activity_type','contact_person','date','start_time','end_time','notes','outcome','next_visit_date','opportunity_id','created_by','employee_id','employee_name','duration_minutes','location','parent_activity_id','note_type','title','valid_until','deal_status','products','amount','currency','is_deleted'],
   hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
+  // ── Stok / Depo Yönetimi — Faz 1 ──
+  stok_urun_gruplari: ['ad','ust_grup_id','ust_grup_adi','sira','aktif'],
+  stok_urunler: ['kod','ad','barkod','grup_id','grup_adi','uretici_kodu','uretici','urun_tipi','marka','model','ana_birim','kdv','alis_fiyati','satis_fiyati','varsayilan_raf_omru_ay','skt_uyari_gun','el_aleti_takip','seri_no_takip','gorsel_url','aktif','notlar','is_deleted'],
+  stok_urun_birimleri: ['urun_id','birim_adi','carpan'],
+  stok_urun_barkodlari: ['urun_id','barkod','birim'],
+  stok_depolar: ['kod','ad','turu','adres','plaka','sorumlu_personel_id','isletim_modu','aktif','kural_giris','kural_cikis','kural_transfer','sira','notlar','is_deleted'],
+  stok_raflar: ['depo_id','depo_adi','kod','ad','tip','kapasite','aktif','is_deleted'],
+  stok_urun_raf: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','min_seviye','max_seviye','varsayilan','notlar'],
+  stok_sahalar: ['kod','ad','adres','yetkili','telefon','customer_id','aktif','notlar','is_deleted'],
+  stok_teslimat_adresleri: ['baslik','adres','customer_id','saha_id'],
+  stok_fisler: ['fis_no','tip','tarih','durum','cari_id','cari_adi','kaynak_depo_id','kaynak_depo_adi','hedef_depo_id','hedef_depo_adi','hedef_saha_id','hedef_saha_adi','fatura_no','irsaliye_no','belge_no','aciklama','teslim_eden','teslim_alan','gonderim_adresi','kaynak_ref_tip','kaynak_ref_id','satir_sayisi','toplam_miktar','olusturan','onaylayan','onay_tarihi','is_deleted'],
+  stok_fis_satirlari: ['fis_id','urun_id','urun_adi','urun_kodu','barkod','kaynak_raf_id','kaynak_raf_adi','hedef_raf_id','hedef_raf_adi','birim','carpan','miktar','miktar_ana_birim','birim_fiyat','tutar','icerik_aciklamasi','lot_no','uretim_tarihi','raf_omru_ay','kontrol_tarihi','skt','raf_omru_durumu','seri_no'],
+  stok_hareketler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','tip','miktar','birim_maliyet','fis_id','fis_no','fis_tip','fis_satir_id','cari_id','saha_id','tarih'],
+  stok_partiler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','lot_no','uretim_tarihi','skt','kontrol_tarihi','giris_miktar','kalan_bakiye','alis_maliyeti','tedarikci_cari_id','tedarikci_adi','durum','kaynak_tip','kaynak_fis_id','kaynak_fis_no','kaynak_fis_satir_id','giris_tarihi'],
+  stok_parti_tahsis: ['parti_id','cikis_fis_id','cikis_fis_no','cikis_fis_satir_id','urun_id','depo_id','dusulen_miktar','maliyet','tarih'],
+  stok_sayimlar: ['sayim_no','depo_id','depo_adi','tarih','tip','durum','aciklama','satir_sayisi','farkli_satir','olusturan','onaylayan','tamamlanma_tarihi','duzeltme_giris_fis_id','duzeltme_cikis_fis_id','is_deleted'],
+  stok_sayim_satirlari: ['sayim_id','urun_id','urun_adi','urun_kodu','raf_id','raf_adi','sistem_miktar','sayilan_miktar','fark','sayan','not_'],
+  stok_talepler: ['talep_no','talep_eden','departman','hedef_saha_id','hedef_saha_adi','kaynak_depo_id','kaynak_depo_adi','is_emri_no','tarih','ihtiyac_tarihi','oncelik','durum','aciklama','satir_sayisi','olusturan','onaylayan','onay_tarihi','is_deleted'],
+  stok_talep_satirlari: ['talep_id','urun_id','urun_adi','urun_kodu','miktar','birim','karsilanan_miktar','not_'],
+  stok_urun_tedarikci: ['urun_id','urun_adi','cari_id','cari_adi','tedarikci_urun_kodu','marka','model','birim','birim_fiyat','para_birimi','fiyat_tarihi','teslim_suresi_gun','min_siparis','stok_durumu','tercih_edilen','aktif','not_'],
+  stok_fiyat_gecmisi: ['urun_id','urun_adi','cari_id','cari_adi','alis_fiyati','para_birimi','tarih','kaynak','fis_no','not_'],
+  stok_personeller: ['kod','ad_soyad','telefon','eposta','departman','employee_id','aktif','not_','is_deleted'],
+  stok_demirbaslar: ['varlik_kodu','urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','seri_no','barkod','alis_tarihi','garanti_bitis','kondisyon','durum','not_','is_deleted'],
+  stok_zimmetler: ['zimmet_no','demirbas_id','demirbas_adi','varlik_kodu','personel_id','personel_adi','saha_id','saha_adi','teslim_tarihi','termin_tarihi','teslim_notu','iade_tarihi','iade_notu','durum'],
+  stok_etiket_fisleri: ['fis_no','tarih','kullanici','dizayn','satirlar_json','toplam_etiket','durum','is_deleted'],
+  stok_excel_yuklemeler: ['yukleme_no','dosya_adi','yukleyen','depo_id','depo_adi','olusan_fis_id','olusan_fis_no','satir_toplam','satir_yeni','satir_atlanan','durum','tarih','is_deleted'],
+  stok_qnb_ayarlar: ['ortam','genel_url','efatura_url','earsiv_url','eirsaliye_url','api_kullanici','api_sifre','firma_unvan','vkn','vergi_dairesi','adres','il','ilce','eposta','telefon','para_birimi','log_saklama_gun','gecici_eslesme_gun','alis_fiyat_gecmisine_isle','aktif'],
+  stok_qnb_belgeler: ['belge_no','yon','tur','cari_id','cari_adi','vkn','tarih','tutar','durum','uuid','dosya_url','kaynak_fis_id','kaynak_fis_no','stok_fis_id','stok_fis_no','satir_sayisi','aciklama','is_deleted'],
+  stok_qnb_belge_satirlari: ['belge_id','satici_urun_adi','satici_kodu','miktar','birim','birim_fiyat','eslesen_urun_id','eslesen_urun_adi'],
+  stok_qnb_loglar: ['tarih','islem','durum','belge_id','mesaj'],
+  stok_qnb_cari_sorgu: ['cari_id','cari_adi','vkn','tip','durum','alici_etiketi','aktif','tarih'],
 };
 
 // Zorunlu alanlar
@@ -245,6 +316,24 @@ const REQUIRED_FIELDS = {
   announcements: ['title','content'],
   hakedisler: ['musteri'],
   // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
+  stok_urun_gruplari: ['ad'],
+  stok_urunler: ['ad'],
+  stok_urun_birimleri: ['urun_id','birim_adi'],
+  stok_urun_barkodlari: ['urun_id','barkod'],
+  stok_depolar: ['ad'],
+  stok_raflar: ['depo_id'],
+  stok_urun_raf: ['urun_id','depo_id'],
+  stok_sahalar: ['ad'],
+  stok_teslimat_adresleri: ['adres'],
+  stok_fisler: ['tip'],
+  stok_fis_satirlari: ['fis_id'],
+  stok_sayimlar: ['depo_id'],
+  stok_sayim_satirlari: ['sayim_id'],
+  stok_talep_satirlari: ['talep_id'],
+  stok_urun_tedarikci: ['urun_id','cari_id'],
+  stok_fiyat_gecmisi: ['urun_id'],
+  stok_personeller: ['ad_soyad'],
+  stok_demirbaslar: ['urun_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {
@@ -281,7 +370,8 @@ const ALLOWED_SORT_COLS = new Set([
   'id','created_date','updated_date','date','name','full_name','email','status',
   'title','sort_order','last_message_at','due_date','start_date','end_date',
   'priority','ticket_number','total_amount','day_count','half_day_period','offer_date','valid_until',
-  'employee_name','customer_name','activity_type','last_message_at'
+  'employee_name','customer_name','activity_type','last_message_at',
+  'kod','ad','sira','depo_adi','urun_adi','fis_no','tarih','tip','durum'
 ]);
 
 function createEntityRouter(tableName) {
@@ -553,6 +643,36 @@ function createEntityRouter(tableName) {
           const ticket = db.prepare('SELECT * FROM tq_tickets WHERE id = ?').get(created.ticket_id);
           if (ticket) notifyNewComment(parseJsonColumns('tq_comments', created), parseJsonColumns('tq_tickets', ticket), req.user);
         } catch (e) { console.error('[taskqubeNotify] yorum bildirimi hatasi:', e.message); }
+      }
+
+      // Stok: yeni depo olusturulunca otomatik "GENEL RAF" kaydi acilir
+      // (stok giris/cikis/transfer raf secilmezse bu rafi kullanir).
+      if (tableName === 'stok_depolar') {
+        try {
+          const now2 = new Date().toISOString();
+          db.prepare(`INSERT INTO stok_raflar (id, depo_id, depo_adi, kod, ad, tip, kapasite, aktif, created_by, created_date, updated_date)
+            VALUES (?, ?, ?, 'GENEL', 'GENEL RAF', 'STANDART', 0, 1, ?, ?, ?)`)
+            .run(uuidv4(), created.id, created.ad, req.user?.email || null, now2, now2);
+        } catch (e) { console.error('[stok] GENEL RAF olusturma hatasi:', e.message); }
+      }
+
+      // Stok: demirbaş / personel için otomatik kod
+      if (tableName === 'stok_demirbaslar' && (!created.varlik_kodu || !created.barkod)) {
+        try {
+          const seq = db.prepare("SELECT COUNT(*) c FROM stok_demirbaslar").get().c;
+          const vk = created.varlik_kodu || ('DMB-' + String(seq).padStart(6, '0'));
+          const bk = created.barkod || ('869' + String(Date.now()).slice(-10));
+          db.prepare("UPDATE stok_demirbaslar SET varlik_kodu=?, barkod=? WHERE id=?").run(vk, bk, created.id);
+          created.varlik_kodu = vk; created.barkod = bk;
+        } catch (e) { console.error('[stok] demirbas kod:', e.message); }
+      }
+      if (tableName === 'stok_personeller' && !created.kod) {
+        try {
+          const seq = 1000 + db.prepare("SELECT COUNT(*) c FROM stok_personeller").get().c;
+          const kod = 'PRS-' + String(seq).padStart(6, '0');
+          db.prepare("UPDATE stok_personeller SET kod=? WHERE id=?").run(kod, created.id);
+          created.kod = kod;
+        } catch (e) { console.error('[stok] personel kod:', e.message); }
       }
 
       res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });

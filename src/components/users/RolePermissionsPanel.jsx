@@ -28,6 +28,13 @@ const CATEGORIES = [
   { label: "Satış",            keys: ["satis", "satis_aktivite_ekle", "satis_teklifleri", "satis_raporlari"] },
   { label: "Raporlar",         keys: ["quick_report"] },
   { label: "Sistem Yönetimi",  keys: ["users", "app_version", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
+  { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_excel"] },
+  { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
+  { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_talep", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },
+  { label: "Stok — Raporlar", keys: ["stok_raporlar"] },
+  { label: "Stok — Satın Alma", keys: ["stok_satinalma"] },
+  { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
+  { label: "Stok — e-Belge", keys: ["stok_qnb"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

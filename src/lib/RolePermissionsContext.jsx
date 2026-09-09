@@ -52,6 +52,30 @@ export const MODULES = [
   { key: "yonetici_masasi",     label: "Yönetici Masası",        path: "/yonetici-masasi" },
   { key: "sozlesmeler",         label: "Sözleşmeler",            path: "/sozlesmeler" },
   { key: "hakedisler",          label: "Hakediş",                path: "/hakedisler" },
+  // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
+  { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
+  { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },
+  { key: "stok_depolar",        label: "Depolar",                path: "/stok/depolar" },
+  { key: "stok_raflar",         label: "Raf Tanımları",          path: "/stok/raflar" },
+  { key: "stok_urun_raf",       label: "Ürün - Raf Atama",       path: "/stok/urun-raf" },
+  { key: "stok_sahalar",        label: "Sahalar / Projeler",     path: "/stok/sahalar" },
+  { key: "stok_tedarikciler",   label: "Tedarikçiler",           path: "/stok/tedarikciler" },
+  // Faz 2: Hareket fişleri
+  { key: "stok_giris",          label: "Stok Giriş",             path: "/stok/giris" },
+  { key: "stok_cikis",          label: "Stok Çıkış",             path: "/stok/cikis" },
+  { key: "stok_transfer",       label: "Depo Transfer",          path: "/stok/transfer" },
+  { key: "stok_fisler",         label: "Stok Fiş Listesi",       path: "/stok/fisler" },
+  { key: "stok_talep",          label: "Malzeme Talebi",         path: "/stok/talep" },
+  { key: "stok_sayim",          label: "Sayım / Envanter",       path: "/stok/sayim" },
+  { key: "stok_parti_takibi",   label: "Parti & Raf Ömrü",       path: "/stok/partiler" },
+  { key: "stok_raporlar",       label: "Stok Raporları",         path: "/stok/raporlar" },
+  { key: "stok_satinalma",      label: "Satın Alma",             path: "/stok/satin-alma" },
+  { key: "stok_zimmet",         label: "El Aletleri & Zimmet",   path: "/stok/zimmet" },
+  { key: "stok_dashboard",      label: "Stok Kontrol Merkezi",   path: "/stok" },
+  { key: "stok_mobil",          label: "Mobil Hızlı İşlem",      path: "/stok/mobil" },
+  { key: "stok_etiket",         label: "Etiket Bas",             path: "/stok/etiket" },
+  { key: "stok_excel",          label: "Excel Stok Yükleme",     path: "/stok/excel" },
+  { key: "stok_qnb",            label: "QNB e-Belge",            path: "/stok/qnb" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

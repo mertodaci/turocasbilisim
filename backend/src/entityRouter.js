@@ -27,6 +27,7 @@ const JSON_COLUMNS = {
   tq_kanban_boards: ['columns'],
   tq_ticket_statuses: ['board_ids'],
   hakedisler: ['tahsilat'],
+  stok_etiket_fisleri: ['satirlar_json'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -144,6 +145,10 @@ const TABLE_TO_MODULE = {
   stok_personeller: 'stok_zimmet',
   stok_demirbaslar: 'stok_zimmet',
   stok_zimmetler: 'stok_zimmet',
+  stok_etiket_fisleri: 'stok_etiket',
+  stok_excel_yuklemeler: 'stok_excel',
+  stok_dashboard: 'stok_dashboard',
+  stok_mobil: 'stok_mobil',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -264,6 +269,8 @@ const ALLOWED_COLUMNS = {
   stok_personeller: ['kod','ad_soyad','telefon','eposta','departman','employee_id','aktif','not_','is_deleted'],
   stok_demirbaslar: ['varlik_kodu','urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','seri_no','barkod','alis_tarihi','garanti_bitis','kondisyon','durum','not_','is_deleted'],
   stok_zimmetler: ['zimmet_no','demirbas_id','demirbas_adi','varlik_kodu','personel_id','personel_adi','saha_id','saha_adi','teslim_tarihi','termin_tarihi','teslim_notu','iade_tarihi','iade_notu','durum'],
+  stok_etiket_fisleri: ['fis_no','tarih','kullanici','dizayn','satirlar_json','toplam_etiket','durum','is_deleted'],
+  stok_excel_yuklemeler: ['yukleme_no','dosya_adi','yukleyen','depo_id','depo_adi','olusan_fis_id','olusan_fis_no','satir_toplam','satir_yeni','satir_atlanan','durum','tarih','is_deleted'],
 };
 
 // Zorunlu alanlar

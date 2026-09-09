@@ -100,6 +100,8 @@ const ENTITY_MAP = {
   StokPersonel:      'stok_personeller',
   StokDemirbas:      'stok_demirbaslar',
   StokZimmet:        'stok_zimmetler',
+  StokEtiketFis:     'stok_etiket_fisleri',
+  StokExcelYukleme:  'stok_excel_yuklemeler',
 };
 
 function createEntityClient(entityName) {
@@ -305,6 +307,9 @@ export const stok = {
     const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
     return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmetler?${p}`, { credentials: 'include' }));
   },
+  async excelYukle(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle`, _sjson('POST', body))); },
+  async excelGeriAl(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle/${id}/geri-al`, _sjson('POST'))); },
+  async dashboard() { return handleResponse(await fetch(`${BASE_URL}/api/stok/dashboard`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

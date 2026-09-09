@@ -413,6 +413,8 @@ function initDb() {
       'stok_satinalma',
       // Faz 8: Zimmet / El Aletleri
       'stok_zimmet',
+      // Faz 9-11: Mobil, Etiket, Excel, Dashboard
+      'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -710,6 +712,27 @@ function initDb() {
     `);
   } catch(e) { console.error('stok faz8 tablolari:', e.message); }
 
+  // ── Stok Faz 10: etiket baskı + Excel stok yükleme ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_etiket_fisleri (
+        id TEXT PRIMARY KEY, fis_no TEXT, tarih TEXT, kullanici TEXT, dizayn TEXT DEFAULT 'standart',
+        satirlar_json TEXT DEFAULT '[]', toplam_etiket INTEGER DEFAULT 0, durum TEXT DEFAULT 'aktif',
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_excel_yuklemeler (
+        id TEXT PRIMARY KEY, yukleme_no TEXT, dosya_adi TEXT, yukleyen TEXT,
+        depo_id TEXT, depo_adi TEXT, olusan_fis_id TEXT, olusan_fis_no TEXT,
+        satir_toplam INTEGER DEFAULT 0, satir_yeni INTEGER DEFAULT 0, satir_atlanan INTEGER DEFAULT 0,
+        durum TEXT DEFAULT 'aktif',   -- aktif | geri_alindi
+        tarih TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_excel_fis ON stok_excel_yuklemeler(olusan_fis_id);
+    `);
+  } catch(e) { console.error('stok faz10 tablolari:', e.message); }
+
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)
   try {
@@ -852,6 +875,44 @@ function initDb() {
   } catch(e) {
     console.error('Rol seed hatası:', e.message);
   }
+
+  // ── Stok Faz 12: referans uygulamadaki stok rolleri + varsayılan yetkileri ──
+  // Idempotent: yalnız eksik olanları ekler. role_permissions satırları yukarıdaki
+  // "Yeni modüller için otomatik role_permissions ekleme" bloğunda 0 olarak açılır;
+  // burada stok modüllerine mantıklı varsayılan veriyoruz.
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const stokRoller = [
+      ['depo_yetkilisi', 'Depo Yetkilisi', 'Stok/depo işlemleri tam yetki'],
+      ['satin_alma', 'Satın Alma', 'Tedarikçi ve fiyat yönetimi'],
+      ['muhasebe', 'Muhasebe', 'Stok raporları ve değerleme (salt görüntüleme)'],
+      ['stok_rapor', 'Stok Rapor Kullanıcısı', 'Yalnız stok raporları'],
+    ];
+    const insRole = db.prepare("INSERT OR IGNORE INTO roles (id, name, label, description) VALUES (lower(hex(randomblob(16))), ?, ?, ?)");
+    for (const [n, l, d] of stokRoller) insRole.run(n, l, d);
+
+    // rol -> [modül anahtarı, view, add, edit, delete]
+    const P = (role, mods, v, a, e, d) => {
+      for (const m of mods) {
+        const exists = db.prepare('SELECT id FROM role_permissions WHERE role_name=? AND module=?').get(role, m);
+        if (!exists) db.prepare('INSERT INTO role_permissions (id, role_name, module, can_view, can_add, can_edit, can_delete, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?)').run(uuidv4(), role, m, v, a, e, d, now, now);
+        else db.prepare('UPDATE role_permissions SET can_view=?, can_add=?, can_edit=?, can_delete=?, updated_date=? WHERE id=?').run(v, a, e, d, now, exists.id);
+      }
+    };
+    const HEP = ['stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf','stok_sahalar','stok_tedarikciler',
+      'stok_giris','stok_cikis','stok_transfer','stok_talep','stok_fisler','stok_sayim','stok_parti_takibi',
+      'stok_raporlar','stok_satinalma','stok_zimmet','stok_dashboard','stok_mobil','stok_etiket','stok_excel'];
+    const RAPORLAR = ['stok_raporlar','stok_parti_takibi','stok_dashboard','stok_fisler'];
+    // Sadece bu bloğun ilk çalışmasında (depo_yetkilisi'nin hiç yetkisi yoksa) uygula.
+    const dyVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='depo_yetkilisi' AND can_view=1 LIMIT 1").get();
+    if (!dyVar) {
+      P('depo_yetkilisi', HEP, 1, 1, 1, 1);
+      P('satin_alma', ['stok_urunler','stok_gruplar','stok_tedarikciler','stok_satinalma','stok_raporlar','stok_dashboard','stok_fisler','stok_parti_takibi'], 1, 1, 1, 0);
+      P('muhasebe', RAPORLAR, 1, 0, 0, 0);
+      P('stok_rapor', RAPORLAR, 1, 0, 0, 0);
+    }
+  } catch(e) { console.error('stok rol seed:', e.message); }
 
   console.log('✅ Veritabanı tabloları hazır');
 }

@@ -186,6 +186,9 @@ app.use('/api/entities/stok_fiyat_gecmisi',     createEntityRouter('stok_fiyat_g
 app.use('/api/entities/stok_personeller',       createEntityRouter('stok_personeller'));
 app.use('/api/entities/stok_demirbaslar',       createEntityRouter('stok_demirbaslar'));
 app.use('/api/entities/stok_zimmetler',         createEntityRouter('stok_zimmetler'));
+// Faz 10: Etiket + Excel
+app.use('/api/entities/stok_etiket_fisleri',    createEntityRouter('stok_etiket_fisleri'));
+app.use('/api/entities/stok_excel_yuklemeler',  createEntityRouter('stok_excel_yuklemeler'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -1918,6 +1921,103 @@ app.get('/api/stok/zimmetler', authMiddleware, (req, res) => {
     const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
     const rows = db.prepare(`SELECT * FROM stok_zimmetler ${where} ORDER BY created_date DESC LIMIT 3000`).all(...params);
     res.json(rows.map((z) => ({ ...z, geciken: z.durum === 'acik' && z.termin_tarihi && String(z.termin_tarihi).slice(0, 10) < bugun })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 10: Excel stok yükleme  ·  Faz 11: Dashboard
+// ═══════════════════════════════════════════════════════════════════
+app.post('/api/stok/excel-yukle', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_excel', 'can_add') || stokFisPerm(req, 'can_add')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { depo_id, dosya_adi, satirlar = [] } = req.body || {};
+  if (!depo_id) return res.status(400).json({ error: 'Depo zorunlu' });
+  if (!Array.isArray(satirlar) || !satirlar.length) return res.status(400).json({ error: 'Satır yok' });
+  try {
+    const depo = db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(depo_id);
+    const now = new Date().toISOString();
+    const urunByKod = {}, urunByBarkod = {};
+    for (const u of db.prepare('SELECT id, kod, barkod, ad, ana_birim, alis_fiyati FROM stok_urunler').all()) {
+      if (u.kod) urunByKod[String(u.kod).trim().toUpperCase()] = u;
+      if (u.barkod) urunByBarkod[String(u.barkod).trim()] = u;
+    }
+    const fisSatir = []; let atlanan = 0;
+    for (const s of satirlar) {
+      const kod = String(s.kod || s.urun_kodu || '').trim().toUpperCase();
+      const bar = String(s.barkod || '').trim();
+      const u = urunByKod[kod] || urunByBarkod[bar] || urunByBarkod[kod];
+      const miktar = Number(s.miktar) || 0;
+      if (!u || miktar <= 0) { atlanan++; continue; }
+      fisSatir.push({ urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, barkod: u.barkod, birim: u.ana_birim || 'ADET', carpan: 1, miktar, birim_fiyat: Number(s.birim_fiyat) || u.alis_fiyati || 0, raf_omru_durumu: 'Raf ömrü uygulanmaz' });
+    }
+    if (!fisSatir.length) return res.status(400).json({ error: `Eşleşen ürün yok (${atlanan} satır atlandı)` });
+
+    const yil = new Date().getFullYear();
+    const gun = now.slice(0, 10).replace(/-/g, '');
+    const rowN = db.prepare("SELECT yukleme_no FROM stok_excel_yuklemeler WHERE yukleme_no LIKE ? ORDER BY yukleme_no DESC LIMIT 1").get(`EXCEL-${gun}-%`);
+    let n = 1; if (rowN) { const x = parseInt(String(rowN.yukleme_no).split('-').pop(), 10); if (Number.isFinite(x)) n = x + 1; }
+    const yuklemeNo = `EXCEL-${gun}-${String(n).padStart(6, '0')}`;
+    const yId = _stokUUID();
+    let fis;
+    db.transaction(() => {
+      fis = insertStokFis(_stokUUID(), { tip: 'giris', tarih: now.slice(0, 10), hedef_depo_id: depo_id, hedef_depo_adi: depo?.ad,
+        belge_no: yuklemeNo, aciklama: `Excel stok yükleme (${dosya_adi || yuklemeNo})` }, fisSatir, req.user.email);
+      // auto-onayla
+      const fSat = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(fis.id);
+      const kGenel = stokGenelRaf(null), hGenel = stokGenelRaf(depo_id);
+      for (const s of fSat) if (!s.hedef_raf_id && hGenel.id) { s.hedef_raf_id = hGenel.id; s.hedef_raf_adi = hGenel.ad; }
+      const insHrk = db.prepare(`INSERT INTO stok_hareketler (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet, fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      for (const s of fSat) insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, depo_id, depo?.ad, s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat, fis.id, fis.fis_no, 'giris', s.id, null, null, fis.tarih, req.user.email, now, now);
+      stokFifoUygula({ ...fis, tip: 'giris', hedef_depo_id: depo_id, hedef_depo_adi: depo?.ad }, fSat, req.user.email);
+      db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, fis.id);
+      db.prepare(`INSERT INTO stok_excel_yuklemeler (id, yukleme_no, dosya_adi, yukleyen, depo_id, depo_adi, olusan_fis_id, olusan_fis_no, satir_toplam, satir_yeni, satir_atlanan, durum, tarih, created_by, created_date, updated_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?, 'aktif', ?, ?, ?, ?)`).run(yId, yuklemeNo, dosya_adi || null, req.user.email, depo_id, depo?.ad, fis.id, fis.fis_no, satirlar.length, fisSatir.length, atlanan, now.slice(0, 10), req.user.email, now, now);
+    })();
+    res.status(201).json({ yukleme: db.prepare('SELECT * FROM stok_excel_yuklemeler WHERE id=?').get(yId), fis_no: fis.fis_no, eslesen: fisSatir.length, atlanan });
+  } catch (err) { console.error('[stok] excel yukle:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/stok/excel-yukle/:id/geri-al', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_excel', 'can_edit') || stokFisPerm(req, 'can_edit')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  const y = db.prepare('SELECT * FROM stok_excel_yuklemeler WHERE id=?').get(req.params.id);
+  if (!y) return res.status(404).json({ error: 'Yükleme bulunamadı' });
+  if (y.durum === 'geri_alindi') return res.status(400).json({ error: 'Zaten geri alınmış' });
+  const fis = y.olusan_fis_id ? db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(y.olusan_fis_id) : null;
+  if (fis && fis.durum === 'onayli' && stokPartiKullanildiMi(fis.id)) return res.status(400).json({ error: 'Yükleme partileri kullanılmış — önce o çıkışları iptal edin' });
+  try {
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      if (fis && fis.durum === 'onayli') { stokFifoGeriAl(fis); db.prepare('DELETE FROM stok_hareketler WHERE fis_id=?').run(fis.id); db.prepare("UPDATE stok_fisler SET durum='iptal', updated_date=? WHERE id=?").run(now, fis.id); }
+      db.prepare("UPDATE stok_excel_yuklemeler SET durum='geri_alindi', updated_date=? WHERE id=?").run(now, y.id);
+    })();
+    res.json({ ok: true });
+  } catch (err) { console.error('[stok] excel geri al:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_dashboard', 'can_view') || stokFisPerm(req, 'can_view')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const bugun = new Date().toISOString().slice(0, 10);
+    const bakiye = db.prepare("SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id").all();
+    const stokBiten = bakiye.filter((r) => r.m <= 0).length;
+    const kritik = bakiye.filter((r) => r.m > 0 && r.m <= 10).length;
+    const bugunGiris = db.prepare("SELECT COALESCE(SUM(toplam_miktar),0) m, COUNT(*) n FROM stok_fisler WHERE tip='giris' AND durum='onayli' AND tarih=?").get(bugun);
+    const bugunCikis = db.prepare("SELECT COALESCE(SUM(toplam_miktar),0) m, COUNT(*) n FROM stok_fisler WHERE tip IN ('cikis','transfer') AND durum='onayli' AND tarih=?").get(bugun);
+    const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const bekleyenTalep = db.prepare("SELECT COUNT(*) n FROM stok_talepler WHERE durum IN ('taslak','onay_bekliyor','onayli','kismen_sevk') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor','fark_onay') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const gecikenZimmet = db.prepare("SELECT COUNT(*) n FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < ?").get(bugun).n;
+    const sktGecen = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ?").get(bugun).n;
+    const sktYaklasan = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days')").get(bugun, bugun).n;
+    const sonHareket = db.prepare("SELECT fis_no, urun_adi, depo_adi, tip, miktar, tarih FROM stok_hareketler ORDER BY created_date DESC LIMIT 10").all();
+    const enCokCalisan = db.prepare("SELECT created_by kullanici, COUNT(*) hareket FROM stok_hareketler WHERE tarih=? GROUP BY created_by ORDER BY hareket DESC LIMIT 1").get(bugun);
+    res.json({
+      stok_biten: stokBiten, kritik, bugun_giris: bugunGiris, bugun_cikis: bugunCikis,
+      is_kuyrugu: { bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep, sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan },
+      son_hareket: sonHareket, en_cok_calisan: enCokCalisan || null,
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

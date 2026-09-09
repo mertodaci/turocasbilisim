@@ -71,6 +71,10 @@ export const MODULES = [
   { key: "stok_raporlar",       label: "Stok Raporları",         path: "/stok/raporlar" },
   { key: "stok_satinalma",      label: "Satın Alma",             path: "/stok/satin-alma" },
   { key: "stok_zimmet",         label: "El Aletleri & Zimmet",   path: "/stok/zimmet" },
+  { key: "stok_dashboard",      label: "Stok Kontrol Merkezi",   path: "/stok" },
+  { key: "stok_mobil",          label: "Mobil Hızlı İşlem",      path: "/stok/mobil" },
+  { key: "stok_etiket",         label: "Etiket Bas",             path: "/stok/etiket" },
+  { key: "stok_excel",          label: "Excel Stok Yükleme",     path: "/stok/excel" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

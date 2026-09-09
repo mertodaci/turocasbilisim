@@ -5,7 +5,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer, Undo2 } from "lucide-react";
 import { fisBelgeYazdir } from "@/lib/stokBelge";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ const TIP_BADGE = {
   giris: { label: "Giriş", cls: "bg-emerald-100 text-emerald-700", Icon: ArrowDownToLine },
   cikis: { label: "Çıkış", cls: "bg-red-100 text-red-700", Icon: ArrowUpFromLine },
   transfer: { label: "Transfer", cls: "bg-blue-100 text-blue-700", Icon: ArrowLeftRight },
+  iade: { label: "Ted. İade", cls: "bg-orange-100 text-orange-700", Icon: Undo2 },
   sayim: { label: "Sayım", cls: "bg-amber-100 text-amber-700", Icon: FileText },
   talep: { label: "Talep", cls: "bg-purple-100 text-purple-700", Icon: FileText },
 };
@@ -70,7 +71,7 @@ export default function StokFisListesi() {
     try { fisBelgeYazdir(await flowApi.stok.getFis(f.id), { belgeTuru }); }
     catch (e) { toast.error("Belge açılamadı: " + (e?.message || "hata")); }
   };
-  const duzenleYol = (f) => `/stok/${f.tip === "giris" ? "giris" : f.tip === "cikis" ? "cikis" : "transfer"}?id=${f.id}`;
+  const duzenleYol = (f) => `/stok/${f.tip === "giris" ? "giris" : f.tip === "cikis" ? "cikis" : f.tip === "iade" ? "iade" : "transfer"}?id=${f.id}`;
 
   const k = ozet || {};
 
@@ -85,12 +86,13 @@ export default function StokFisListesi() {
           <Button variant="outline" className="text-emerald-700" onClick={() => navigate("/stok/giris")}><ArrowDownToLine className="w-4 h-4 mr-1.5" /> Giriş</Button>
           <Button variant="outline" className="text-red-700" onClick={() => navigate("/stok/cikis")}><ArrowUpFromLine className="w-4 h-4 mr-1.5" /> Çıkış</Button>
           <Button variant="outline" className="text-blue-700" onClick={() => navigate("/stok/transfer")}><ArrowLeftRight className="w-4 h-4 mr-1.5" /> Transfer</Button>
+          <Button variant="outline" className="text-orange-700" onClick={() => navigate("/stok/iade")}><Undo2 className="w-4 h-4 mr-1.5" /> Ted. İade</Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
         {[
-          ["Toplam", k.toplam], ["Giriş", k.giris], ["Çıkış", k.cikis], ["Transfer", k.transfer],
+          ["Toplam", k.toplam], ["Giriş", k.giris], ["Çıkış", k.cikis], ["Transfer", k.transfer], ["Ted. İade", k.iade],
           ["Taslak", k.taslak], ["Onay Bekleyen", k.onay_bekliyor], ["Onaylı", k.onayli], ["İptal", k.iptal],
         ].map(([lbl, v]) => (
           <div key={lbl} className="bg-card border rounded-xl p-3">
@@ -101,7 +103,7 @@ export default function StokFisListesi() {
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
-        {["hepsi", "giris", "cikis", "transfer"].map((t) => (
+        {["hepsi", "giris", "cikis", "transfer", "iade"].map((t) => (
           <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)}>
             {t === "hepsi" ? "Tümü" : TIP_BADGE[t].label}
           </Button>

@@ -1,7 +1,7 @@
 // Stok fiş / sevk irsaliyesi yazdırma — yeni pencereye temiz bir belge yazıp
 // window.print() çağırır. jspdf/html2canvas'a göre daha güvenilir ve seçilebilir metin.
 
-const TIP_LBL = { giris: "STOK GİRİŞ FİŞİ", cikis: "STOK ÇIKIŞ FİŞİ", transfer: "DEPO TRANSFER FİŞİ", sayim: "SAYIM DÜZELTME FİŞİ", talep: "MALZEME TALEP FİŞİ" };
+const TIP_LBL = { giris: "STOK GİRİŞ FİŞİ", cikis: "STOK ÇIKIŞ FİŞİ", transfer: "DEPO TRANSFER FİŞİ", iade: "TEDARİKÇİYE İADE FİŞİ", sayim: "SAYIM DÜZELTME FİŞİ", talep: "MALZEME TALEP FİŞİ" };
 const DURUM_LBL = { taslak: "TASLAK", onay_bekliyor: "ONAY BEKLİYOR", onayli: "ONAYLI", iptal: "İPTAL" };
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -103,7 +103,13 @@ export function fisBelgeYazdir(fis, opt = {}) {
     ${irsaliye ? "<div>Taşıyıcı</div>" : ""}
   </div>
 
-  <script>window.onload = function () { window.print(); };</script>
+  <script>
+    (function () {
+      function go() { try { window.focus(); window.print(); } catch (e) {} }
+      if (document.readyState === "complete") setTimeout(go, 150);
+      else window.addEventListener("load", function () { setTimeout(go, 150); });
+    })();
+  </script>
 </body></html>`;
 
   const w = window.open("", "_blank", "width=900,height=1000");
@@ -111,4 +117,6 @@ export function fisBelgeYazdir(fis, opt = {}) {
   w.document.open();
   w.document.write(html);
   w.document.close();
+  // document.write sonrası load tetiklenmiş olabilir; dışarıdan da bir kez deneriz.
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* pencere içi script halleder */ } }, 400);
 }

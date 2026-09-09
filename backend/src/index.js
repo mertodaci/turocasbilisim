@@ -72,7 +72,7 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '32mb' })); // Excel stok yükleme büyük satır setleri JSON POST ediyor
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
@@ -921,8 +921,17 @@ function stokKritikListe() {
   return out;
 }
 
+// Açık rezervasyon toplamı (urun,depo). haricId verilirse o rezervasyon hariç tutulur.
+function stokRezerve(urunId, depoId, haricId) {
+  if (!urunId || !depoId) return 0;
+  let sql = "SELECT COALESCE(SUM(miktar - COALESCE(karsilanan,0)),0) m FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)";
+  const params = [urunId, depoId];
+  if (haricId) { sql += " AND id<>?"; params.push(haricId); }
+  return db.prepare(sql).get(...params).m || 0;
+}
+
 function stokFisNoUret(tip) {
-  const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP' }[tip] || 'FIS';
+  const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP', iade: 'IAD' }[tip] || 'FIS';
   const yil = new Date().getFullYear();
   const row = db.prepare("SELECT fis_no FROM stok_fisler WHERE fis_no LIKE ? ORDER BY fis_no DESC LIMIT 1").get(`${pre}-${yil}-%`);
   let next = 1;
@@ -934,7 +943,7 @@ function stokFisNoUret(tip) {
 }
 
 function stokFisPerm(req, action) {
-  const mods = ['stok_fisler', 'stok_giris', 'stok_cikis', 'stok_transfer'];
+  const mods = ['stok_fisler', 'stok_giris', 'stok_cikis', 'stok_transfer', 'stok_iade'];
   return req.user?.role === 'admin' || mods.some((m) => checkPermission(db, req.user?.role, m, action));
 }
 
@@ -1110,12 +1119,13 @@ function stokPartiKullanildiMi(fisId) {
 app.post('/api/stok/fis', authMiddleware, (req, res) => {
   if (!stokFisPerm(req, 'can_add')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
   const { fis = {}, satirlar = [] } = req.body || {};
-  if (!['giris', 'cikis', 'transfer'].includes(fis.tip)) return res.status(400).json({ error: 'Geçersiz fiş tipi' });
+  if (!['giris', 'cikis', 'transfer', 'iade'].includes(fis.tip)) return res.status(400).json({ error: 'Geçersiz fiş tipi' });
   if (!Array.isArray(satirlar) || satirlar.length === 0) return res.status(400).json({ error: 'En az bir ürün satırı gerekli' });
   if (fis.tip !== 'giris' && !fis.kaynak_depo_id) return res.status(400).json({ error: 'Kaynak depo zorunlu' });
   if (fis.tip === 'giris' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
   if (fis.tip === 'transfer' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
   if (fis.tip === 'cikis' && !fis.hedef_depo_id && !fis.hedef_saha_id) return res.status(400).json({ error: 'Hedef depo veya saha zorunlu' });
+  if (fis.tip === 'iade' && !fis.cari_id) return res.status(400).json({ error: 'Tedarikçi (cari) zorunlu' });
   try {
     let created;
     db.transaction(() => { created = insertStokFis(_stokUUID(), fis, satirlar, req.user.email); })();
@@ -1179,11 +1189,11 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   const depo = (id) => (id ? db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(id) : null);
   const kd = depo(fis.kaynak_depo_id), hd = depo(fis.hedef_depo_id);
   if (fis.tip === 'giris' && hd && !hd.kural_giris) return res.status(400).json({ error: `"${hd.ad}" deposunda stok girişi kapalı` });
-  if (fis.tip === 'cikis' && kd && !kd.kural_cikis) return res.status(400).json({ error: `"${kd.ad}" deposunda normal çıkış kapalı` });
+  if ((fis.tip === 'cikis' || fis.tip === 'iade') && kd && !kd.kural_cikis) return res.status(400).json({ error: `"${kd.ad}" deposunda çıkış kapalı` });
   if (fis.tip === 'transfer' && ((kd && !kd.kural_transfer) || (hd && !hd.kural_transfer)))
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
-  if (fis.tip === 'cikis' || fis.tip === 'transfer') {
+  if (fis.tip === 'cikis' || fis.tip === 'transfer' || fis.tip === 'iade') {
     // Aynı ürün + kaynak raf için birden çok satır varsa toplam ihtiyacı birlikte
     // kontrol et; satır bazlı ayrı ayrı kontrol (60 + 60, stok 100) negatif stoğa yol açardı.
     const ihtiyac = new Map();
@@ -1202,6 +1212,27 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
       if (g.miktar > mevcut + 1e-9) yetersiz.push(`${g.urun_adi}: gerekli ${g.miktar}, mevcut ${mevcut}`);
     }
     if (yetersiz.length) return res.status(400).json({ error: 'Yetersiz stok — onaylanamadı:\n' + yetersiz.join('\n') });
+
+    // Rezervasyon kontrolü — çıkış/iade, başka projelere ayrılmış stoğu tüketemez.
+    // Bu fişin bağlı olduğu talebin rezervasyonları "kendi" sayılır ve hariç tutulur.
+    if (fis.tip === 'cikis' || fis.tip === 'iade') {
+      const kendiTalep = fis.kaynak_ref_tip === 'talep' ? fis.kaynak_ref_id : null;
+      const rezSorgu = db.prepare(`SELECT COALESCE(SUM(miktar - COALESCE(karsilanan,0)),0) m FROM stok_rezervasyonlar
+        WHERE urun_id=? AND depo_id=? AND durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)
+        ${kendiTalep ? 'AND (talep_id IS NULL OR talep_id<>?)' : ''}`);
+      const rezYetersiz = [];
+      const perUrun = new Map();
+      for (const g of ihtiyac.values()) perUrun.set(g.urun_id, (perUrun.get(g.urun_id) || 0) + g.miktar);
+      for (const [urunId, gereken] of perUrun) {
+        const mevcut = stokMevcut(urunId, fis.kaynak_depo_id, null);
+        const rezerve = kendiTalep ? rezSorgu.get(urunId, fis.kaynak_depo_id, kendiTalep).m : rezSorgu.get(urunId, fis.kaynak_depo_id).m;
+        if (gereken > mevcut - rezerve + 1e-9) {
+          const ad = [...ihtiyac.values()].find((x) => x.urun_id === urunId)?.urun_adi || urunId;
+          rezYetersiz.push(`${ad}: kullanılabilir ${+(mevcut - rezerve).toFixed(2)} (mevcut ${mevcut}, başka projeye rezerve ${rezerve}), gerekli ${gereken}`);
+        }
+      }
+      if (rezYetersiz.length) return res.status(400).json({ error: 'Rezerve stok engeli — onaylanamadı:\n' + rezYetersiz.join('\n') + '\n\nRezervasyonu iptal edin veya çıkışı ilgili talebe bağlayın.' });
+    }
   }
 
   // Seri no takipli ürünler: her satır tek adet + seri no zorunlu. Çıkış/transferde
@@ -1243,7 +1274,7 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
             fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, sn, req.user.email, now, now);
-        } else if (fis.tip === 'cikis') {
+        } else if (fis.tip === 'cikis' || fis.tip === 'iade') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
             fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, sn, req.user.email, now, now);
@@ -1260,6 +1291,31 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
       stokFifoUygula(fis, satirlar, req.user.email);
       // Faz 7: alış fiyat geçmişi + tedarikçi eşleştirme
       stokFiyatGecmisiYaz(fis, satirlar, req.user.email);
+      // Çıkış/iade: eşleşen açık rezervasyonları tüket (aynı saha, sonra aynı talep, sonra en eski).
+      if (fis.tip === 'cikis' || fis.tip === 'iade') {
+        const kendiTalep = fis.kaynak_ref_tip === 'talep' ? fis.kaynak_ref_id : null;
+        for (const s of satirlar) {
+          let kalan = Number(s.miktar_ana_birim) || 0;
+          if (kalan <= 0) continue;
+          const rezler = db.prepare(`SELECT * FROM stok_rezervasyonlar
+            WHERE urun_id=? AND depo_id=? AND durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)
+            ORDER BY CASE WHEN saha_id IS NOT NULL AND saha_id=? THEN 0 WHEN talep_id IS NOT NULL AND talep_id=? THEN 1 ELSE 2 END,
+                     COALESCE(ihtiyac_tarihi, created_date), created_date`).all(
+            s.urun_id, fis.kaynak_depo_id, fis.hedef_saha_id || '', kendiTalep || '');
+          for (const r of rezler) {
+            if (kalan <= 1e-9) break;
+            const acikMik = (r.miktar || 0) - (r.karsilanan || 0);
+            if (acikMik <= 1e-9) continue;
+            const dus = Math.min(acikMik, kalan);
+            const yeniKars = +((r.karsilanan || 0) + dus).toFixed(4);
+            db.prepare("UPDATE stok_rezervasyonlar SET karsilanan=?, durum=?, updated_date=? WHERE id=?")
+              .run(yeniKars, yeniKars >= (r.miktar || 0) - 1e-9 ? 'kullanildi' : 'acik', now, r.id);
+            db.prepare("INSERT INTO stok_rezervasyon_tuketim (id, rez_id, fis_id, miktar, created_date) VALUES (?,?,?,?,?)")
+              .run(_stokUUID(), r.id, fis.id, dus, now);
+            kalan = +(kalan - dus).toFixed(4);
+          }
+        }
+      }
       db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?")
         .run(req.user.email, now, now, fis.id);
     })();
@@ -1282,6 +1338,16 @@ app.post('/api/stok/fis/:id/iptal', authMiddleware, (req, res) => {
       if (fis.durum === 'onayli') {
         stokFifoGeriAl(fis);
         db.prepare('DELETE FROM stok_hareketler WHERE fis_id=?').run(fis.id);
+        // Bu fişin tükettiği rezervasyonları geri yükle.
+        for (const t of db.prepare('SELECT * FROM stok_rezervasyon_tuketim WHERE fis_id=?').all(fis.id)) {
+          const r = db.prepare('SELECT * FROM stok_rezervasyonlar WHERE id=?').get(t.rez_id);
+          if (r) {
+            const yeniKars = Math.max(0, +((r.karsilanan || 0) - t.miktar).toFixed(4));
+            db.prepare("UPDATE stok_rezervasyonlar SET karsilanan=?, durum=?, updated_date=? WHERE id=?")
+              .run(yeniKars, r.durum === 'iptal' ? 'iptal' : (yeniKars >= (r.miktar || 0) - 1e-9 ? 'kullanildi' : 'acik'), now, r.id);
+          }
+        }
+        db.prepare('DELETE FROM stok_rezervasyon_tuketim WHERE fis_id=?').run(fis.id);
       }
       db.prepare("UPDATE stok_fisler SET durum='iptal', updated_date=? WHERE id=?").run(now, fis.id);
     })();
@@ -1304,7 +1370,7 @@ app.get('/api/stok/fis-ozet', authMiddleware, (req, res) => {
     const ND = "(is_deleted=0 OR is_deleted IS NULL)";
     const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_fisler WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
     res.json({
-      toplam: c(''), giris: c("tip='giris'"), cikis: c("tip='cikis'"), transfer: c("tip='transfer'"),
+      toplam: c(''), giris: c("tip='giris'"), cikis: c("tip='cikis'"), transfer: c("tip='transfer'"), iade: c("tip='iade'"),
       taslak: c("durum='taslak'"), onay_bekliyor: c("durum='onay_bekliyor'"),
       onayli: c("durum='onayli'"), iptal: c("durum='iptal'"),
     });
@@ -1747,11 +1813,23 @@ app.get('/api/stok/rapor/durum', authMiddleware, (req, res) => {
     for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim FROM stok_urunler').all()) urunMap[u.id] = u;
     const minMap = {};
     for (const m of db.prepare('SELECT urun_id, depo_id, min_seviye FROM stok_urun_raf').all()) minMap[`${m.urun_id}|${m.depo_id}`] = m.min_seviye;
-    rows = rows.map((r) => ({ ...r, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '', birim: urunMap[r.urun_id]?.ana_birim || 'ADET', min_seviye: minMap[`${r.urun_id}|${r.depo_id}`] || 0 }));
+    // Açık rezervasyon (urun,depo bazında). Rapor rafa göre gruplu; rezerve depo
+    // seviyesinde tutulur, o (urun,depo)'nun ilk satırına yazılır (çift sayımı önler).
+    const rezMap = {};
+    for (const x of db.prepare("SELECT urun_id, depo_id, COALESCE(SUM(miktar - COALESCE(karsilanan,0)),0) m FROM stok_rezervasyonlar WHERE durum='acik' AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY urun_id, depo_id").all())
+      rezMap[`${x.urun_id}|${x.depo_id}`] = x.m || 0;
+    const rezGoruldu = new Set();
+    rows = rows.map((r) => {
+      const key = `${r.urun_id}|${r.depo_id}`;
+      const rezerve = rezGoruldu.has(key) ? 0 : (rezMap[key] || 0);
+      rezGoruldu.add(key);
+      return { ...r, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '', birim: urunMap[r.urun_id]?.ana_birim || 'ADET', min_seviye: minMap[`${r.urun_id}|${r.depo_id}`] || 0, rezerve, kullanilabilir: +(r.mevcut - rezerve).toFixed(4) };
+    });
     if (mode === 'zero') rows = rows.filter((r) => r.mevcut <= 1e-9);
     else if (mode === 'critical') rows = rows.filter((r) => r.mevcut > 0 && r.mevcut <= (r.min_seviye || 10));
     if (q) { const s = q.toLowerCase(); rows = rows.filter((r) => `${r.urun_adi} ${r.urun_kodu} ${r.depo_adi} ${r.raf_adi} ${r.grup}`.toLowerCase().includes(s)); }
-    const tot = rows.reduce((a, r) => ({ giren: a.giren + r.giren, cikan: a.cikan + r.cikan, mevcut: a.mevcut + r.mevcut }), { giren: 0, cikan: 0, mevcut: 0 });
+    const tot = rows.reduce((a, r) => ({ giren: a.giren + r.giren, cikan: a.cikan + r.cikan, mevcut: a.mevcut + r.mevcut, rezerve: a.rezerve + (r.rezerve || 0) }), { giren: 0, cikan: 0, mevcut: 0, rezerve: 0 });
+    tot.kullanilabilir = +(tot.mevcut - tot.rezerve).toFixed(4);
     res.json({ rows, toplam: tot });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -1942,6 +2020,120 @@ app.get('/api/stok/fiyat-gecmisi', authMiddleware, (req, res) => {
     const rows = db.prepare(`SELECT * FROM stok_fiyat_gecmisi ${where} ORDER BY tarih DESC, created_date DESC LIMIT 3000`).all(...params);
     const fiyatlar = rows.map((r) => r.alis_fiyati).filter((x) => x > 0);
     res.json({ rows, ozet: { kayit: rows.length, son: rows[0]?.alis_fiyati || 0, en_dusuk: fiyatlar.length ? Math.min(...fiyatlar) : 0, en_yuksek: fiyatlar.length ? Math.max(...fiyatlar) : 0 } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Barkod / kod çözümleme — mobil hızlı ekran tüm ürünleri indirmesin diye.
+app.get('/api/stok/barkod-coz', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const kod = (req.query.kod || '').trim();
+    const q = (req.query.q || '').trim();
+    const alanlar = 'id, kod, ad, barkod, ana_birim, alis_fiyati, satis_fiyati, seri_no_takip';
+    let urun = null;
+    if (kod) {
+      urun = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (barkod=? OR UPPER(kod)=UPPER(?)) LIMIT 1`).get(kod, kod);
+      if (!urun) {
+        const b = db.prepare('SELECT urun_id FROM stok_urun_barkodlari WHERE barkod=? LIMIT 1').get(kod);
+        if (b) urun = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE id=? LIMIT 1`).get(b.urun_id);
+      }
+    }
+    let adaylar = [];
+    if (!urun && (q || kod)) {
+      const term = `%${q || kod}%`;
+      adaylar = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (ad LIKE ? OR kod LIKE ? OR barkod LIKE ?) ORDER BY ad LIMIT 20`).all(term, term, term);
+    }
+    res.json({ urun: urun || null, adaylar });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Proje / saha rezervasyonu ────────────────────────────────────
+function stokRezPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_rezervasyon', action || 'can_view');
+}
+app.get('/api/stok/rezervasyonlar', authMiddleware, (req, res) => {
+  if (!stokRezPerm(req, 'can_view') && !stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { durum, urun_id, depo_id, saha_id } = req.query;
+    const cond = ['(is_deleted=0 OR is_deleted IS NULL)'], params = [];
+    if (durum && durum !== 'hepsi') { cond.push('durum=?'); params.push(durum); }
+    if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
+    if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
+    if (saha_id) { cond.push('saha_id=?'); params.push(saha_id); }
+    const rows = db.prepare(`SELECT * FROM stok_rezervasyonlar WHERE ${cond.join(' AND ')} ORDER BY created_date DESC LIMIT 3000`).all(...params);
+    const acik = rows.filter((r) => r.durum === 'acik');
+    res.json({ rows, ozet: { toplam: rows.length, acik: acik.length, acik_miktar: acik.reduce((a, r) => a + (r.miktar - (r.karsilanan || 0)), 0) } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post('/api/stok/rezervasyon', authMiddleware, (req, res) => {
+  if (!stokRezPerm(req, 'can_add')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const b = req.body || {};
+  if (!b.urun_id || !b.depo_id || !(Number(b.miktar) > 0)) return res.status(400).json({ error: 'Ürün, depo ve miktar zorunlu' });
+  try {
+    const mevcut = stokMevcut(b.urun_id, b.depo_id, null);
+    const rezerve = stokRezerve(b.urun_id, b.depo_id);
+    const kullanilabilir = mevcut - rezerve;
+    if (Number(b.miktar) > kullanilabilir + 1e-9)
+      return res.status(400).json({ error: `Kullanılabilir stok yetersiz — mevcut ${mevcut}, açık rezerve ${rezerve}, kalan ${kullanilabilir}` });
+    const yil = new Date().getFullYear();
+    const last = db.prepare("SELECT rez_no FROM stok_rezervasyonlar WHERE rez_no LIKE ? ORDER BY rez_no DESC LIMIT 1").get(`REZ-${yil}-%`);
+    let n = 1; if (last?.rez_no) { const x = parseInt(String(last.rez_no).split('-').pop(), 10); if (Number.isFinite(x)) n = x + 1; }
+    const id = _stokUUID(), now = new Date().toISOString();
+    const urun = db.prepare('SELECT ad FROM stok_urunler WHERE id=?').get(b.urun_id);
+    const depo = db.prepare('SELECT ad FROM stok_depolar WHERE id=?').get(b.depo_id);
+    const saha = b.saha_id ? db.prepare('SELECT ad FROM stok_sahalar WHERE id=?').get(b.saha_id) : null;
+    db.prepare(`INSERT INTO stok_rezervasyonlar
+      (id, rez_no, urun_id, urun_adi, depo_id, depo_adi, saha_id, saha_adi, talep_id, talep_no,
+       miktar, karsilanan, durum, tarih, ihtiyac_tarihi, aciklama, olusturan, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,0,'acik',?,?,?,?,?,?,?)`).run(
+      id, `REZ-${yil}-${String(n).padStart(5, '0')}`, b.urun_id, urun?.ad || b.urun_adi || null,
+      b.depo_id, depo?.ad || b.depo_adi || null, b.saha_id || null, saha?.ad || b.saha_adi || null,
+      b.talep_id || null, b.talep_no || null, Number(b.miktar),
+      b.tarih || now.slice(0, 10), b.ihtiyac_tarihi || null, b.aciklama || null, req.user.email, req.user.email, now, now);
+    res.status(201).json(db.prepare('SELECT * FROM stok_rezervasyonlar WHERE id=?').get(id));
+  } catch (err) { console.error('[stok] rezervasyon:', err); res.status(500).json({ error: err.message }); }
+});
+app.post('/api/stok/rezervasyon/:id/iptal', authMiddleware, (req, res) => {
+  if (!stokRezPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const r = db.prepare('SELECT * FROM stok_rezervasyonlar WHERE id=?').get(req.params.id);
+  if (!r) return res.status(404).json({ error: 'Rezervasyon bulunamadı' });
+  if (r.durum !== 'acik') return res.status(400).json({ error: 'Sadece açık rezervasyon iptal edilebilir' });
+  db.prepare("UPDATE stok_rezervasyonlar SET durum='iptal', updated_date=? WHERE id=?").run(new Date().toISOString(), r.id);
+  res.json({ ok: true });
+});
+
+// Cari ekstre — bir cariye bağlı onaylı stok fişleri + yürüyen bakiye.
+// Konvansiyon: giriş (bizim alımımız) = cariye borç (+); çıkış/iade = alacak (−).
+// Tam muhasebe cari hesabı değil; stok hareketlerinin parasal izidir.
+app.get('/api/stok/cari-ekstre', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req) && !stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { cari_id, t1, t2 } = req.query;
+    if (!cari_id) return res.status(400).json({ error: 'cari_id zorunlu' });
+    const cari = db.prepare('SELECT id, company_name, tax_number, is_supplier, is_customer FROM customers WHERE id=?').get(cari_id);
+    const cond = ['f.cari_id=?', "f.durum='onayli'", '(f.is_deleted=0 OR f.is_deleted IS NULL)'];
+    const params = [cari_id];
+    if (t1) { cond.push('f.tarih>=?'); params.push(t1); }
+    if (t2) { cond.push('f.tarih<=?'); params.push(t2); }
+    const fisler = db.prepare(`SELECT f.id, f.fis_no, f.tip, f.tarih, f.aciklama, f.fatura_no, f.irsaliye_no, f.belge_no,
+        f.onay_tarihi, f.created_date,
+        (SELECT COALESCE(SUM(s.miktar_ana_birim * s.birim_fiyat),0) FROM stok_fis_satirlari s WHERE s.fis_id=f.id) AS tutar
+      FROM stok_fisler f WHERE ${cond.join(' AND ')}
+      ORDER BY COALESCE(f.tarih, f.created_date), f.created_date`).all(...params);
+    let bakiye = 0;
+    const hareketler = fisler.map((f) => {
+      const borc = f.tip === 'giris' ? +(f.tutar || 0).toFixed(2) : 0;
+      const alacak = f.tip !== 'giris' ? +(f.tutar || 0).toFixed(2) : 0;
+      bakiye = +(bakiye + borc - alacak).toFixed(2);
+      return { ...f, tutar: +(f.tutar || 0).toFixed(2), borc, alacak, bakiye };
+    });
+    const toplamBorc = hareketler.reduce((a, h) => a + h.borc, 0);
+    const toplamAlacak = hareketler.reduce((a, h) => a + h.alacak, 0);
+    res.json({
+      cari: cari || { id: cari_id },
+      hareketler,
+      ozet: { fis: hareketler.length, toplam_borc: +toplamBorc.toFixed(2), toplam_alacak: +toplamAlacak.toFixed(2), bakiye },
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

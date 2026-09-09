@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, ListChecks } from "lucide-react";
+import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, ListChecks, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 const TIP_CFG = {
   giris: { baslik: "Stok Giriş Fişi", icon: ArrowDownToLine, renk: "text-emerald-600", aciklama: "Satın alma, başlangıç veya sayım fazlası girişleri. Hedef depo/raf seçilir; parti ve raf ömrü bilgisi FIFO'ya kaydedilir." },
   cikis: { baslik: "Stok Çıkış Fişi", icon: ArrowUpFromLine, renk: "text-red-600", aciklama: "Kaynak depodan çıkış. Hedef bir depo veya saha/proje olabilir. Onaylama anında stok yeterlilik kontrol edilir." },
   transfer: { baslik: "Depo Transfer Fişi", icon: ArrowLeftRight, renk: "text-blue-600", aciklama: "Depo/araç/raf arası net transfer. Lot, maliyet ve tarihler hedefe aynen taşınır." },
+  iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
 };
 
 const bosSatir = () => ({
@@ -49,7 +50,7 @@ export default function FisForm({ tip }) {
   useEffect(() => {
     if (!editId) return;
     flowApi.stok.getFis(editId).then((f) => {
-      if (f.tip !== tip) { navigate(`/stok/${f.tip === "giris" ? "giris" : f.tip === "cikis" ? "cikis" : "transfer"}?id=${editId}`); return; }
+      if (f.tip !== tip) { navigate(`/stok/${f.tip === "giris" ? "giris" : f.tip === "cikis" ? "cikis" : f.tip === "iade" ? "iade" : "transfer"}?id=${editId}`); return; }
       if (!["taslak", "onay_bekliyor"].includes(f.durum)) { toast.error("Bu fiş düzenlenemez (durum: " + f.durum + ")"); navigate("/stok/fisler"); return; }
       setHeader({
         tarih: f.tarih || bugun, cari_id: f.cari_id || "", kaynak_depo_id: f.kaynak_depo_id || "",
@@ -97,6 +98,7 @@ export default function FisForm({ tip }) {
       aciklama: header.aciklama || null, teslim_eden: header.teslim_eden || null, teslim_alan: header.teslim_alan || null,
       gonderim_adresi: header.gonderim_adresi || null };
     if (tip === "giris") { h.hedef_depo_id = header.hedef_depo_id || null; h.hedef_depo_adi = depoAdi(header.hedef_depo_id); }
+    if (tip === "iade") { h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id); }
     if (tip === "cikis") {
       h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id);
       if (header.cikis_hedef === "saha") { h.hedef_saha_id = header.hedef_saha_id || null; h.hedef_saha_adi = sahalar.find((s) => s.id === header.hedef_saha_id)?.ad || null; }
@@ -116,10 +118,12 @@ export default function FisForm({ tip }) {
 
   const validate = () => {
     if (tip !== "giris" && !header.kaynak_depo_id) return "Kaynak depo seçin";
+    if (tip === "iade" && !header.cari_id) return "Tedarikçi (cari) seçin";
     if (tip === "giris" && !header.hedef_depo_id) return "Hedef depo seçin";
     if (tip === "transfer" && !header.hedef_depo_id) return "Hedef depo seçin";
     if (tip === "transfer" && header.kaynak_depo_id === header.hedef_depo_id) return "Kaynak ve hedef depo aynı olamaz";
     if (tip === "cikis" && header.cikis_hedef === "depo" && !header.hedef_depo_id) return "Hedef depo seçin";
+    if (tip === "cikis" && header.cikis_hedef === "depo" && header.hedef_depo_id === header.kaynak_depo_id) return "Çıkış hedefi kaynak depoyla aynı olamaz (bunun için transfer kullanın)";
     if (tip === "cikis" && header.cikis_hedef === "saha" && !header.hedef_saha_id) return "Hedef saha seçin";
     if (tip === "giris" && !header.fatura_no && !header.irsaliye_no && !header.belge_no) return "Fatura / İrsaliye / Fiş No alanlarından en az biri gerekli";
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";
@@ -154,8 +158,11 @@ export default function FisForm({ tip }) {
     } finally { setSaving(false); }
   };
 
-  const cariOpts = useMemo(() => [{ value: "", label: "— Firma seçilmedi" },
-    ...cariler.map((c) => ({ value: c.id, label: c.company_name || c.name || c.id }))], [cariler]);
+  const cariOpts = useMemo(() => {
+    const list = tip === "iade" ? cariler.filter((c) => c.is_supplier === 1 || c.is_supplier === true) : cariler;
+    return [{ value: "", label: tip === "iade" ? "— Tedarikçi seçin" : "— Firma seçilmedi" },
+      ...list.map((c) => ({ value: c.id, label: c.company_name || c.name || c.id }))];
+  }, [cariler, tip]);
   const depoOpts = depolar.map((d) => ({ value: d.id, label: d.ad }));
   const sahaOpts = sahalar.map((s) => ({ value: s.id, label: s.ad }));
 
@@ -175,10 +182,10 @@ export default function FisForm({ tip }) {
           <Label className="mb-1.5 block">Tarih *</Label>
           <Input type="date" value={header.tarih} onChange={(e) => setHeader({ ...header, tarih: e.target.value })} />
         </div>
-        {tip === "giris" && (
+        {(tip === "giris" || tip === "iade") && (
           <div>
-            <Label className="mb-1.5 block">Firma / Cari</Label>
-            <SearchableSelect value={header.cari_id} onChange={(v) => setHeader({ ...header, cari_id: v })} options={cariOpts} placeholder="Firma seçin (opsiyonel)" />
+            <Label className="mb-1.5 block">{tip === "iade" ? "Tedarikçi / Cari *" : "Firma / Cari"}</Label>
+            <SearchableSelect value={header.cari_id} onChange={(v) => setHeader({ ...header, cari_id: v })} options={cariOpts} placeholder={tip === "iade" ? "Tedarikçi seçin" : "Firma seçin (opsiyonel)"} />
           </div>
         )}
         {tip !== "giris" && (
@@ -232,7 +239,7 @@ export default function FisForm({ tip }) {
           </>
         )}
         {tip !== "giris" && (
-          <div><Label className="mb-1.5 block">Çıkış Fiş / Talep / İş Emri No</Label><Input value={header.belge_no} onChange={(e) => setHeader({ ...header, belge_no: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block">{tip === "iade" ? "İade / İrsaliye No" : "Çıkış Fiş / Talep / İş Emri No"}</Label><Input value={header.belge_no} onChange={(e) => setHeader({ ...header, belge_no: e.target.value })} /></div>
         )}
         {tip === "transfer" && (
           <>
@@ -272,7 +279,7 @@ export default function FisForm({ tip }) {
                     options={[{ value: "", label: "GENEL RAF (otomatik)" }, ...rafOptions(header.kaynak_depo_id)]} placeholder="Raf" fixDialogWheelScroll />
                 </div>
               )}
-              {tip !== "cikis" && (
+              {(tip === "giris" || tip === "transfer") && (
                 <div className="md:col-span-3">
                   <Label className="mb-1 block text-xs">Hedef Raf</Label>
                   <SearchableSelect value={l.hedef_raf_id} onChange={(v) => setLine(i, { hedef_raf_id: v })}

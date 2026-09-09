@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,10 @@ export default function StokMobil() {
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
 
-  const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000) });
+  // Mobil ekran tüm ürün/barkod kataloğunu indirmez — barkod sunucuda çözülür.
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
   const { data: sahalar = [] } = useQuery({ queryKey: ["stok_sahalar"], queryFn: () => flowApi.entities.StokSaha.list("ad", 5000) });
-  const { data: barkodlar = [] } = useQuery({ queryKey: ["stok_urun_barkodlari-all"], queryFn: () => flowApi.entities.StokUrunBarkod.list("", 20000) });
-
-  const barkodMap = useMemo(() => {
-    const m = {};
-    for (const u of urunler) { if (u.barkod) m[String(u.barkod).trim()] = u; if (u.kod) m[String(u.kod).trim().toUpperCase()] = u; }
-    for (const b of barkodlar) { const u = urunler.find((x) => x.id === b.urun_id); if (u && b.barkod) m[String(b.barkod).trim()] = u; }
-    return m;
-  }, [urunler, barkodlar]);
+  const [scanning, setScanning] = useState(false);
 
   const ekle = (u) => {
     setLines((ls) => {
@@ -35,12 +28,18 @@ export default function StokMobil() {
       return [{ urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, birim: u.ana_birim || "ADET", miktar: 1, birim_fiyat: mode === "giris" ? (u.alis_fiyati || 0) : (u.satis_fiyati || 0) }, ...ls];
     });
   };
-  const onScan = () => {
+  const onScan = async () => {
     const s = scan.trim();
-    if (!s) return;
-    const u = barkodMap[s] || barkodMap[s.toUpperCase()] || urunler.find((x) => (x.ad || "").toLowerCase().includes(s.toLowerCase()));
-    if (u) { ekle(u); setScan(""); inputRef.current?.focus(); }
-    else toast.error("Ürün bulunamadı: " + s);
+    if (!s || scanning) return;
+    setScanning(true);
+    try {
+      const r = await flowApi.stok.barkodCoz({ kod: s, q: s });
+      const u = r.urun || (r.adaylar?.length === 1 ? r.adaylar[0] : null);
+      if (u) { ekle(u); setScan(""); inputRef.current?.focus(); }
+      else if (r.adaylar?.length > 1) toast.error(`${r.adaylar.length} eşleşme — tam barkod / kod okutun`);
+      else toast.error("Ürün bulunamadı: " + s);
+    } catch (e) { toast.error(String(e?.message || "Arama hatası")); }
+    finally { setScanning(false); }
   };
   const setQ = (i, d) => setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, miktar: Math.max(0.001, +(l.miktar + d).toFixed(3)) } : l));
   const setQV = (i, v) => setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, miktar: parseFloat(v) || 0 } : l));
@@ -86,7 +85,7 @@ export default function StokMobil() {
       <div className="flex gap-2">
         <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
           onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onScan(); }} />
-        <Button className="h-12 px-4" onClick={onScan}><ScanLine className="w-5 h-5" /></Button>
+        <Button className="h-12 px-4" onClick={onScan} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
       </div>
 
       <div className="space-y-2">

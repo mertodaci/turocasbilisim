@@ -97,20 +97,22 @@ export default function StokRaporlar() {
             </Select>
             <Button variant="outline" onClick={() => xlsx(durum.data?.rows, "stok-durum")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
           </div>
-          <div className="grid grid-cols-3 gap-3 max-w-md">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 max-w-2xl">
             <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Giren</p><p className="text-lg font-bold">{durum.data?.toplam?.giren ?? 0}</p></div>
             <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Çıkan</p><p className="text-lg font-bold">{durum.data?.toplam?.cikan ?? 0}</p></div>
             <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Mevcut</p><p className="text-lg font-bold">{durum.data?.toplam?.mevcut ?? 0}</p></div>
+            <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Rezerve</p><p className="text-lg font-bold text-amber-600">{durum.data?.toplam?.rezerve ?? 0}</p></div>
+            <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Kullanılabilir</p><p className="text-lg font-bold text-emerald-600">{durum.data?.toplam?.kullanilabilir ?? 0}</p></div>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
-            <table className="w-full text-sm min-w-[820px]">
-              <thead className="bg-muted/40 border-b"><tr><Th>Depo</Th><Th>Raf</Th><Th>Ürün Kodu</Th><Th>Ürün Adı</Th><Th>Grup</Th><Th r>Giren</Th><Th r>Çıkan</Th><Th r>Mevcut</Th><Th>Birim</Th></tr></thead>
+            <table className="w-full text-sm min-w-[920px]">
+              <thead className="bg-muted/40 border-b"><tr><Th>Depo</Th><Th>Raf</Th><Th>Ürün Kodu</Th><Th>Ürün Adı</Th><Th>Grup</Th><Th r>Giren</Th><Th r>Çıkan</Th><Th r>Mevcut</Th><Th r>Rezerve</Th><Th r>Kull.</Th><Th>Birim</Th></tr></thead>
               <tbody>
                 {(durum.data?.rows || []).map((r, i) => (
-                  <tr key={i} className="border-b last:border-0"><Td>{r.depo_adi}</Td><Td>{r.raf_adi || "GENEL RAF"}</Td><Td>{r.urun_kodu}</Td><Td b>{r.urun_adi}</Td><Td>{r.grup}</Td><Td r>{r.giren}</Td><Td r>{r.cikan}</Td><Td r b>{r.mevcut}</Td><Td>{r.birim}</Td></tr>
+                  <tr key={i} className="border-b last:border-0"><Td>{r.depo_adi}</Td><Td>{r.raf_adi || "GENEL RAF"}</Td><Td>{r.urun_kodu}</Td><Td b>{r.urun_adi}</Td><Td>{r.grup}</Td><Td r>{r.giren}</Td><Td r>{r.cikan}</Td><Td r b>{r.mevcut}</Td><Td r>{r.rezerve ? <span className="text-amber-600">{r.rezerve}</span> : "—"}</Td><Td r>{r.kullanilabilir ?? r.mevcut}</Td><Td>{r.birim}</Td></tr>
                 ))}
-                {durum.isLoading && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Yükleniyor...</td></tr>}
-                {!durum.isLoading && !(durum.data?.rows || []).length && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Kayıt yok.</td></tr>}
+                {durum.isLoading && <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Yükleniyor...</td></tr>}
+                {!durum.isLoading && !(durum.data?.rows || []).length && <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Kayıt yok.</td></tr>}
               </tbody>
             </table>
           </div>

@@ -455,12 +455,16 @@ function initDb() {
       'stok_sahalar','stok_tedarikciler',
       // Faz 2: Hareket fişleri
       'stok_giris','stok_cikis','stok_transfer','stok_fisler',
+      // Tedarikçiye iade (RMA)
+      'stok_iade',
       // Faz 3: FIFO / parti
       'stok_parti_takibi',
       // Faz 4: Sayım
       'stok_sayim',
       // Faz 5: Malzeme Talep
       'stok_talep',
+      // Proje/saha rezervasyonu
+      'stok_rezervasyon',
       // Faz 6: Raporlar
       'stok_raporlar',
       // Faz 7: Satın Alma
@@ -714,6 +718,33 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_talep_sat ON stok_talep_satirlari(talep_id);
     `);
   } catch(e) { console.error('stok faz5 tablolari:', e.message); }
+
+  // ── Stok: proje / saha rezervasyonu (stok ayırma) ──
+  // Rezervasyon hareket üretmez; "kullanılabilir stok = mevcut − açık rezervasyon".
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_rezervasyonlar (
+        id TEXT PRIMARY KEY, rez_no TEXT,
+        urun_id TEXT NOT NULL, urun_adi TEXT,
+        depo_id TEXT NOT NULL, depo_adi TEXT,
+        saha_id TEXT, saha_adi TEXT, talep_id TEXT, talep_no TEXT,
+        miktar REAL DEFAULT 0, karsilanan REAL DEFAULT 0,
+        durum TEXT DEFAULT 'acik',                                -- acik | kullanildi | iptal
+        tarih TEXT, ihtiyac_tarihi TEXT, aciklama TEXT,
+        olusturan TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_rez_urun_depo ON stok_rezervasyonlar(urun_id, depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_rez_durum ON stok_rezervasyonlar(durum);
+      CREATE INDEX IF NOT EXISTS idx_stok_rez_talep ON stok_rezervasyonlar(talep_id);
+      -- Hangi çıkış/iade fişi hangi rezervasyondan ne kadar tüketti (iptalde geri yüklemek için).
+      CREATE TABLE IF NOT EXISTS stok_rezervasyon_tuketim (
+        id TEXT PRIMARY KEY, rez_id TEXT NOT NULL, fis_id TEXT NOT NULL, miktar REAL DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_rez_tuketim_fis ON stok_rezervasyon_tuketim(fis_id);
+    `);
+  } catch(e) { console.error('stok rezervasyon tablosu:', e.message); }
 
   // ── Stok Faz 7: satın alma (ürün-tedarikçi eşleştirme + fiyat geçmişi) ──
   try {

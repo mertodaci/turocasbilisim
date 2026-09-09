@@ -80,8 +80,10 @@ const translations = {
     stok_giris: "Stok Giriş",
     stok_cikis: "Stok Çıkış",
     stok_transfer: "Depo Transfer",
+    stok_iade: "Tedarikçiye İade",
     stok_fisler: "Stok Fiş Listesi",
     stok_talep: "Malzeme Talebi",
+    stok_rezervasyon: "Proje Rezervasyonu",
     stok_sayim: "Sayım / Envanter",
     stok_parti_takibi: "Parti & Raf Ömrü",
     stok_raporlar: "Stok Raporları",
@@ -161,8 +163,10 @@ const translations = {
     stok_giris: "Stock In",
     stok_cikis: "Stock Out",
     stok_transfer: "Warehouse Transfer",
+    stok_iade: "Supplier Return",
     stok_fisler: "Stock Vouchers",
     stok_talep: "Material Request",
+    stok_rezervasyon: "Project Reservation",
     stok_sayim: "Stock Count",
     stok_parti_takibi: "Batch & Shelf Life",
     stok_raporlar: "Inventory Reports",
@@ -200,4 +204,3 @@ export function useLanguage() {
     throw new Error("useLanguage must be used within a LanguageProvider");
   }
   return context;
-}

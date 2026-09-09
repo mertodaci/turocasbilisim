@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { Plus, Pencil, Building2, Link2 } from "lucide-react";
+import { Plus, Pencil, Building2, Link2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 const empty = {
@@ -26,6 +26,13 @@ export default function StokTedarikciler() {
   const [q, setQ] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkId, setLinkId] = useState("");
+  const [ekstreCari, setEkstreCari] = useState(null);
+
+  const { data: ekstre, isFetching: ekstreLoading } = useQuery({
+    queryKey: ["stok_cari_ekstre", ekstreCari?.id],
+    queryFn: () => flowApi.stok.cariEkstre({ cari_id: ekstreCari.id }),
+    enabled: !!ekstreCari?.id,
+  });
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers-all"],
@@ -119,8 +126,9 @@ export default function StokTedarikciler() {
                   <td className="px-4 py-3 text-muted-foreground">{[c.payment_method, c.payment_term_days ? `${c.payment_term_days} gün` : null].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.tax_number || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.working_region || "—"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Cari Ekstre" onClick={() => setEkstreCari(c)}><Receipt className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Düzenle" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
                   </td>
                 </tr>
               ))}
@@ -236,6 +244,48 @@ export default function StokTedarikciler() {
                 İşaretle
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cari ekstre */}
+      <Dialog open={!!ekstreCari} onOpenChange={(v) => !v && setEkstreCari(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader><DialogTitle>Cari Ekstre — {ekstreCari?.company_name}</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm max-h-[70vh] overflow-y-auto">
+            <p className="text-xs text-muted-foreground">Onaylı stok fişlerinin parasal izi. Giriş = borç (+), çıkış/iade = alacak (−). Muhasebe cari hesabı değildir.</p>
+            {ekstreLoading ? (
+              <div className="h-24 flex items-center justify-center text-muted-foreground">Yükleniyor…</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-muted/40 rounded-lg p-2"><p className="text-[11px] text-muted-foreground">Toplam Borç</p><p className="font-bold">{(ekstre?.ozet?.toplam_borc ?? 0).toLocaleString("tr-TR")}</p></div>
+                  <div className="bg-muted/40 rounded-lg p-2"><p className="text-[11px] text-muted-foreground">Toplam Alacak</p><p className="font-bold">{(ekstre?.ozet?.toplam_alacak ?? 0).toLocaleString("tr-TR")}</p></div>
+                  <div className="bg-muted/40 rounded-lg p-2"><p className="text-[11px] text-muted-foreground">Bakiye</p><p className={`font-bold ${(ekstre?.ozet?.bakiye ?? 0) >= 0 ? "text-red-600" : "text-emerald-600"}`}>{(ekstre?.ozet?.bakiye ?? 0).toLocaleString("tr-TR")}</p></div>
+                </div>
+                <table className="w-full text-xs border rounded-lg overflow-hidden">
+                  <thead className="bg-muted/40"><tr>
+                    <th className="text-left px-2 py-1.5">Tarih</th><th className="text-left px-2 py-1.5">Fiş No</th>
+                    <th className="text-left px-2 py-1.5">Tip</th><th className="text-left px-2 py-1.5">Belge</th>
+                    <th className="text-right px-2 py-1.5">Borç</th><th className="text-right px-2 py-1.5">Alacak</th><th className="text-right px-2 py-1.5">Bakiye</th>
+                  </tr></thead>
+                  <tbody>
+                    {(ekstre?.hareketler || []).map((h) => (
+                      <tr key={h.id} className="border-t">
+                        <td className="px-2 py-1.5">{h.tarih || "—"}</td>
+                        <td className="px-2 py-1.5 font-medium">{h.fis_no}</td>
+                        <td className="px-2 py-1.5">{h.tip === "giris" ? "Giriş" : h.tip === "cikis" ? "Çıkış" : h.tip}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground">{[h.fatura_no, h.irsaliye_no, h.belge_no].filter(Boolean).join(" / ") || "—"}</td>
+                        <td className="px-2 py-1.5 text-right">{h.borc ? h.borc.toLocaleString("tr-TR") : "—"}</td>
+                        <td className="px-2 py-1.5 text-right">{h.alacak ? h.alacak.toLocaleString("tr-TR") : "—"}</td>
+                        <td className="px-2 py-1.5 text-right font-medium">{h.bakiye.toLocaleString("tr-TR")}</td>
+                      </tr>
+                    ))}
+                    {!(ekstre?.hareketler || []).length && <tr><td colSpan={7} className="px-2 py-4 text-center text-muted-foreground">Bu cariye bağlı onaylı fiş yok.</td></tr>}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

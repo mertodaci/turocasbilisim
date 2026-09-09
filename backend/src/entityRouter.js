@@ -128,6 +128,10 @@ const TABLE_TO_MODULE = {
   stok_fisler: 'stok_fisler',
   stok_fis_satirlari: 'stok_fisler',
   stok_hareketler: 'stok_fisler',
+  // Tablosu olmayan modül anahtarları (checkPermission bunlarla da çağrılıyor)
+  stok_giris: 'stok_giris',
+  stok_cikis: 'stok_cikis',
+  stok_transfer: 'stok_transfer',
 };
 
 function checkPermission(db, role, tableName, action) {

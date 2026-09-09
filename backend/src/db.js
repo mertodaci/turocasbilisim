@@ -715,7 +715,16 @@ const dbWrapper = {
   },
   exec(sql) {
     db.exec(sql);
-  }
+  },
+  // better-sqlite3 transaction'a erisim (or. cok satirli fis + satir yazimi
+  // atomik olsun diye). Kullanim: db.transaction(fn)()  -> fn bir transaction
+  // icinde calisir, hata olursa tumu geri alinir.
+  transaction(fn) {
+    return db.transaction(fn);
+  },
+  pragma(source, opts) {
+    return db.pragma(source, opts);
+  },
 };
 
 module.exports = { db: dbWrapper, initDb };

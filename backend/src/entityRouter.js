@@ -8,7 +8,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
-  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar'];
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -136,6 +136,8 @@ const TABLE_TO_MODULE = {
   stok_parti_tahsis: 'stok_parti_takibi',
   stok_sayimlar: 'stok_sayim',
   stok_sayim_satirlari: 'stok_sayim',
+  stok_talepler: 'stok_talep',
+  stok_talep_satirlari: 'stok_talep',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -249,6 +251,8 @@ const ALLOWED_COLUMNS = {
   stok_parti_tahsis: ['parti_id','cikis_fis_id','cikis_fis_no','cikis_fis_satir_id','urun_id','depo_id','dusulen_miktar','maliyet','tarih'],
   stok_sayimlar: ['sayim_no','depo_id','depo_adi','tarih','tip','durum','aciklama','satir_sayisi','farkli_satir','olusturan','onaylayan','tamamlanma_tarihi','duzeltme_giris_fis_id','duzeltme_cikis_fis_id','is_deleted'],
   stok_sayim_satirlari: ['sayim_id','urun_id','urun_adi','urun_kodu','raf_id','raf_adi','sistem_miktar','sayilan_miktar','fark','sayan','not_'],
+  stok_talepler: ['talep_no','talep_eden','departman','hedef_saha_id','hedef_saha_adi','kaynak_depo_id','kaynak_depo_adi','is_emri_no','tarih','ihtiyac_tarihi','oncelik','durum','aciklama','satir_sayisi','olusturan','onaylayan','onay_tarihi','is_deleted'],
+  stok_talep_satirlari: ['talep_id','urun_id','urun_adi','urun_kodu','miktar','birim','karsilanan_miktar','not_'],
 };
 
 // Zorunlu alanlar
@@ -297,6 +301,7 @@ const REQUIRED_FIELDS = {
   stok_fis_satirlari: ['fis_id'],
   stok_sayimlar: ['depo_id'],
   stok_sayim_satirlari: ['sayim_id'],
+  stok_talep_satirlari: ['talep_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

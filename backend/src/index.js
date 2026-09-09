@@ -176,6 +176,9 @@ app.use('/api/entities/stok_parti_tahsis',      createEntityRouter('stok_parti_t
 // Faz 4: Sayım
 app.use('/api/entities/stok_sayimlar',          createEntityRouter('stok_sayimlar'));
 app.use('/api/entities/stok_sayim_satirlari',   createEntityRouter('stok_sayim_satirlari'));
+// Faz 5: Malzeme Talep
+app.use('/api/entities/stok_talepler',          createEntityRouter('stok_talepler'));
+app.use('/api/entities/stok_talep_satirlari',   createEntityRouter('stok_talep_satirlari'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -1387,6 +1390,174 @@ app.get('/api/stok/sayim-ozet', authMiddleware, (req, res) => {
     const ND = "(is_deleted=0 OR is_deleted IS NULL)";
     const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_sayimlar WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
     res.json({ toplam: c(''), taslak: c("durum IN ('taslak','sayiliyor','fark_onay')"), tamamlandi: c("durum='tamamlandi'") });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 5: Malzeme Talep / İş Emri
+// Talep -> onay -> onaylı talepten çıkış fişi türetilir (kısmi sevk destekli).
+// ═══════════════════════════════════════════════════════════════════
+function stokTalepPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_talep', action);
+}
+function stokTalepNoUret() {
+  const yil = new Date().getFullYear();
+  const row = db.prepare("SELECT talep_no FROM stok_talepler WHERE talep_no LIKE ? ORDER BY talep_no DESC LIMIT 1").get(`TLP-${yil}-%`);
+  let n = 1; if (row) { const x = parseInt(String(row.talep_no).split('-').pop(), 10); if (Number.isFinite(x)) n = x + 1; }
+  return `TLP-${yil}-${String(n).padStart(5, '0')}`;
+}
+function stokTalepYaz(id, t, satirlar, userEmail) {
+  const now = new Date().toISOString();
+  const durum = t.durum === 'onay_bekliyor' ? 'onay_bekliyor' : 'taslak';
+  db.prepare(`INSERT INTO stok_talepler (id, talep_no, talep_eden, departman, hedef_saha_id, hedef_saha_adi,
+      kaynak_depo_id, kaynak_depo_adi, is_emri_no, tarih, ihtiyac_tarihi, oncelik, durum, aciklama, satir_sayisi,
+      olusturan, created_by, created_date, updated_date)
+    VALUES (@id,@talep_no,@talep_eden,@departman,@hedef_saha_id,@hedef_saha_adi,@kaynak_depo_id,@kaynak_depo_adi,
+      @is_emri_no,@tarih,@ihtiyac_tarihi,@oncelik,@durum,@aciklama,@satir_sayisi,@olusturan,@created_by,@cd,@ud)`).run({
+    id, talep_no: stokTalepNoUret(), talep_eden: t.talep_eden || userEmail, departman: t.departman || null,
+    hedef_saha_id: t.hedef_saha_id || null, hedef_saha_adi: t.hedef_saha_adi || null,
+    kaynak_depo_id: t.kaynak_depo_id || null, kaynak_depo_adi: t.kaynak_depo_adi || null,
+    is_emri_no: t.is_emri_no || null, tarih: t.tarih || now.slice(0, 10), ihtiyac_tarihi: t.ihtiyac_tarihi || null,
+    oncelik: t.oncelik || 'orta', durum, aciklama: t.aciklama || null, satir_sayisi: satirlar.length,
+    olusturan: userEmail, created_by: userEmail, cd: now, ud: now,
+  });
+  const ins = db.prepare(`INSERT INTO stok_talep_satirlari (id, talep_id, urun_id, urun_adi, urun_kodu, miktar, birim, karsilanan_miktar, not_, created_by, created_date, updated_date)
+    VALUES (?,?,?,?,?,?,?,0,?,?,?,?)`);
+  for (const s of satirlar) ins.run(_stokUUID(), id, s.urun_id || null, s.urun_adi || null, s.urun_kodu || null, Number(s.miktar) || 0, s.birim || null, s.not_ || null, userEmail, now, now);
+  return db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(id);
+}
+
+app.post('/api/stok/talep', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_add')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { talep = {}, satirlar = [] } = req.body || {};
+  if (!Array.isArray(satirlar) || !satirlar.some((s) => s.urun_id && Number(s.miktar) > 0)) return res.status(400).json({ error: 'En az bir ürün satırı gerekli' });
+  try {
+    let out;
+    db.transaction(() => { out = stokTalepYaz(_stokUUID(), talep, satirlar.filter((s) => s.urun_id && Number(s.miktar) > 0), req.user.email); })();
+    out.satirlar = db.prepare('SELECT * FROM stok_talep_satirlari WHERE talep_id=?').all(out.id);
+    res.status(201).json(out);
+  } catch (err) { console.error('[stok] talep olusturma:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/talep/:id', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const t = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Talep bulunamadı' });
+  t.satirlar = db.prepare('SELECT * FROM stok_talep_satirlari WHERE talep_id=? ORDER BY urun_adi').all(t.id);
+  t.sevk_fisleri = db.prepare("SELECT id, fis_no, tarih, durum, toplam_miktar FROM stok_fisler WHERE kaynak_ref_tip='talep' AND kaynak_ref_id=? ORDER BY created_date").all(t.id);
+  res.json(t);
+});
+
+app.put('/api/stok/talep/:id', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const t = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Talep bulunamadı' });
+  if (!['taslak', 'onay_bekliyor'].includes(t.durum)) return res.status(400).json({ error: 'Sadece taslak/onay bekleyen talep düzenlenebilir' });
+  const { talep = {}, satirlar = [] } = req.body || {};
+  const temiz = (satirlar || []).filter((s) => s.urun_id && Number(s.miktar) > 0);
+  if (!temiz.length) return res.status(400).json({ error: 'En az bir ürün satırı gerekli' });
+  try {
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      db.prepare(`UPDATE stok_talepler SET departman=@departman, hedef_saha_id=@hedef_saha_id, hedef_saha_adi=@hedef_saha_adi,
+        kaynak_depo_id=@kaynak_depo_id, kaynak_depo_adi=@kaynak_depo_adi, is_emri_no=@is_emri_no, ihtiyac_tarihi=@ihtiyac_tarihi,
+        oncelik=@oncelik, aciklama=@aciklama, satir_sayisi=@n, durum=@durum, updated_date=@ud WHERE id=@id`).run({
+        id: t.id, departman: talep.departman ?? t.departman, hedef_saha_id: talep.hedef_saha_id ?? t.hedef_saha_id,
+        hedef_saha_adi: talep.hedef_saha_adi ?? t.hedef_saha_adi, kaynak_depo_id: talep.kaynak_depo_id ?? t.kaynak_depo_id,
+        kaynak_depo_adi: talep.kaynak_depo_adi ?? t.kaynak_depo_adi, is_emri_no: talep.is_emri_no ?? t.is_emri_no,
+        ihtiyac_tarihi: talep.ihtiyac_tarihi ?? t.ihtiyac_tarihi, oncelik: talep.oncelik ?? t.oncelik,
+        aciklama: talep.aciklama ?? t.aciklama, n: temiz.length,
+        durum: talep.durum === 'onay_bekliyor' ? 'onay_bekliyor' : t.durum, ud: now,
+      });
+      db.prepare('DELETE FROM stok_talep_satirlari WHERE talep_id=?').run(t.id);
+      const ins = db.prepare(`INSERT INTO stok_talep_satirlari (id, talep_id, urun_id, urun_adi, urun_kodu, miktar, birim, karsilanan_miktar, not_, created_by, created_date, updated_date)
+        VALUES (?,?,?,?,?,?,?,0,?,?,?,?)`);
+      for (const s of temiz) ins.run(_stokUUID(), t.id, s.urun_id, s.urun_adi || null, s.urun_kodu || null, Number(s.miktar) || 0, s.birim || null, s.not_ || null, req.user.email, now, now);
+    })();
+    const out = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(t.id);
+    out.satirlar = db.prepare('SELECT * FROM stok_talep_satirlari WHERE talep_id=?').all(t.id);
+    res.json(out);
+  } catch (err) { console.error('[stok] talep guncelleme:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/stok/talep/:id/onayla', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_edit')) return res.status(403).json({ error: 'Onaylama yetkiniz yok' });
+  const t = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Talep bulunamadı' });
+  if (t.durum === 'iptal') return res.status(400).json({ error: 'İptal talep onaylanamaz' });
+  const now = new Date().toISOString();
+  db.prepare("UPDATE stok_talepler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, t.id);
+  res.json(db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(t.id));
+});
+
+app.post('/api/stok/talep/:id/iptal', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const t = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Talep bulunamadı' });
+  db.prepare("UPDATE stok_talepler SET durum='iptal', updated_date=? WHERE id=?").run(new Date().toISOString(), t.id);
+  res.json(db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(t.id));
+});
+
+// Onaylı talepten çıkış fişi türet (kısmi sevk). body.satirlar: [{talep_satir_id, miktar}]
+// verilmezse her satırın kalan (miktar - karsilanan_miktar) kadarı sevk edilir.
+app.post('/api/stok/talep/:id/sevk', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_add')) return res.status(403).json({ error: 'Sevk (çıkış fişi) yetkiniz yok' });
+  const t = db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'Talep bulunamadı' });
+  if (!['onayli', 'kismen_sevk'].includes(t.durum)) return res.status(400).json({ error: 'Sadece onaylı talep sevk edilebilir' });
+  if (!t.kaynak_depo_id) return res.status(400).json({ error: 'Talebe kaynak depo atanmamış' });
+  const satirlar = db.prepare('SELECT * FROM stok_talep_satirlari WHERE talep_id=?').all(t.id);
+  const istenen = req.body?.satirlar || null;
+  const sevkSatir = [];
+  for (const s of satirlar) {
+    const kalan = +(Number(s.miktar) - Number(s.karsilanan_miktar || 0)).toFixed(6);
+    let m = kalan;
+    if (istenen) { const x = istenen.find((i) => i.talep_satir_id === s.id); m = x ? Math.min(Number(x.miktar) || 0, kalan) : 0; }
+    if (m > 1e-9) sevkSatir.push({ satir: s, miktar: m });
+  }
+  if (!sevkSatir.length) return res.status(400).json({ error: 'Sevk edilecek miktar yok' });
+  try {
+    const now = new Date().toISOString();
+    let fis;
+    db.transaction(() => {
+      const uf = (id) => db.prepare('SELECT satis_fiyati, ana_birim FROM stok_urunler WHERE id=?').get(id) || {};
+      fis = insertStokFis(_stokUUID(), {
+        tip: 'cikis', tarih: now.slice(0, 10), kaynak_depo_id: t.kaynak_depo_id, kaynak_depo_adi: t.kaynak_depo_adi,
+        hedef_saha_id: t.hedef_saha_id, hedef_saha_adi: t.hedef_saha_adi,
+        belge_no: `${t.talep_no}${t.is_emri_no ? ' / ' + t.is_emri_no : ''}`, aciklama: `Malzeme talebi sevki (${t.talep_no})`,
+        kaynak_ref_tip: 'talep', kaynak_ref_id: t.id,
+      }, sevkSatir.map(({ satir, miktar }) => { const f = uf(satir.urun_id); return { urun_id: satir.urun_id, urun_adi: satir.urun_adi, urun_kodu: satir.urun_kodu, birim: satir.birim || f.ana_birim || 'ADET', carpan: 1, miktar, birim_fiyat: f.satis_fiyati || 0 }; }), req.user.email);
+      // stok yeterlilik
+      const fSat = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(fis.id);
+      const yetersiz = [];
+      for (const fs of fSat) {
+        const mevcut = stokMevcut(fs.urun_id, t.kaynak_depo_id, null);
+        if (fs.miktar_ana_birim > mevcut + 1e-9) yetersiz.push(`${fs.urun_adi}: gerekli ${fs.miktar_ana_birim}, mevcut ${mevcut}`);
+      }
+      if (yetersiz.length) { const e = new Error('Yetersiz stok:\n' + yetersiz.join('\n')); e.stok = true; throw e; }
+      const insHrk = db.prepare(`INSERT INTO stok_hareketler (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet, fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      for (const fs of fSat) insHrk.run(_stokUUID(), fs.urun_id, fs.urun_adi, t.kaynak_depo_id, t.kaynak_depo_adi, fs.kaynak_raf_id, fs.kaynak_raf_adi, 'cikis', fs.miktar_ana_birim, fs.birim_fiyat, fis.id, fis.fis_no, 'cikis', fs.id, null, t.hedef_saha_id, fis.tarih, req.user.email, now, now);
+      stokFifoUygula({ ...fis, tip: 'cikis', kaynak_depo_id: t.kaynak_depo_id, hedef_saha_id: t.hedef_saha_id }, fSat, req.user.email);
+      db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, fis.id);
+      // karsilanan_miktar güncelle
+      const updSat = db.prepare("UPDATE stok_talep_satirlari SET karsilanan_miktar=karsilanan_miktar+?, updated_date=? WHERE id=?");
+      for (const { satir, miktar } of sevkSatir) updSat.run(miktar, now, satir.id);
+      const kalanToplam = db.prepare("SELECT COALESCE(SUM(miktar - karsilanan_miktar),0) k FROM stok_talep_satirlari WHERE talep_id=?").get(t.id).k;
+      db.prepare("UPDATE stok_talepler SET durum=?, updated_date=? WHERE id=?").run(kalanToplam <= 1e-9 ? 'sevk_edildi' : 'kismen_sevk', now, t.id);
+    })();
+    res.json({ ok: true, fis: db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(fis.id), talep: db.prepare('SELECT * FROM stok_talepler WHERE id=?').get(t.id) });
+  } catch (err) {
+    if (err.stok) return res.status(400).json({ error: err.message });
+    console.error('[stok] talep sevk:', err); res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/stok/talep-ozet', authMiddleware, (req, res) => {
+  if (!stokTalepPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const ND = "(is_deleted=0 OR is_deleted IS NULL)";
+    const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_talepler WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
+    res.json({ toplam: c(''), bekleyen: c("durum IN ('taslak','onay_bekliyor')"), onayli: c("durum='onayli'"), kismen: c("durum='kismen_sevk'"), sevk: c("durum='sevk_edildi'") });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

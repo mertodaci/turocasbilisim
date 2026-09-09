@@ -80,6 +80,7 @@ const StokTransfer = lazy(() => import('./pages/stok/StokTransfer'));
 const StokFisListesi = lazy(() => import('./pages/stok/StokFisListesi'));
 const StokPartiTakibi = lazy(() => import('./pages/stok/StokPartiTakibi'));
 const StokSayim = lazy(() => import('./pages/stok/StokSayim'));
+const StokTalep = lazy(() => import('./pages/stok/StokTalep'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -222,6 +223,8 @@ const AuthenticatedApp = () => {
         <Route path="/stok/partiler" element={guard("stok_parti_takibi", <StokPartiTakibi />)} />
         {/* Faz 4: Sayım */}
         <Route path="/stok/sayim" element={guard("stok_sayim", <StokSayim />)} />
+        {/* Faz 5: Malzeme Talep */}
+        <Route path="/stok/talep" element={guard("stok_talep", <StokTalep />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

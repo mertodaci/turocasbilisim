@@ -405,6 +405,8 @@ function initDb() {
       'stok_parti_takibi',
       // Faz 4: Sayım
       'stok_sayim',
+      // Faz 5: Malzeme Talep
+      'stok_talep',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -622,6 +624,30 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_sayim_sat ON stok_sayim_satirlari(sayim_id);
     `);
   } catch(e) { console.error('stok faz4 tablolari:', e.message); }
+
+  // ── Stok Faz 5: malzeme talep / iş emri ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_talepler (
+        id TEXT PRIMARY KEY, talep_no TEXT, talep_eden TEXT, departman TEXT,
+        hedef_saha_id TEXT, hedef_saha_adi TEXT, kaynak_depo_id TEXT, kaynak_depo_adi TEXT,
+        is_emri_no TEXT, tarih TEXT, ihtiyac_tarihi TEXT, oncelik TEXT DEFAULT 'orta',
+        durum TEXT DEFAULT 'taslak',   -- taslak | onay_bekliyor | onayli | kismen_sevk | sevk_edildi | iptal
+        aciklama TEXT, satir_sayisi INTEGER DEFAULT 0,
+        olusturan TEXT, onaylayan TEXT, onay_tarihi TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_talep_satirlari (
+        id TEXT PRIMARY KEY, talep_id TEXT NOT NULL,
+        urun_id TEXT, urun_adi TEXT, urun_kodu TEXT,
+        miktar REAL DEFAULT 0, birim TEXT, karsilanan_miktar REAL DEFAULT 0, not_ TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_talep_durum ON stok_talepler(durum);
+      CREATE INDEX IF NOT EXISTS idx_stok_talep_sat ON stok_talep_satirlari(talep_id);
+    `);
+  } catch(e) { console.error('stok faz5 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

@@ -93,6 +93,8 @@ const ENTITY_MAP = {
   StokPartiTahsis:   'stok_parti_tahsis',
   StokSayim:         'stok_sayimlar',
   StokSayimSatir:    'stok_sayim_satirlari',
+  StokTalep:         'stok_talepler',
+  StokTalepSatir:    'stok_talep_satirlari',
 };
 
 function createEntityClient(entityName) {
@@ -268,6 +270,13 @@ export const stok = {
   async sayimKaydet(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, _sjson('PUT', body))); },
   async sayimTamamla(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}/tamamla`, _sjson('POST'))); },
   async sayimOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim-ozet`, { credentials: 'include' })); },
+  async talepOlustur(talep, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep`, _sjson('POST', { talep, satirlar }))); },
+  async talepGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}`, { credentials: 'include' })); },
+  async talepKaydet(id, talep, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}`, _sjson('PUT', { talep, satirlar }))); },
+  async talepOnayla(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}/onayla`, _sjson('POST'))); },
+  async talepIptal(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}/iptal`, _sjson('POST'))); },
+  async talepSevk(id, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}/sevk`, _sjson('POST', satirlar ? { satirlar } : undefined))); },
+  async talepOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep-ozet`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

@@ -409,6 +409,8 @@ function initDb() {
       'stok_talep',
       // Faz 6: Raporlar
       'stok_raporlar',
+      // Faz 7: Satın Alma
+      'stok_satinalma',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -650,6 +652,31 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_talep_sat ON stok_talep_satirlari(talep_id);
     `);
   } catch(e) { console.error('stok faz5 tablolari:', e.message); }
+
+  // ── Stok Faz 7: satın alma (ürün-tedarikçi eşleştirme + fiyat geçmişi) ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_urun_tedarikci (
+        id TEXT PRIMARY KEY, urun_id TEXT, urun_adi TEXT, cari_id TEXT, cari_adi TEXT,
+        tedarikci_urun_kodu TEXT, marka TEXT, model TEXT, birim TEXT DEFAULT 'ADET',
+        birim_fiyat REAL DEFAULT 0, para_birimi TEXT DEFAULT 'TRY', fiyat_tarihi TEXT,
+        teslim_suresi_gun REAL DEFAULT 0, min_siparis REAL DEFAULT 1, stok_durumu TEXT,
+        tercih_edilen INTEGER DEFAULT 0, aktif INTEGER DEFAULT 1, not_ TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_fiyat_gecmisi (
+        id TEXT PRIMARY KEY, urun_id TEXT, urun_adi TEXT, cari_id TEXT, cari_adi TEXT,
+        alis_fiyati REAL DEFAULT 0, para_birimi TEXT DEFAULT 'TRY', tarih TEXT,
+        kaynak TEXT DEFAULT 'manuel',   -- manuel | stok_giris | excel | qnb
+        fis_no TEXT, not_ TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_ut_urun ON stok_urun_tedarikci(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_ut_cari ON stok_urun_tedarikci(cari_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_fg_urun ON stok_fiyat_gecmisi(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_fg_tarih ON stok_fiyat_gecmisi(tarih);
+    `);
+  } catch(e) { console.error('stok faz7 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

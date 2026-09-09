@@ -179,6 +179,9 @@ app.use('/api/entities/stok_sayim_satirlari',   createEntityRouter('stok_sayim_s
 // Faz 5: Malzeme Talep
 app.use('/api/entities/stok_talepler',          createEntityRouter('stok_talepler'));
 app.use('/api/entities/stok_talep_satirlari',   createEntityRouter('stok_talep_satirlari'));
+// Faz 7: Satın Alma
+app.use('/api/entities/stok_urun_tedarikci',    createEntityRouter('stok_urun_tedarikci'));
+app.use('/api/entities/stok_fiyat_gecmisi',     createEntityRouter('stok_fiyat_gecmisi'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -1033,6 +1036,26 @@ function stokFifoGeriAl(fis) {
   db.prepare('DELETE FROM stok_partiler WHERE kaynak_fis_id=?').run(fis.id);
 }
 
+// Faz 7: onaylı giriş fişinde cari varsa alış fiyat geçmişi + tedarikçi eşleştirmesini güncelle
+function stokFiyatGecmisiYaz(fis, satirlar, userEmail) {
+  if (fis.tip !== 'giris' || !fis.cari_id) return;
+  const now = new Date().toISOString();
+  const insFG = db.prepare(`INSERT INTO stok_fiyat_gecmisi (id, urun_id, urun_adi, cari_id, cari_adi, alis_fiyati, para_birimi, tarih, kaynak, fis_no, created_by, created_date, updated_date)
+    VALUES (?,?,?,?,?,?, 'TRY', ?, 'stok_giris', ?, ?, ?, ?)`);
+  for (const s of satirlar) {
+    if (!s.urun_id) continue;
+    const anaFiyat = (Number(s.carpan) || 1) > 0 ? (Number(s.birim_fiyat) || 0) / (Number(s.carpan) || 1) : (Number(s.birim_fiyat) || 0);
+    insFG.run(_stokUUID(), s.urun_id, s.urun_adi, fis.cari_id, fis.cari_adi || null, anaFiyat, fis.tarih || now.slice(0, 10), fis.fis_no, userEmail, now, now);
+    const mevcut = db.prepare('SELECT id FROM stok_urun_tedarikci WHERE urun_id=? AND cari_id=?').get(s.urun_id, fis.cari_id);
+    if (mevcut) {
+      db.prepare("UPDATE stok_urun_tedarikci SET birim_fiyat=?, fiyat_tarihi=?, updated_date=? WHERE id=?").run(anaFiyat, fis.tarih || now.slice(0, 10), now, mevcut.id);
+    } else {
+      db.prepare(`INSERT INTO stok_urun_tedarikci (id, urun_id, urun_adi, cari_id, cari_adi, birim, birim_fiyat, para_birimi, fiyat_tarihi, aktif, created_by, created_date, updated_date)
+        VALUES (?,?,?,?,?,?,?, 'TRY', ?, 1, ?, ?, ?)`).run(_stokUUID(), s.urun_id, s.urun_adi, fis.cari_id, fis.cari_adi || null, s.birim || 'ADET', anaFiyat, fis.tarih || now.slice(0, 10), userEmail, now, now);
+    }
+  }
+}
+
 // Bir fişin oluşturduğu parti başka fiş tarafından tüketilmiş mi?
 function stokPartiKullanildiMi(fisId) {
   return !!db.prepare(`SELECT 1 FROM stok_parti_tahsis t JOIN stok_partiler p ON p.id=t.parti_id
@@ -1158,6 +1181,8 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
       }
       // Faz 3: FIFO parti oluştur / tüket
       stokFifoUygula(fis, satirlar, req.user.email);
+      // Faz 7: alış fiyat geçmişi + tedarikçi eşleştirme
+      stokFiyatGecmisiYaz(fis, satirlar, req.user.email);
       db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?")
         .run(req.user.email, now, now, fis.id);
     })();
@@ -1722,6 +1747,99 @@ app.get('/api/stok/rapor/merkez', authMiddleware, (req, res) => {
     const depoYogunluk = db.prepare(`SELECT depo_adi, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY depo_id ORDER BY m DESC LIMIT 8`).all();
     const sonHareket = db.prepare("SELECT fis_no, urun_adi, depo_adi, raf_adi, tip, miktar, tarih FROM stok_hareketler ORDER BY created_date DESC LIMIT 12").all();
     res.json({ aktif_urun: aktifUrun, aktif_depo: aktifDepo, aktif_raf: aktifRaf, stok_biten: stokBiten, kritik, depo_yogunluk: depoYogunluk, son_hareket: sonHareket });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 7: Satın Alma raporları
+// ═══════════════════════════════════════════════════════════════════
+function stokSatinalmaPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_satinalma', action || 'can_view');
+}
+
+app.get('/api/stok/satinalma/merkez', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const aktifTedarikci = db.prepare("SELECT COUNT(*) n FROM customers WHERE (is_supplier=1) AND (is_deleted=0 OR is_deleted IS NULL) AND (status='aktif' OR status IS NULL)").get().n;
+    const eslesme = db.prepare("SELECT COUNT(*) n FROM stok_urun_tedarikci WHERE aktif=1").get().n;
+    const eskiFiyat = db.prepare("SELECT COUNT(*) n FROM stok_urun_tedarikci WHERE aktif=1 AND fiyat_tarihi IS NOT NULL AND fiyat_tarihi <> '' AND substr(fiyat_tarihi,1,10) < date('now','-90 days')").get().n;
+    const tekTedarikci = db.prepare("SELECT COUNT(*) n FROM (SELECT urun_id FROM stok_urun_tedarikci WHERE aktif=1 GROUP BY urun_id HAVING COUNT(DISTINCT cari_id)=1)").get().n;
+    const enUygun = db.prepare(`SELECT ut.urun_id, MAX(ut.urun_adi) urun_adi,
+        (SELECT cari_adi FROM stok_urun_tedarikci x WHERE x.urun_id=ut.urun_id AND x.aktif=1 ORDER BY x.birim_fiyat ASC LIMIT 1) en_ucuz_cari,
+        MIN(ut.birim_fiyat) en_dusuk, MAX(ut.birim_fiyat) en_yuksek, COUNT(DISTINCT ut.cari_id) tedarikci_sayisi
+      FROM stok_urun_tedarikci ut WHERE ut.aktif=1 GROUP BY ut.urun_id ORDER BY urun_adi LIMIT 20`).all();
+    const sonFiyat = db.prepare("SELECT urun_adi, cari_adi, alis_fiyati, tarih, kaynak FROM stok_fiyat_gecmisi ORDER BY created_date DESC LIMIT 12").all();
+    res.json({ aktif_tedarikci: aktifTedarikci, eslesme, eski_fiyat: eskiFiyat, tek_tedarikci: tekTedarikci, en_uygun: enUygun, son_fiyat: sonFiyat });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/satinalma/karsilastirma', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { urun_id, cari_id, marka, minf, maxf, maxteslim, q } = req.query;
+    const cond = ['ut.aktif=1'], params = [];
+    if (urun_id) { cond.push('ut.urun_id=?'); params.push(urun_id); }
+    if (cari_id) { cond.push('ut.cari_id=?'); params.push(cari_id); }
+    if (marka) { cond.push('ut.marka LIKE ?'); params.push(`%${marka}%`); }
+    if (minf) { cond.push('ut.birim_fiyat >= ?'); params.push(Number(minf)); }
+    if (maxf) { cond.push('ut.birim_fiyat <= ?'); params.push(Number(maxf)); }
+    if (maxteslim) { cond.push('ut.teslim_suresi_gun <= ?'); params.push(Number(maxteslim)); }
+    if (q) { cond.push('(ut.urun_adi LIKE ? OR ut.cari_adi LIKE ? OR ut.marka LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+    const rows = db.prepare(`SELECT ut.* FROM stok_urun_tedarikci ut WHERE ${cond.join(' AND ')} ORDER BY ut.urun_adi, ut.birim_fiyat ASC LIMIT 2000`).all(...params);
+    res.json({ rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/satinalma/rapor', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { tip = 'volume', gun } = req.query;
+  const g = Number(gun) || 90;
+  try {
+    let rows = [];
+    if (tip === 'volume') {
+      rows = db.prepare(`SELECT c.company_name cari, COUNT(DISTINCT h.fis_no) fis_sayisi, COUNT(*) satir,
+          SUM(h.miktar) toplam_miktar, SUM(h.miktar*h.birim_maliyet) toplam_tutar
+        FROM stok_hareketler h JOIN stok_fisler f ON f.id=h.fis_id
+        JOIN customers c ON c.id=f.cari_id
+        WHERE h.tip='giris' AND f.tip='giris' AND f.cari_id IS NOT NULL AND h.tarih >= date('now', ?)
+        GROUP BY f.cari_id ORDER BY toplam_tutar DESC`).all(`-${g} days`);
+    } else if (tip === 'best') {
+      rows = db.prepare(`SELECT urun_adi, cari_adi, birim_fiyat, para_birimi, fiyat_tarihi, teslim_suresi_gun
+        FROM stok_urun_tedarikci ut WHERE aktif=1 AND birim_fiyat = (SELECT MIN(birim_fiyat) FROM stok_urun_tedarikci x WHERE x.urun_id=ut.urun_id AND x.aktif=1)
+        ORDER BY urun_adi`).all();
+    } else if (tip === 'changes') {
+      rows = db.prepare(`SELECT urun_adi, cari_adi, alis_fiyati, tarih, kaynak, fis_no FROM stok_fiyat_gecmisi
+        WHERE tarih >= date('now', ?) ORDER BY tarih DESC, created_date DESC LIMIT 500`).all(`-${g} days`);
+    } else if (tip === 'history') {
+      rows = db.prepare(`SELECT urun_adi, cari_adi, alis_fiyati, tarih, kaynak FROM stok_fiyat_gecmisi ORDER BY urun_adi, tarih DESC LIMIT 1000`).all();
+    } else if (tip === 'stale') {
+      rows = db.prepare(`SELECT urun_adi, cari_adi, birim_fiyat, fiyat_tarihi, teslim_suresi_gun FROM stok_urun_tedarikci
+        WHERE aktif=1 AND (fiyat_tarihi IS NULL OR fiyat_tarihi='' OR substr(fiyat_tarihi,1,10) < date('now','-90 days')) ORDER BY fiyat_tarihi`).all();
+    } else if (tip === 'single') {
+      rows = db.prepare(`SELECT MAX(urun_adi) urun_adi, MAX(cari_adi) cari_adi, MAX(birim_fiyat) birim_fiyat FROM stok_urun_tedarikci
+        WHERE aktif=1 GROUP BY urun_id HAVING COUNT(DISTINCT cari_id)=1 ORDER BY urun_adi`).all();
+    } else if (tip === 'multi') {
+      rows = db.prepare(`SELECT MAX(urun_adi) urun_adi, COUNT(DISTINCT cari_id) tedarikci_sayisi, MIN(birim_fiyat) en_dusuk, MAX(birim_fiyat) en_yuksek FROM stok_urun_tedarikci
+        WHERE aktif=1 GROUP BY urun_id HAVING COUNT(DISTINCT cari_id) > 1 ORDER BY tedarikci_sayisi DESC`).all();
+    }
+    res.json({ tip, rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/fiyat-gecmisi', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { urun_id, cari_id, t1, t2, q } = req.query;
+    const cond = [], params = [];
+    if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
+    if (cari_id) { cond.push('cari_id=?'); params.push(cari_id); }
+    if (t1) { cond.push('tarih>=?'); params.push(t1); }
+    if (t2) { cond.push('tarih<=?'); params.push(t2); }
+    if (q) { cond.push('(urun_adi LIKE ? OR cari_adi LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+    const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+    const rows = db.prepare(`SELECT * FROM stok_fiyat_gecmisi ${where} ORDER BY tarih DESC, created_date DESC LIMIT 3000`).all(...params);
+    const fiyatlar = rows.map((r) => r.alis_fiyati).filter((x) => x > 0);
+    res.json({ rows, ozet: { kayit: rows.length, son: rows[0]?.alis_fiyati || 0, en_dusuk: fiyatlar.length ? Math.min(...fiyatlar) : 0, en_yuksek: fiyatlar.length ? Math.max(...fiyatlar) : 0 } });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

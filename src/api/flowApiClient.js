@@ -95,6 +95,8 @@ const ENTITY_MAP = {
   StokSayimSatir:    'stok_sayim_satirlari',
   StokTalep:         'stok_talepler',
   StokTalepSatir:    'stok_talep_satirlari',
+  StokUrunTedarikci: 'stok_urun_tedarikci',
+  StokFiyatGecmisi:  'stok_fiyat_gecmisi',
 };
 
 function createEntityClient(entityName) {
@@ -280,6 +282,18 @@ export const stok = {
   async rapor(ad, filtre = {}) {
     const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
     return handleResponse(await fetch(`${BASE_URL}/api/stok/rapor/${ad}?${p}`, { credentials: 'include' }));
+  },
+  async satinalma(ad, filtre = {}) {
+    const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/satinalma/${ad}?${p}`, { credentials: 'include' }));
+  },
+  async satinalmaRapor(tip, filtre = {}) {
+    const p = new URLSearchParams({ tip, ...Object.fromEntries(Object.entries(filtre).filter(([, v]) => v != null && v !== '')) });
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/satinalma/rapor?${p}`, { credentials: 'include' }));
+  },
+  async fiyatGecmisi(filtre = {}) {
+    const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/fiyat-gecmisi?${p}`, { credentials: 'include' }));
   },
 };
 

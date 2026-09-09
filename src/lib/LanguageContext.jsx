@@ -84,6 +84,7 @@ const translations = {
     stok_sayim: "Sayım / Envanter",
     stok_parti_takibi: "Parti & Raf Ömrü",
     stok_raporlar: "Stok Raporları",
+    stok_satinalma: "Satın Alma",
   },
   en: {
     dashboard: "Dashboard",
@@ -158,6 +159,7 @@ const translations = {
     stok_sayim: "Stock Count",
     stok_parti_takibi: "Batch & Shelf Life",
     stok_raporlar: "Inventory Reports",
+    stok_satinalma: "Purchasing",
   },
 };
 

@@ -138,6 +138,8 @@ const TABLE_TO_MODULE = {
   stok_sayim_satirlari: 'stok_sayim',
   stok_talepler: 'stok_talep',
   stok_talep_satirlari: 'stok_talep',
+  stok_urun_tedarikci: 'stok_satinalma',
+  stok_fiyat_gecmisi: 'stok_satinalma',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -253,6 +255,8 @@ const ALLOWED_COLUMNS = {
   stok_sayim_satirlari: ['sayim_id','urun_id','urun_adi','urun_kodu','raf_id','raf_adi','sistem_miktar','sayilan_miktar','fark','sayan','not_'],
   stok_talepler: ['talep_no','talep_eden','departman','hedef_saha_id','hedef_saha_adi','kaynak_depo_id','kaynak_depo_adi','is_emri_no','tarih','ihtiyac_tarihi','oncelik','durum','aciklama','satir_sayisi','olusturan','onaylayan','onay_tarihi','is_deleted'],
   stok_talep_satirlari: ['talep_id','urun_id','urun_adi','urun_kodu','miktar','birim','karsilanan_miktar','not_'],
+  stok_urun_tedarikci: ['urun_id','urun_adi','cari_id','cari_adi','tedarikci_urun_kodu','marka','model','birim','birim_fiyat','para_birimi','fiyat_tarihi','teslim_suresi_gun','min_siparis','stok_durumu','tercih_edilen','aktif','not_'],
+  stok_fiyat_gecmisi: ['urun_id','urun_adi','cari_id','cari_adi','alis_fiyati','para_birimi','tarih','kaynak','fis_no','not_'],
 };
 
 // Zorunlu alanlar
@@ -302,6 +306,8 @@ const REQUIRED_FIELDS = {
   stok_sayimlar: ['depo_id'],
   stok_sayim_satirlari: ['sayim_id'],
   stok_talep_satirlari: ['talep_id'],
+  stok_urun_tedarikci: ['urun_id','cari_id'],
+  stok_fiyat_gecmisi: ['urun_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

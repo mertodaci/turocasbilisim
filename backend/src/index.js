@@ -1152,7 +1152,9 @@ app.post('/api/stok/fis', authMiddleware, (req, res) => {
   if (fis.tip !== 'giris' && !fis.kaynak_depo_id) return res.status(400).json({ error: 'Kaynak depo zorunlu' });
   if (fis.tip === 'giris' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
   if (fis.tip === 'transfer' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
-  if (fis.tip === 'cikis' && !fis.hedef_depo_id && !fis.hedef_saha_id) return res.status(400).json({ error: 'Hedef depo veya saha zorunlu' });
+  if (fis.tip === 'transfer' && fis.kaynak_depo_id === fis.hedef_depo_id) return res.status(400).json({ error: 'Kaynak ve hedef depo aynı olamaz' });
+  // Çıkış: hedef saha opsiyonel (genel sarf), hedef depo yok — depo→depo için Depo Transfer fişi.
+  if (fis.tip === 'cikis' && fis.hedef_depo_id) return res.status(400).json({ error: 'Çıkış fişinde hedef depo olmaz — Depo Transfer fişi kullanın' });
   if (fis.tip === 'iade' && !fis.cari_id) return res.status(400).json({ error: 'Tedarikçi (cari) zorunlu' });
   try {
     let created;
@@ -1349,6 +1351,16 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     })();
     res.json(db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(fis.id));
   } catch (err) { console.error('[stok] fis onaylama:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Onay bekleyen fişi taslağa geri al (ör. rezerve stok engeline takıldıysa serbestçe düzenlemek için)
+app.post('/api/stok/fis/:id/taslaga-al', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const fis = db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(req.params.id);
+  if (!fis) return res.status(404).json({ error: 'Fiş bulunamadı' });
+  if (fis.durum !== 'onay_bekliyor') return res.status(400).json({ error: 'Sadece "onay bekliyor" durumundaki fiş taslağa alınabilir' });
+  db.prepare("UPDATE stok_fisler SET durum='taslak', updated_date=? WHERE id=?").run(new Date().toISOString(), fis.id);
+  res.json({ ok: true, durum: 'taslak' });
 });
 
 // Fişi iptal et -> onaylıysa stok hareketleri + FIFO partileri geri alınır
@@ -1871,17 +1883,21 @@ app.get('/api/stok/rapor/ekstre', authMiddleware, (req, res) => {
     if (depo_id) { cond.push('h.depo_id=?'); params.push(depo_id); }
     if (t1) { cond.push('h.tarih>=?'); params.push(t1); }
     if (t2) { cond.push('h.tarih<=?'); params.push(t2); }
-    const rows = db.prepare(`SELECT h.tarih, h.fis_no, h.fis_tip, h.depo_adi, h.raf_adi, h.tip, h.miktar
+    const rows = db.prepare(`SELECT h.tarih, h.fis_no, h.fis_tip, h.depo_id, h.depo_adi, h.raf_adi, h.tip, h.miktar
       FROM stok_hareketler h WHERE ${cond.join(' AND ')}
       ORDER BY h.tarih, h.created_date`).all(...params);
-    let bakiye = 0;
+    // Yürüyen bakiye DEPO BAZINDA tutulur — birden fazla depo seçiliyse her satır kendi deposunun bakiyesini gösterir.
+    const bakiyeByDepo = {};
+    let genelBakiye = 0;
     const out = rows.map((r) => {
       const giris = r.tip === 'giris' ? r.miktar : 0;
       const cikis = r.tip === 'cikis' ? r.miktar : 0;
-      bakiye += giris - cikis;
-      return { tarih: r.tarih, fis_no: r.fis_no, tip: r.fis_tip, depo: r.depo_adi, raf: r.raf_adi, giris, cikis, bakiye: +bakiye.toFixed(4) };
+      const dk = r.depo_id || '_';
+      bakiyeByDepo[dk] = (bakiyeByDepo[dk] || 0) + giris - cikis;
+      genelBakiye += giris - cikis;
+      return { tarih: r.tarih, fis_no: r.fis_no, tip: r.fis_tip, depo: r.depo_adi, raf: r.raf_adi, giris, cikis, bakiye: +bakiyeByDepo[dk].toFixed(4) };
     });
-    res.json({ rows: out, son_bakiye: bakiye });
+    res.json({ rows: out, son_bakiye: +genelBakiye.toFixed(4), depo_bakiye: Object.fromEntries(Object.entries(bakiyeByDepo).map(([k, v]) => [k, +v.toFixed(4)])) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

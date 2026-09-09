@@ -433,6 +433,15 @@ function initDb() {
     // ve normal musteri girisi 1 (varsayilan). Stok modulunden acilan saf tedarikci
     // is_customer=0 ile eklenir -> satis listesinde gorunmez, sadece Tedarikciler'de.
     "ALTER TABLE customers ADD COLUMN is_customer INTEGER DEFAULT 1",
+    // customers tablosunda fiilen olmayan ama form/ALLOWED_COLUMNS'un beklediği cari
+    // alanları (Tedarikçiler formu bunları doğrudan customers'a yazıyor; kolon yoksa
+    // sessizce düşüyordu). Müşteri iletişim kişileri ayrıca customer_contacts'ta tutulur.
+    "ALTER TABLE customers ADD COLUMN contact_person TEXT",
+    "ALTER TABLE customers ADD COLUMN phone TEXT",
+    "ALTER TABLE customers ADD COLUMN email TEXT",
+    "ALTER TABLE customers ADD COLUMN tax_number TEXT",
+    "ALTER TABLE customers ADD COLUMN address TEXT",
+    "ALTER TABLE customers ADD COLUMN country TEXT",
     // Seri no takibi: hareket satırına seri no (çıkışta "bu SN bu depoda mı" kontrolü için).
     "ALTER TABLE stok_hareketler ADD COLUMN seri_no TEXT",
     // ── İK / Özlük / Bordro modülü — Faz 1: personel özlük + ücret genişletme ──

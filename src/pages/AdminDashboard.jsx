@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       {/* BAŞLIK */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Operasyon Merkezi</h1>
+          <h1 className="text-2xl font-bold">Yönetim Merkezi</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Günlük operasyon ve ekip durumu</p>
         </div>
         <div className="flex items-center gap-2 bg-card border border-border px-4 py-2 rounded-xl text-xs text-muted-foreground">

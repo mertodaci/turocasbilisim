@@ -264,7 +264,7 @@ export const NotificationProvider = ({ children }) => {
       flowApi.entities.Todo.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-todos'] })),
       flowApi.entities.Message.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-conversations'] })),
       flowApi.entities.Conversation.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-conversations'] })),
-      flowApi.entities.WorkTask.subscribe(() => fetchWorkTaskCount()),
+      flowApi.entities.WorkTask.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-worktask'] })),
     ];
     return () => unsubs.forEach(u => u?.());
   }, [user?.email]);

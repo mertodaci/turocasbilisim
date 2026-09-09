@@ -291,6 +291,7 @@ export const stok = {
   async updateFis(id, fis, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}`, _sjson('PUT', { fis, satirlar }))); },
   async onayla(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}/onayla`, _sjson('POST'))); },
   async iptal(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}/iptal`, _sjson('POST'))); },
+  async fisTaslagaAl(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}/taslaga-al`, _sjson('POST'))); },
   async stokDurum(urun_id, depo_id, raf_id) {
     const p = new URLSearchParams({ urun_id, depo_id });
     if (raf_id) p.set('raf_id', raf_id);

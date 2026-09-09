@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 const TIP_CFG = {
   giris: { baslik: "Stok Giriş Fişi", icon: ArrowDownToLine, renk: "text-emerald-600", aciklama: "Satın alma, başlangıç veya sayım fazlası girişleri. Hedef depo/raf seçilir; parti ve raf ömrü bilgisi FIFO'ya kaydedilir." },
-  cikis: { baslik: "Stok Çıkış Fişi", icon: ArrowUpFromLine, renk: "text-red-600", aciklama: "Kaynak depodan çıkış. Hedef bir depo veya saha/proje olabilir. Onaylama anında stok yeterlilik kontrol edilir." },
+  cikis: { baslik: "Stok Çıkış Fişi", icon: ArrowUpFromLine, renk: "text-red-600", aciklama: "Kaynak depodan sarf / teslim çıkışı. İsteğe bağlı hedef saha/proje seçilebilir. Depo→depo taşıma için Depo Transfer fişi kullanın. Onaylama anında stok yeterlilik kontrol edilir." },
   transfer: { baslik: "Depo Transfer Fişi", icon: ArrowLeftRight, renk: "text-blue-600", aciklama: "Depo/araç/raf arası net transfer. Lot, maliyet ve tarihler hedefe aynen taşınır." },
   iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
 };
@@ -34,7 +34,7 @@ export default function FisForm({ tip }) {
 
   const [header, setHeader] = useState({
     tarih: bugun, cari_id: "", kaynak_depo_id: "", hedef_depo_id: "", hedef_saha_id: "",
-    cikis_hedef: "depo", fatura_no: "", irsaliye_no: "", belge_no: "", aciklama: "",
+    fatura_no: "", irsaliye_no: "", belge_no: "", aciklama: "",
     teslim_eden: "", teslim_alan: "", gonderim_adresi: "",
   });
   const [lines, setLines] = useState([bosSatir()]);
@@ -55,7 +55,6 @@ export default function FisForm({ tip }) {
       setHeader({
         tarih: f.tarih || bugun, cari_id: f.cari_id || "", kaynak_depo_id: f.kaynak_depo_id || "",
         hedef_depo_id: f.hedef_depo_id || "", hedef_saha_id: f.hedef_saha_id || "",
-        cikis_hedef: f.hedef_saha_id ? "saha" : "depo",
         fatura_no: f.fatura_no || "", irsaliye_no: f.irsaliye_no || "", belge_no: f.belge_no || "",
         aciklama: f.aciklama || "", teslim_eden: f.teslim_eden || "", teslim_alan: f.teslim_alan || "",
         gonderim_adresi: f.gonderim_adresi || "",
@@ -101,8 +100,9 @@ export default function FisForm({ tip }) {
     if (tip === "iade") { h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id); }
     if (tip === "cikis") {
       h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id);
-      if (header.cikis_hedef === "saha") { h.hedef_saha_id = header.hedef_saha_id || null; h.hedef_saha_adi = sahalar.find((s) => s.id === header.hedef_saha_id)?.ad || null; }
-      else { h.hedef_depo_id = header.hedef_depo_id || null; h.hedef_depo_adi = depoAdi(header.hedef_depo_id); }
+      // Çıkış hedefi yalnız saha/proje (opsiyonel); depo→depo taşıma Depo Transfer'de.
+      h.hedef_saha_id = header.hedef_saha_id || null;
+      h.hedef_saha_adi = sahalar.find((s) => s.id === header.hedef_saha_id)?.ad || null;
     }
     if (tip === "transfer") {
       h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id);
@@ -122,9 +122,7 @@ export default function FisForm({ tip }) {
     if (tip === "giris" && !header.hedef_depo_id) return "Hedef depo seçin";
     if (tip === "transfer" && !header.hedef_depo_id) return "Hedef depo seçin";
     if (tip === "transfer" && header.kaynak_depo_id === header.hedef_depo_id) return "Kaynak ve hedef depo aynı olamaz";
-    if (tip === "cikis" && header.cikis_hedef === "depo" && !header.hedef_depo_id) return "Hedef depo seçin";
-    if (tip === "cikis" && header.cikis_hedef === "depo" && header.hedef_depo_id === header.kaynak_depo_id) return "Çıkış hedefi kaynak depoyla aynı olamaz (bunun için transfer kullanın)";
-    if (tip === "cikis" && header.cikis_hedef === "saha" && !header.hedef_saha_id) return "Hedef saha seçin";
+    // Çıkışta hedef saha opsiyonel; depo hedefi yok (Depo Transfer fişi kullanılır).
     if (tip === "giris" && !header.fatura_no && !header.irsaliye_no && !header.belge_no) return "Fatura / İrsaliye / Fiş No alanlarından en az biri gerekli";
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";
     for (const l of lines) {
@@ -207,29 +205,11 @@ export default function FisForm({ tip }) {
           </div>
         )}
         {tip === "cikis" && (
-          <>
-            <div>
-              <Label className="mb-1.5 block">Çıkış Hedefi</Label>
-              <Select value={header.cikis_hedef} onValueChange={(v) => setHeader({ ...header, cikis_hedef: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="depo">Depo</SelectItem>
-                  <SelectItem value="saha">Saha / Proje</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {header.cikis_hedef === "depo" ? (
-              <div>
-                <Label className="mb-1.5 block">Hedef Depo *</Label>
-                <SearchableSelect value={header.hedef_depo_id} onChange={(v) => setHeader({ ...header, hedef_depo_id: v })} options={depoOpts} placeholder="Hedef depo" />
-              </div>
-            ) : (
-              <div>
-                <Label className="mb-1.5 block">Hedef Saha *</Label>
-                <SearchableSelect value={header.hedef_saha_id} onChange={(v) => setHeader({ ...header, hedef_saha_id: v })} options={sahaOpts} placeholder="Şantiye / proje" />
-              </div>
-            )}
-          </>
+          <div>
+            <Label className="mb-1.5 block">Hedef Saha / Proje (opsiyonel)</Label>
+            <SearchableSelect value={header.hedef_saha_id} onChange={(v) => setHeader({ ...header, hedef_saha_id: v })} options={[{ value: "", label: "— Genel sarf (saha yok)" }, ...sahaOpts]} placeholder="Şantiye / proje" />
+            <p className="text-[11px] text-muted-foreground mt-1">Başka bir depoya taşıma için <b>Depo Transfer</b> fişi kullanın.</p>
+          </div>
         )}
         {tip === "giris" && (
           <>

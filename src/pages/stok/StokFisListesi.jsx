@@ -52,6 +52,11 @@ export default function StokFisListesi() {
     onSuccess: (f) => { invalidate(); toast.success(`${f.fis_no} iptal edildi`); },
     onError: (e) => toast.error(String(e?.message || "İptal edilemedi")),
   });
+  const taslagaM = useMutation({
+    mutationFn: (id) => flowApi.stok.fisTaslagaAl(id),
+    onSuccess: () => { invalidate(); toast.success("Fiş taslağa alındı — düzenleyip tekrar onaya gönderin"); },
+    onError: (e) => toast.error(String(e?.message || "İşlenemedi")),
+  });
 
   const filtered = useMemo(() => fisler.filter((f) => {
     if (f.is_deleted === 1) return false;
@@ -134,14 +139,16 @@ export default function StokFisListesi() {
               {filtered.map((f, i) => {
                 const tb = TIP_BADGE[f.tip] || TIP_BADGE.giris;
                 const hedef = f.hedef_saha_adi || f.hedef_depo_adi || "—";
+                const depoGosterim = f.tip === "giris" ? hedef
+                  : f.tip === "cikis" ? (f.hedef_saha_adi ? `${f.kaynak_depo_adi || "—"} → ${f.hedef_saha_adi}` : `${f.kaynak_depo_adi || "—"} (sarf)`)
+                  : f.tip === "iade" ? `${f.kaynak_depo_adi || "—"} → ${f.cari_adi || "tedarikçi"}`
+                  : `${f.kaynak_depo_adi || "—"} → ${f.hedef_depo_adi || "—"}`;
                 return (
                   <tr key={f.id} className={`border-b last:border-0 hover:bg-muted/20 ${i % 2 ? "bg-muted/10" : ""}`}>
                     <td className="px-4 py-3 font-medium">{f.fis_no || "—"}</td>
                     <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${tb.cls}`}><tb.Icon className="w-3 h-3" />{tb.label}</span></td>
                     <td className="px-4 py-3 text-muted-foreground">{f.tarih || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {f.tip === "giris" ? hedef : f.tip === "cikis" ? `${f.kaynak_depo_adi || "—"} → ${hedef}` : `${f.kaynak_depo_adi || "—"} → ${f.hedef_depo_adi || "—"}`}
-                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{depoGosterim}</td>
                     <td className="px-4 py-3 text-muted-foreground">{f.satir_sayisi || 0}</td>
                     <td className="px-4 py-3 text-muted-foreground">{f.toplam_miktar || 0}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs font-medium ${DURUM_BADGE[f.durum] || ""}`}>{DURUM_LBL[f.durum] || f.durum}</span></td>
@@ -152,6 +159,10 @@ export default function StokFisListesi() {
                         {["taslak", "onay_bekliyor"].includes(f.durum) && (
                           <>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Düzenle" onClick={() => navigate(duzenleYol(f))}><Pencil className="w-3.5 h-3.5" /></Button>
+                            {f.durum === "onay_bekliyor" && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Taslağa Al"
+                                disabled={taslagaM.isPending} onClick={() => taslagaM.mutate(f.id)}><Undo2 className="w-3.5 h-3.5" /></Button>
+                            )}
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600" title="Onayla"
                               disabled={onaylaM.isPending} onClick={() => onaylaM.mutate(f.id)}><Check className="w-3.5 h-3.5" /></Button>
                           </>

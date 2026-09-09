@@ -131,7 +131,7 @@ export default function StokRaporlar() {
           {!f.urun_id ? <p className="text-sm text-muted-foreground">Ekstre için ürün seçin.</p> : (
             <div className="bg-card border rounded-2xl overflow-x-auto">
               <table className="w-full text-sm min-w-[720px]">
-                <thead className="bg-muted/40 border-b"><tr><Th>Tarih</Th><Th>Fiş</Th><Th>Tip</Th><Th>Depo / Raf</Th><Th r>Giriş</Th><Th r>Çıkış</Th><Th r>Bakiye</Th></tr></thead>
+                <thead className="bg-muted/40 border-b"><tr><Th>Tarih</Th><Th>Fiş</Th><Th>Tip</Th><Th>Depo / Raf</Th><Th r>Giriş</Th><Th r>Çıkış</Th><Th r>Bakiye{!f.depo_id ? " (depo)" : ""}</Th></tr></thead>
                 <tbody>
                   {(ekstre.data?.rows || []).map((r, i) => (
                     <tr key={i} className="border-b last:border-0"><Td>{r.tarih}</Td><Td>{r.fis_no}</Td><Td>{r.tip}</Td><Td>{r.depo}{r.raf ? ` / ${r.raf}` : ""}</Td><Td r>{r.giris || ""}</Td><Td r>{r.cikis || ""}</Td><Td r b>{r.bakiye}</Td></tr>
@@ -187,7 +187,7 @@ export default function StokRaporlar() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {raflar.map((r) => (
                     <div key={r.id} className="border rounded-lg p-2 text-xs">
-                      <p className="font-medium">{r.kod} {r.ad}</p>
+                      <p className="font-medium">{r.ad && r.kod && r.ad.toUpperCase().includes(r.kod.toUpperCase()) ? r.ad : [r.kod, r.ad].filter(Boolean).join(" ")}</p>
                       <p className="text-muted-foreground">{r.mevcut} birim · {r.urun_sayisi} ürün</p>
                       {r.doluluk != null && <div className="h-1.5 bg-muted rounded mt-1"><div className={`h-full rounded ${r.doluluk >= 85 ? "bg-red-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(r.doluluk, 100)}%` }} /></div>}
                     </div>

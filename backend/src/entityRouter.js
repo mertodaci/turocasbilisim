@@ -736,6 +736,23 @@ function createEntityRouter(tableName) {
         } catch (e) { console.error('[stok] GENEL RAF olusturma hatasi:', e.message); }
       }
 
+      // Stok: ürün kartı — kod/barkod boşsa 8690 (TR GS1) önekli EAN-13 üret
+      if (tableName === 'stok_urunler' && (!created.kod || !created.barkod)) {
+        try {
+          const ean13 = (prefix12) => {
+            const b = String(prefix12).replace(/\D/g, '').padEnd(12, '0').slice(0, 12);
+            let sum = 0;
+            for (let i = 0; i < 12; i++) sum += (+b[i]) * (i % 2 === 0 ? 1 : 3);
+            return b + String((10 - (sum % 10)) % 10);
+          };
+          const seq = 1 + db.prepare("SELECT COUNT(*) c FROM stok_urunler").get().c;
+          const kod = created.kod || ean13('8690' + String(seq).padStart(8, '0'));
+          const barkod = created.barkod || ean13('8691' + String(Date.now()).slice(-8));
+          db.prepare("UPDATE stok_urunler SET kod=?, barkod=? WHERE id=?").run(kod, barkod, created.id);
+          created.kod = kod; created.barkod = barkod;
+        } catch (e) { console.error('[stok] urun kod:', e.message); }
+      }
+
       // Stok: demirbaş / personel için otomatik kod
       if (tableName === 'stok_demirbaslar' && (!created.varlik_kodu || !created.barkod)) {
         try {

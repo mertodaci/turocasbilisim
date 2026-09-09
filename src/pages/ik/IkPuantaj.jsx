@@ -47,6 +47,18 @@ export default function IkPuantaj() {
     onSuccess: (r) => { qc.invalidateQueries({ queryKey: ["ik_puantaj_cetvel"] }); toast.success(`Puantaj hesaplandı — ${r.satir} satır`); },
     onError: (e) => toast.error(String(e?.message || "Hesaplanamadı")),
   });
+  const ayHesapla = useMutation({
+    mutationFn: () => {
+      const d = new Date(tarih + "T00:00:00");
+      const t1 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+      const sonGun = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+      const bugun = new Date().toISOString().slice(0, 10);
+      const t2 = sonGun > bugun ? bugun : sonGun;
+      return flowApi.ik.puantajHesapla({ t1, t2, ...(sube ? { sube_id: sube } : {}) });
+    },
+    onSuccess: (r) => { qc.invalidateQueries({ queryKey: ["ik_puantaj_cetvel"] }); toast.success(`Ay puantajı üretildi — ${r.gun} gün × ${r.personel} personel = ${r.satir} satır`); },
+    onError: (e) => toast.error(String(e?.message || "Üretilemedi")),
+  });
   const duzelt = useMutation({
     mutationFn: ({ id, data }) => flowApi.ik.puantajDuzelt(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["ik_puantaj_cetvel"] }); setEdit(null); toast.success("Kaydedildi"); },
@@ -69,8 +81,11 @@ export default function IkPuantaj() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setTopluOpen(true)}><Layers className="w-4 h-4 mr-1.5" /> Toplu İşlem</Button>
+          <Button variant="outline" disabled={ayHesapla.isPending} onClick={() => ayHesapla.mutate()}>
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${ayHesapla.isPending ? "animate-spin" : ""}`} /> Bu Ayı Üret
+          </Button>
           <Button disabled={hesapla.isPending} onClick={() => hesapla.mutate()}>
-            <RefreshCw className={`w-4 h-4 mr-1.5 ${hesapla.isPending ? "animate-spin" : ""}`} /> Hesapla
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${hesapla.isPending ? "animate-spin" : ""}`} /> Günü Hesapla
           </Button>
         </div>
       </div>

@@ -40,7 +40,7 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
 
   const open = () => {
     setForm(mode === "borc"
-      ? { personel_id: "", acilis_tutar: "", varsayilan_kaynak: "maas", tarih: new Date().toISOString().slice(0, 10), aciklama: "" }
+      ? { personel_id: "", acilis_tutar: "", aylik_taksit: "", varsayilan_kaynak: "maas", tarih: new Date().toISOString().slice(0, 10), aciklama: "" }
       : { personel_id: "", tutar: "", donem_yil: yil, donem_ay: ay, kesinti_kaynagi: "sadece_not", aciklama: "" });
     setDialog(true);
   };
@@ -49,7 +49,7 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
     if (!form.personel_id) { toast.error("Personel seçin"); return; }
     if (mode === "borc") {
       if (!(Number(form.acilis_tutar) > 0)) { toast.error("Tutar gerekli"); return; }
-      ekleBorc.mutate({ ...form, personel_adi: emp?.full_name, acilis_tutar: Number(form.acilis_tutar), kalan_bakiye: Number(form.acilis_tutar), durum: "acik" });
+      ekleBorc.mutate({ ...form, personel_adi: emp?.full_name, acilis_tutar: Number(form.acilis_tutar), aylik_taksit: Number(form.aylik_taksit) || 0, kalan_bakiye: Number(form.acilis_tutar), durum: "acik" });
     } else {
       if (!(Number(form.tutar) > 0)) { toast.error("Tutar gerekli"); return; }
       ekleMasraf.mutate({ ...form, personel_adi: emp?.full_name, tutar: Number(form.tutar), donem_yil: Number(form.donem_yil), donem_ay: Number(form.donem_ay) });
@@ -98,7 +98,7 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
               <tr key={r.id} className="border-b last:border-0">
                 <td className="px-4 py-2 font-medium">{r.personel_adi}</td>
                 {mode === "borc"
-                  ? <><td className="px-4 py-2 text-right">{nf(r.acilis_tutar)} / <b>{nf(r.kalan_bakiye)}</b> ₺</td><td className="px-4 py-2 text-muted-foreground">{r.varsayilan_kaynak === "maas" ? "Maaş" : "Yol/Yemek/Ticket"}</td><td className="px-4 py-2">{r.durum === "kapali" ? "Kapalı" : "Açık"}</td></>
+                  ? <><td className="px-4 py-2 text-right">{nf(r.acilis_tutar)} / <b>{nf(r.kalan_bakiye)}</b> ₺{Number(r.aylik_taksit) > 0 ? <span className="text-xs text-muted-foreground block">taksit {nf(r.aylik_taksit)} ₺/ay</span> : null}</td><td className="px-4 py-2 text-muted-foreground">{r.varsayilan_kaynak === "maas" ? "Maaş" : "Yol/Yemek/Ticket"}</td><td className="px-4 py-2">{r.durum === "kapali" ? "Kapalı" : "Açık"}</td></>
                   : <><td className="px-4 py-2 text-muted-foreground">{r.donem_ay}/{r.donem_yil}</td><td className="px-4 py-2 text-right font-medium">{nf(r.tutar)} ₺</td><td className="px-4 py-2 text-muted-foreground">{KAYNAK_MASRAF[r.kesinti_kaynagi]}</td></>}
                 <td className="px-4 py-2 text-xs text-muted-foreground">{r.aciklama || "—"}</td>
                 <td className="px-4 py-2 text-right"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => (mode === "borc" ? silBorc : silMasraf).mutate(r.id)}><Trash2 className="w-3.5 h-3.5" /></Button></td>
@@ -118,10 +118,12 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
             </div>
             {mode === "borc" ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div><Label className="mb-1.5 block">Açılış Tutarı (₺)</Label><Input type="number" value={form.acilis_tutar} onChange={(e) => setForm({ ...form, acilis_tutar: e.target.value })} /></div>
+                  <div><Label className="mb-1.5 block">Aylık Taksit (₺)</Label><Input type="number" value={form.aylik_taksit} onChange={(e) => setForm({ ...form, aylik_taksit: e.target.value })} placeholder="boş = tek seferde" /></div>
                   <div><Label className="mb-1.5 block">Tarih</Label><Input type="date" value={form.tarih} onChange={(e) => setForm({ ...form, tarih: e.target.value })} /></div>
                 </div>
+                <p className="text-xs text-muted-foreground">Aylık taksit girilirse her ay "Kesinti Merkezi &rarr; Dönemi Üret" ile o kadar tahsil edilir, kalan bakiye düşer. Boş bırakılırsa ilk dönemde tamamı kesilir.</p>
                 <div><Label className="mb-1.5 block">Varsayılan Kesinti Kaynağı</Label>
                   <Select value={form.varsayilan_kaynak} onValueChange={(v) => setForm({ ...form, varsayilan_kaynak: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>

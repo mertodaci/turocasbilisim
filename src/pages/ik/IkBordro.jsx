@@ -35,7 +35,11 @@ export default function IkBordro() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["ik_bordro_liste"] });
 
   const hesapla = useMutation({
-    mutationFn: (force) => flowApi.ik.bordroHesapla({ yil, ay, force }),
+    mutationFn: async (force) => {
+      // Önce kesinti/borç kayıtlarını döneme çek (yetki yoksa sessizce atla), sonra bordroyu üret.
+      try { await flowApi.ik.kesintiDonemUret({ donem_yil: yil, donem_ay: ay }); } catch { /* ikb_kesinti yetkisi yoksa atlanır */ }
+      return flowApi.ik.bordroHesapla({ yil, ay, force });
+    },
     onSuccess: (r) => { invalidate(); toast.success(`Bordro hesaplandı — ${r.satir} satır`); },
     onError: (e) => toast.error(String(e?.message || "Hesaplanamadı")),
   });
@@ -79,6 +83,7 @@ export default function IkBordro() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Calculator className="w-6 h-6 text-primary" /> Bordrolama</h1>
           <p className="text-sm text-muted-foreground mt-1">Maaş + bayram + fazla mesai + yol/yemek/ticket (gün bazlı) − kesintiler − borç = net. SGK/gelir vergisi tevkifatı yok (Resmî Net = Resmî Toplam).</p>
+          <p className="text-xs text-amber-600 mt-1">Sıra: (1) Puantaj Cetveli → "Bu Ayı Üret" · (2) burada "Hesapla" (kesinti/icra/BES/borç kayıtlarını otomatik döneme çeker) · (3) "Bordroyu Onayla" · (4) Ay Kapanışı.</p>
         </div>
         <div className="flex gap-2 items-center">
           <Input type="number" className="w-20" value={yil} onChange={(e) => setYil(Number(e.target.value))} />

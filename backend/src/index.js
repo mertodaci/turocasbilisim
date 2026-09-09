@@ -2491,6 +2491,17 @@ function ikPerm(req, action, ...mods) {
   const list = mods.length ? mods : ['ikb_personel'];
   return list.some((m) => checkPermission(db, req.user?.role, m, action));
 }
+// Bir dönemin (yıl/ay) durumu: 'taslak' | 'onayli' | 'kapali' | null (dönem yok)
+function ikDonemDurumu(yil, ay) {
+  const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
+  return d ? d.durum : null;
+}
+// tarih (YYYY-MM-DD) için dönem kapalı mı?
+function ikTarihKapaliMi(tarih) {
+  if (!tarih || tarih.length < 7) return false;
+  return ikDonemDurumu(+tarih.slice(0, 4), +tarih.slice(5, 7)) === 'kapali';
+}
+
 // Aylık ücret → saatlik (aylık/225) ve dakikalık (saatlik/60). 225 = 30 gün × 7,5 saat.
 function ikUcretTuret(aylik) {
   const a = Number(aylik) || 0;
@@ -2707,6 +2718,7 @@ app.post('/api/ik/puantaj/hesapla', authMiddleware, (req, res) => {
   const bugun = new Date().toISOString().slice(0, 10);
   if (bit > bugun) bit = bugun;
   if (bas > bit) return res.status(400).json({ error: 'Başlangıç bugünden ileride — üretilecek gün yok' });
+  if (ikTarihKapaliMi(bas) || ikTarihKapaliMi(bit)) return res.status(400).json({ error: 'Kapalı dönem — puantaj yeniden üretilemez' });
 
   const vardiyaMap = {};
   for (const v of db.prepare('SELECT * FROM ik_vardiyalar').all()) vardiyaMap[v.id] = v;
@@ -2771,6 +2783,7 @@ app.put('/api/ik/puantaj/:id', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const row = db.prepare('SELECT * FROM ik_puantaj WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Kayıt bulunamadı' });
+  if (ikTarihKapaliMi(row.tarih)) return res.status(400).json({ error: 'Kapalı dönem — puantaj düzeltilemez' });
   const b = req.body || {};
   const alanlar = ['giris_saat', 'cikis_saat', 'durum_kodu', 'mesai_dk', 'duzeltme_notu'];
   const now = new Date().toISOString();
@@ -2796,6 +2809,7 @@ app.post('/api/ik/puantaj/toplu', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const { personel_ids = [], t1, t2, durum_kodu, giris_saat, cikis_saat, aciklama } = req.body || {};
   if (!Array.isArray(personel_ids) || !personel_ids.length || !t1 || !t2) return res.status(400).json({ error: 'Personel ve tarih aralığı gerekli' });
+  if (ikTarihKapaliMi(t1) || ikTarihKapaliMi(t2)) return res.status(400).json({ error: 'Kapalı dönem — puantaj değiştirilemez' });
   try {
     const now = new Date().toISOString();
     const gunler = [];
@@ -2858,6 +2872,7 @@ app.post('/api/ik/mesai', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_add', 'ikb_mesai')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const b = req.body || {};
   if (!b.personel_id || !b.tarih || !(Number(b.sure_dk) > 0)) return res.status(400).json({ error: 'Personel, tarih ve süre gerekli' });
+  if (ikTarihKapaliMi(b.tarih)) return res.status(400).json({ error: 'Kapalı dönem — mesai kaydı eklenemez' });
   const emp = db.prepare('SELECT id, full_name, saatlik_ucret FROM employees WHERE id=?').get(b.personel_id);
   if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
   const tur = b.tur === 'tatil' ? 'tatil' : 'fazla';
@@ -2886,8 +2901,17 @@ app.post('/api/ik/mesai/toplu-onay', authMiddleware, (req, res) => {
   const durum = islem === 'reddet' ? 'red' : islem === 'kaldir' ? 'taslak' : 'onayli';
   const now = new Date().toISOString();
   const upd = db.prepare("UPDATE ik_mesai_kayitlari SET onay=?, onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?");
-  db.transaction(() => { for (const id of ids) upd.run(durum, durum === 'onayli' ? req.user.email : null, durum === 'onayli' ? now : null, now, id); })();
-  res.json({ ok: true, guncellenen: ids.length, durum });
+  const getRow = db.prepare('SELECT donem_yil, donem_ay FROM ik_mesai_kayitlari WHERE id=?');
+  let atlanan = 0, guncellenen = 0;
+  db.transaction(() => {
+    for (const id of ids) {
+      const r = getRow.get(id);
+      if (r && ikDonemDurumu(r.donem_yil, r.donem_ay) === 'kapali') { atlanan++; continue; }
+      upd.run(durum, durum === 'onayli' ? req.user.email : null, durum === 'onayli' ? now : null, now, id);
+      guncellenen++;
+    }
+  })();
+  res.json({ ok: true, guncellenen, atlanan, durum });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2971,9 +2995,10 @@ app.post('/api/ik/kesinti/donem-uret', authMiddleware, (req, res) => {
   const { donem_yil, donem_ay } = req.body || {};
   if (!donem_yil || !donem_ay) return res.status(400).json({ error: 'Dönem gerekli' });
   const yil = Number(donem_yil), ay = Number(donem_ay);
+  if (ikDonemDurumu(yil, ay) === 'kapali') return res.status(400).json({ error: 'Kapalı dönem — kesintiler yeniden üretilemez' });
   const now = new Date().toISOString();
   try {
-    let planN = 0, gunN = 0;
+    let planN = 0, gunN = 0, borcN = 0;
     db.transaction(() => {
       // Bu dönemin plan/puantaj kaynaklı kayıtlarını sil (elle avans/diğer korunur)
       db.prepare("DELETE FROM ik_kesintiler WHERE donem_yil=? AND donem_ay=? AND kaynak IN ('plan','puantaj')").run(yil, ay);
@@ -3017,8 +3042,32 @@ app.post('/api/ik/kesinti/donem-uret', authMiddleware, (req, res) => {
           gunN++;
         }
       }
+
+      // 3) İç borç aylık taksiti → ik_ic_borc_tahsilat (bordro motoru buradan okur, genel net'ten düşer)
+      const doW = yil * 12 + ay;   // bu dönemin sıra numarası
+      db.prepare("DELETE FROM ik_ic_borc_tahsilat WHERE donem_yil=? AND donem_ay=?").run(yil, ay);
+      const borclar = db.prepare("SELECT * FROM ik_ic_borclar WHERE durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)").all();
+      for (const bc of borclar) {
+        // önceki dönemlerde tahsil edilen toplam
+        const onceki = db.prepare(`SELECT COALESCE(SUM(tutar),0) t FROM ik_ic_borc_tahsilat
+          WHERE borc_id=? AND (donem_yil*12 + donem_ay) < ?`).get(bc.id, doW)?.t || 0;
+        const kalanOnce = +(Number(bc.acilis_tutar) - onceki).toFixed(2);
+        if (kalanOnce <= 0) {
+          db.prepare("UPDATE ik_ic_borclar SET kalan_bakiye=0, durum='kapali', updated_date=? WHERE id=?").run(now, bc.id);
+          continue;
+        }
+        const taksitTutar = Number(bc.aylik_taksit) > 0 ? Math.min(Number(bc.aylik_taksit), kalanOnce) : kalanOnce;
+        if (taksitTutar <= 0) continue;
+        db.prepare(`INSERT INTO ik_ic_borc_tahsilat (id, borc_id, personel_id, donem_yil, donem_ay, tutar, kaynak, created_by, created_date)
+          VALUES (?,?,?,?,?,?,?,?,?)`).run(
+          _stokUUID(), bc.id, bc.personel_id, yil, ay, +taksitTutar.toFixed(2), bc.varsayilan_kaynak || 'maas', req.user.email, now);
+        const kalanSonra = +(kalanOnce - taksitTutar).toFixed(2);
+        db.prepare("UPDATE ik_ic_borclar SET kalan_bakiye=?, durum=?, updated_date=? WHERE id=?")
+          .run(kalanSonra, kalanSonra <= 0 ? 'kapali' : 'acik', now, bc.id);
+        borcN++;
+      }
     })();
-    res.json({ ok: true, plan_taksiti: planN, gun_kesintisi: gunN });
+    res.json({ ok: true, plan_taksiti: planN, gun_kesintisi: gunN, ic_borc_tahsilat: borcN });
   } catch (err) { console.error('[ik] kesinti donem uret:', err); res.status(500).json({ error: err.message }); }
 });
 

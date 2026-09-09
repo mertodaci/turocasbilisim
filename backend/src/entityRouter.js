@@ -333,7 +333,7 @@ const ALLOWED_COLUMNS = {
   ik_bordro_yemek_kural: ['personel_id','personel_adi','cumartesi_kurali','kesinti_tipi','aciklama','aktif'],
   ik_kesinti_planlari: ['personel_id','personel_adi','tur','toplam_tutar','baslangic_yil','baslangic_ay','taksit_sayisi','aylik_taksit','referans_maas','kalan_bakiye','aktif','aciklama','is_deleted'],
   ik_kesintiler: ['personel_id','personel_adi','donem_yil','donem_ay','tur','tutar','plan_id','taksit_no','aciklama','kaynak','tarih','is_deleted'],
-  ik_ic_borclar: ['personel_id','personel_adi','acilis_tutar','kalan_bakiye','varsayilan_kaynak','tarih','aciklama','durum','is_deleted'],
+  ik_ic_borclar: ['personel_id','personel_adi','acilis_tutar','aylik_taksit','kalan_bakiye','varsayilan_kaynak','tarih','aciklama','durum','is_deleted'],
   ik_ic_borc_tahsilat: ['borc_id','personel_id','donem_yil','donem_ay','tutar','kaynak','bordro_satir_id'],
   ik_personel_masraf: ['personel_id','personel_adi','donem_yil','donem_ay','tutar','aciklama','kesinti_kaynagi','kilitli','is_deleted'],
   ik_bordro_donemleri: ['yil','ay','durum','olusturan','onaylayan','onay_tarihi','kapatan','kapanis_tarihi'],

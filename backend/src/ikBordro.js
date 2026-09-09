@@ -87,9 +87,16 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
   const masrafRows = db.prepare("SELECT tutar, kesinti_kaynagi FROM ik_personel_masraf WHERE personel_id=? AND donem_yil=? AND donem_ay=? AND is_deleted!=1").all(emp.id, yil, ay);
   const personelMasrafi = +masrafRows.filter((m) => m.kesinti_kaynagi !== 'sadece_not').reduce((a, m) => a + (m.tutar || 0), 0).toFixed(2);
 
-  // İç borç tahsilatı: bu dönem tahsilat kaydı + kaydı yoksa varsayılan taksit (kalan bakiyenin makul kısmı)
-  let borcToplam = db.prepare("SELECT COALESCE(SUM(tutar),0) t FROM ik_ic_borc_tahsilat WHERE personel_id=? AND donem_yil=? AND donem_ay=?").get(emp.id, yil, ay)?.t || 0;
-  borcToplam = +Number(borcToplam).toFixed(2);
+  // İç borç tahsilatı (bu dönem — kesinti/donem-uret üretir). Kaynağa göre maaş / yol-yemek-ticket ayrımı.
+  const borcT = db.prepare(`SELECT
+      COALESCE(SUM(CASE WHEN kaynak='maas' THEN tutar ELSE 0 END),0) maas,
+      COALESCE(SUM(CASE WHEN kaynak!='maas' THEN tutar ELSE 0 END),0) yyt,
+      COALESCE(SUM(tutar),0) toplam
+    FROM ik_ic_borc_tahsilat WHERE personel_id=? AND donem_yil=? AND donem_ay=?`).get(emp.id, yil, ay)
+    || { maas: 0, yyt: 0, toplam: 0 };
+  const borcMaas = +Number(borcT.maas).toFixed(2);
+  const borcYyt = +Number(borcT.yyt).toFixed(2);
+  const borcToplam = +Number(borcT.toplam).toFixed(2);
 
   const sahsiNet = emp.sahsi_hesap_aktif ? (Number(emp.sahsi_hesap_tutar) || 0) : 0;
 
@@ -109,7 +116,7 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
     avans: kes.avans || 0, icra: kes.icra || 0, bes: kes.bes || 0, diger_kesinti: kes.diger || 0,
     maas_puantaj_kes: maasPuantajKes, yol_kes: kes.gun_kes || 0, yemek_kes: 0, ticket_kes: 0,
     personel_masrafi: personelMasrafi,
-    borc_maas: 0, borc_yyt: 0, borc_toplam: borcToplam,
+    borc_maas: borcMaas, borc_yyt: borcYyt, borc_toplam: borcToplam,
     sahsi_hesap_net: sahsiNet, genel_net: genelNet,
   };
 }
@@ -145,7 +152,8 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email }) {
       resmi_toplam=excluded.resmi_toplam, resmi_net=excluded.resmi_net, avans=excluded.avans, icra=excluded.icra, bes=excluded.bes,
       diger_kesinti=excluded.diger_kesinti, maas_puantaj_kes=excluded.maas_puantaj_kes, yol_kes=excluded.yol_kes,
       personel_masrafi=excluded.personel_masrafi,
-      borc_toplam=excluded.borc_toplam, sahsi_hesap_net=excluded.sahsi_hesap_net, genel_net=excluded.genel_net, updated_date=excluded.updated_date
+      borc_maas=excluded.borc_maas, borc_yyt=excluded.borc_yyt, borc_toplam=excluded.borc_toplam,
+      sahsi_hesap_net=excluded.sahsi_hesap_net, genel_net=excluded.genel_net, updated_date=excluded.updated_date
     WHERE ik_bordro_satirlari.manuel_override=0 ${force ? "OR 1=1" : ""}`);
 
   const now = new Date().toISOString();

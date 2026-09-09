@@ -1052,6 +1052,41 @@ function initDb() {
     `);
   } catch(e) { console.error('ik faz5 tablolari:', e.message); }
 
+  // ── İK / Özlük / Bordro — Faz 6: Yol/Yemek/Ticket hak ediş + cumartesi kuralı ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_hakedis_genel_ayar (
+        id INTEGER PRIMARY KEY CHECK (id=1),
+        varsayilan_baz_gun REAL DEFAULT 26,
+        ticket_qr_yoksa_kes INTEGER DEFAULT 1,
+        ticket_e_kes INTEGER DEFAULT 1,
+        ticket_izin_rapor_kes INTEGER DEFAULT 1,
+        ticket_rt_kesme INTEGER DEFAULT 1,
+        ticket_cumartesi_yemek_kurali INTEGER DEFAULT 1,
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      INSERT OR IGNORE INTO ik_hakedis_genel_ayar (id) VALUES (1);
+      -- Personel bazlı Yol/Yemek/Ticket tanımı (tur başına 1 satır)
+      CREATE TABLE IF NOT EXISTS ik_hakedis_tanim (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        tur TEXT NOT NULL,                     -- yol | yemek | ticket
+        aktif INTEGER DEFAULT 0, baz_gun REAL DEFAULT 26, aylik_tutar REAL DEFAULT 0,
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(personel_id, tur)
+      );
+      -- Kişi bazlı cumartesi çalışma kuralı
+      CREATE TABLE IF NOT EXISTS ik_bordro_yemek_kural (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        cumartesi_kurali TEXT DEFAULT 'calismaz',   -- calismaz | girisi_varsa_kesme
+        kesinti_tipi TEXT DEFAULT 'hic',            -- hic | yemek | yol | her_ikisi | maas
+        aciklama TEXT, aktif INTEGER DEFAULT 1,
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(personel_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_hakedis_tanim_personel ON ik_hakedis_tanim(personel_id);
+    `);
+  } catch(e) { console.error('ik faz6 tablolari:', e.message); }
+
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
   try {

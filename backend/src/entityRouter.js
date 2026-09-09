@@ -170,6 +170,9 @@ const TABLE_TO_MODULE = {
   ik_puantaj: 'ikb_puantaj',
   ik_puantaj_duzeltme_log: 'ikb_puantaj',
   ik_mesai_kayitlari: 'ikb_mesai',
+  ik_hakedis_genel_ayar: 'ikb_hakedis_ayar',
+  ik_hakedis_tanim: 'ikb_hakedis_ayar',
+  ik_bordro_yemek_kural: 'ikb_bordro_yemek',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -309,6 +312,9 @@ const ALLOWED_COLUMNS = {
   ik_puantaj: ['personel_id','personel_adi','tarih','sube_id','vardiya_id','giris_saat','cikis_saat','mesai_dk','gec_dk','erken_dk','eksik_dk','fazla_mesai_dk','durum_kodu','kayit_tipi','ozet','duzeltme_notu','kaynak'],
   ik_puantaj_duzeltme_log: ['puantaj_id','personel_id','tarih','alan','eski','yeni','aciklama','actor_email'],
   ik_mesai_kayitlari: ['personel_id','personel_adi','tarih','tur','katsayi','rt_tipi','sure_dk','saatlik_ucret','tutar','onay','kaynak','aciklama','onaylayan','onay_tarihi','donem_yil','donem_ay','is_deleted'],
+  ik_hakedis_genel_ayar: ['varsayilan_baz_gun','ticket_qr_yoksa_kes','ticket_e_kes','ticket_izin_rapor_kes','ticket_rt_kesme','ticket_cumartesi_yemek_kurali'],
+  ik_hakedis_tanim: ['personel_id','personel_adi','tur','aktif','baz_gun','aylik_tutar'],
+  ik_bordro_yemek_kural: ['personel_id','personel_adi','cumartesi_kurali','kesinti_tipi','aciklama','aktif'],
 };
 
 // Zorunlu alanlar
@@ -371,6 +377,8 @@ const REQUIRED_FIELDS = {
   ik_resmi_tatiller: ['tarih','ad'],
   ik_puantaj: ['personel_id','tarih'],
   ik_mesai_kayitlari: ['personel_id','tarih'],
+  ik_hakedis_tanim: ['personel_id','tur'],
+  ik_bordro_yemek_kural: ['personel_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

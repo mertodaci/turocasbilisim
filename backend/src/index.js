@@ -207,6 +207,9 @@ app.use('/api/entities/ik_resmi_tatiller',     createEntityRouter('ik_resmi_tati
 app.use('/api/entities/ik_puantaj',            createEntityRouter('ik_puantaj'));
 app.use('/api/entities/ik_puantaj_duzeltme_log', createEntityRouter('ik_puantaj_duzeltme_log'));
 app.use('/api/entities/ik_mesai_kayitlari',    createEntityRouter('ik_mesai_kayitlari'));
+app.use('/api/entities/ik_hakedis_genel_ayar', createEntityRouter('ik_hakedis_genel_ayar'));
+app.use('/api/entities/ik_hakedis_tanim',      createEntityRouter('ik_hakedis_tanim'));
+app.use('/api/entities/ik_bordro_yemek_kural', createEntityRouter('ik_bordro_yemek_kural'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2861,6 +2864,46 @@ app.post('/api/ik/mesai/toplu-onay', authMiddleware, (req, res) => {
   const upd = db.prepare("UPDATE ik_mesai_kayitlari SET onay=?, onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?");
   db.transaction(() => { for (const id of ids) upd.run(durum, durum === 'onayli' ? req.user.email : null, durum === 'onayli' ? now : null, now, id); })();
   res.json({ ok: true, guncellenen: ids.length, durum });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 6: Yol/Yemek/Ticket hak ediş tanımları
+// ═══════════════════════════════════════════════════════════════════
+app.get('/api/ik/hakedis/liste', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_hakedis_ayar')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const emps = db.prepare(`SELECT id, full_name, sube_id FROM employees
+    WHERE (is_deleted=0 OR is_deleted IS NULL) AND app_role != 'musteri' AND (status IS NULL OR status != 'pasif')
+    ORDER BY full_name`).all();
+  const tanimlar = db.prepare('SELECT personel_id, tur, aktif, baz_gun, aylik_tutar FROM ik_hakedis_tanim').all();
+  const map = {};
+  for (const t of tanimlar) { (map[t.personel_id] ||= {})[t.tur] = t; }
+  const rows = emps.map((e) => ({
+    personel_id: e.id, personel_adi: e.full_name, sube_id: e.sube_id,
+    yol: map[e.id]?.yol || null, yemek: map[e.id]?.yemek || null, ticket: map[e.id]?.ticket || null,
+  }));
+  const genel = db.prepare('SELECT * FROM ik_hakedis_genel_ayar WHERE id=1').get();
+  res.json({ rows, genel });
+});
+
+// Toplu tanım (seçili personel + tür → aktif/baz_gun/aylik_tutar upsert)
+app.post('/api/ik/hakedis/toplu', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_hakedis_ayar')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { personel_ids = [], tur, aktif, baz_gun, aylik_tutar } = req.body || {};
+  if (!Array.isArray(personel_ids) || !personel_ids.length || !['yol', 'yemek', 'ticket'].includes(tur))
+    return res.status(400).json({ error: 'Personel ve geçerli tür gerekli' });
+  const now = new Date().toISOString();
+  const up = db.prepare(`INSERT INTO ik_hakedis_tanim (id, personel_id, personel_adi, tur, aktif, baz_gun, aylik_tutar, created_by, created_date, updated_date)
+    VALUES (?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(personel_id, tur) DO UPDATE SET aktif=excluded.aktif, baz_gun=excluded.baz_gun, aylik_tutar=excluded.aylik_tutar, updated_date=excluded.updated_date`);
+  try {
+    db.transaction(() => {
+      for (const pid of personel_ids) {
+        const emp = db.prepare('SELECT full_name FROM employees WHERE id=?').get(pid);
+        up.run(_stokUUID(), pid, emp?.full_name || null, tur, aktif ? 1 : 0, Number(baz_gun) || 26, Number(aylik_tutar) || 0, req.user.email, now, now);
+      }
+    })();
+    res.json({ ok: true, guncellenen: personel_ids.length });
+  } catch (err) { console.error('[ik] hakedis toplu:', err); res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

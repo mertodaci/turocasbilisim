@@ -72,7 +72,7 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '32mb' })); // Excel stok yükleme büyük satır setleri JSON POST ediyor
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
@@ -2008,6 +2008,30 @@ app.get('/api/stok/fiyat-gecmisi', authMiddleware, (req, res) => {
     const rows = db.prepare(`SELECT * FROM stok_fiyat_gecmisi ${where} ORDER BY tarih DESC, created_date DESC LIMIT 3000`).all(...params);
     const fiyatlar = rows.map((r) => r.alis_fiyati).filter((x) => x > 0);
     res.json({ rows, ozet: { kayit: rows.length, son: rows[0]?.alis_fiyati || 0, en_dusuk: fiyatlar.length ? Math.min(...fiyatlar) : 0, en_yuksek: fiyatlar.length ? Math.max(...fiyatlar) : 0 } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Barkod / kod çözümleme — mobil hızlı ekran tüm ürünleri indirmesin diye.
+app.get('/api/stok/barkod-coz', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const kod = (req.query.kod || '').trim();
+    const q = (req.query.q || '').trim();
+    const alanlar = 'id, kod, ad, barkod, ana_birim, alis_fiyati, satis_fiyati, seri_no_takip';
+    let urun = null;
+    if (kod) {
+      urun = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (barkod=? OR UPPER(kod)=UPPER(?)) LIMIT 1`).get(kod, kod);
+      if (!urun) {
+        const b = db.prepare('SELECT urun_id FROM stok_urun_barkodlari WHERE barkod=? LIMIT 1').get(kod);
+        if (b) urun = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE id=? LIMIT 1`).get(b.urun_id);
+      }
+    }
+    let adaylar = [];
+    if (!urun && (q || kod)) {
+      const term = `%${q || kod}%`;
+      adaylar = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (ad LIKE ? OR kod LIKE ? OR barkod LIKE ?) ORDER BY ad LIMIT 20`).all(term, term, term);
+    }
+    res.json({ urun: urun || null, adaylar });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

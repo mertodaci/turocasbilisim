@@ -282,6 +282,7 @@ export const stok = {
   async rezervasyonlar(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/stok/rezervasyonlar?${qs}`, { credentials: 'include' })); },
   async rezervasyonOlustur(data) { return handleResponse(await fetch(`${BASE_URL}/api/stok/rezervasyon`, _sjson('POST', data))); },
   async rezervasyonIptal(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/rezervasyon/${id}/iptal`, _sjson('POST'))); },
+  async barkodCoz({ kod, q } = {}) { const qs = new URLSearchParams({ ...(kod ? { kod } : {}), ...(q ? { q } : {}) }).toString(); return handleResponse(await fetch(`${BASE_URL}/api/stok/barkod-coz?${qs}`, { credentials: 'include' })); },
   async sayimOlustur(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim`, _sjson('POST', body))); },
   async sayimGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, { credentials: 'include' })); },
   async sayimKaydet(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, _sjson('PUT', body))); },

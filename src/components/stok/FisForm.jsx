@@ -123,6 +123,7 @@ export default function FisForm({ tip }) {
     if (tip === "transfer" && !header.hedef_depo_id) return "Hedef depo seçin";
     if (tip === "transfer" && header.kaynak_depo_id === header.hedef_depo_id) return "Kaynak ve hedef depo aynı olamaz";
     if (tip === "cikis" && header.cikis_hedef === "depo" && !header.hedef_depo_id) return "Hedef depo seçin";
+    if (tip === "cikis" && header.cikis_hedef === "depo" && header.hedef_depo_id === header.kaynak_depo_id) return "Çıkış hedefi kaynak depoyla aynı olamaz (bunun için transfer kullanın)";
     if (tip === "cikis" && header.cikis_hedef === "saha" && !header.hedef_saha_id) return "Hedef saha seçin";
     if (tip === "giris" && !header.fatura_no && !header.irsaliye_no && !header.belge_no) return "Fatura / İrsaliye / Fiş No alanlarından en az biri gerekli";
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";

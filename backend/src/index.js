@@ -173,6 +173,9 @@ app.use('/api/entities/stok_hareketler',        createEntityRouter('stok_hareket
 // Faz 3: FIFO partileri
 app.use('/api/entities/stok_partiler',          createEntityRouter('stok_partiler'));
 app.use('/api/entities/stok_parti_tahsis',      createEntityRouter('stok_parti_tahsis'));
+// Faz 4: Sayım
+app.use('/api/entities/stok_sayimlar',          createEntityRouter('stok_sayimlar'));
+app.use('/api/entities/stok_sayim_satirlari',   createEntityRouter('stok_sayim_satirlari'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -1238,6 +1241,153 @@ app.post('/api/stok/fifo-yeniden-hesapla', authMiddleware, (req, res) => {
     })();
     res.json({ ok: true, ...sonuc });
   } catch (err) { console.error('[stok] fifo yeniden hesapla:', err); res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 4: Fiziksel Sayım / Envanter
+// ═══════════════════════════════════════════════════════════════════
+function stokSayimPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_sayim', action);
+}
+function stokDepoStokListe(depoId) {
+  return db.prepare(`SELECT h.urun_id,
+      COALESCE(MAX(h.urun_adi), (SELECT ad FROM stok_urunler WHERE id=h.urun_id)) AS urun_adi,
+      COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) AS sistem_miktar
+    FROM stok_hareketler h WHERE h.depo_id=? GROUP BY h.urun_id`).all(depoId);
+}
+
+app.post('/api/stok/sayim', authMiddleware, (req, res) => {
+  if (!stokSayimPerm(req, 'can_add')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { depo_id, tarih, tip, aciklama, doldur } = req.body || {};
+  if (!depo_id) return res.status(400).json({ error: 'Depo zorunlu' });
+  try {
+    const depo = db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(depo_id);
+    const now = new Date().toISOString();
+    const id = _stokUUID();
+    const yil = new Date().getFullYear();
+    const row = db.prepare("SELECT sayim_no FROM stok_sayimlar WHERE sayim_no LIKE ? ORDER BY sayim_no DESC LIMIT 1").get(`SAY-${yil}-%`);
+    let n = 1; if (row) { const x = parseInt(String(row.sayim_no).split('-').pop(), 10); if (Number.isFinite(x)) n = x + 1; }
+    const sayimNo = `SAY-${yil}-${String(n).padStart(5, '0')}`;
+    let satirlar = [];
+    db.transaction(() => {
+      db.prepare(`INSERT INTO stok_sayimlar (id, sayim_no, depo_id, depo_adi, tarih, tip, durum, aciklama, olusturan, created_by, created_date, updated_date)
+        VALUES (?,?,?,?,?,?, 'taslak', ?, ?, ?, ?, ?)`).run(id, sayimNo, depo_id, depo?.ad || null, tarih || now.slice(0, 10), tip || 'tam', aciklama || null, req.user.email, req.user.email, now, now);
+      if (doldur) {
+        const stoklar = stokDepoStokListe(depo_id);
+        const ins = db.prepare(`INSERT INTO stok_sayim_satirlari (id, sayim_id, urun_id, urun_adi, sistem_miktar, sayilan_miktar, fark, created_by, created_date, updated_date)
+          VALUES (?,?,?,?,?,?,?,?,?,?)`);
+        for (const s of stoklar) ins.run(_stokUUID(), id, s.urun_id, s.urun_adi, s.sistem_miktar, null, 0, req.user.email, now, now);
+        db.prepare('UPDATE stok_sayimlar SET satir_sayisi=? WHERE id=?').run(stoklar.length, id);
+        satirlar = stoklar;
+      }
+    })();
+    const out = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(id);
+    out.satirlar = db.prepare('SELECT * FROM stok_sayim_satirlari WHERE sayim_id=?').all(id);
+    res.status(201).json(out);
+  } catch (err) { console.error('[stok] sayim olusturma:', err); res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/sayim/:id', authMiddleware, (req, res) => {
+  if (!stokSayimPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const s = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Sayım bulunamadı' });
+  s.satirlar = db.prepare('SELECT * FROM stok_sayim_satirlari WHERE sayim_id=? ORDER BY urun_adi').all(s.id);
+  res.json(s);
+});
+
+// Sayılan miktarları kaydet (satır güncelleme)
+app.put('/api/stok/sayim/:id', authMiddleware, (req, res) => {
+  if (!stokSayimPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const s = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Sayım bulunamadı' });
+  if (['tamamlandi', 'iptal'].includes(s.durum)) return res.status(400).json({ error: 'Bu sayım düzenlenemez' });
+  const { satirlar = [], aciklama, durum } = req.body || {};
+  try {
+    const now = new Date().toISOString();
+    let farkli = 0;
+    db.transaction(() => {
+      const upd = db.prepare("UPDATE stok_sayim_satirlari SET sayilan_miktar=?, fark=?, sayan=?, not_=?, updated_date=? WHERE id=? AND sayim_id=?");
+      for (const r of satirlar) {
+        const say = (r.sayilan_miktar === '' || r.sayilan_miktar == null) ? null : Number(r.sayilan_miktar);
+        const fark = say == null ? 0 : +(say - (Number(r.sistem_miktar) || 0)).toFixed(6);
+        if (fark !== 0) farkli++;
+        upd.run(say, fark, req.user.email, r.not_ || null, now, r.id, s.id);
+      }
+      db.prepare("UPDATE stok_sayimlar SET aciklama=COALESCE(?,aciklama), durum=?, farkli_satir=?, updated_date=? WHERE id=?")
+        .run(aciklama ?? null, durum && ['sayiliyor', 'fark_onay'].includes(durum) ? durum : s.durum, farkli, now, s.id);
+    })();
+    const out = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(s.id);
+    out.satirlar = db.prepare('SELECT * FROM stok_sayim_satirlari WHERE sayim_id=? ORDER BY urun_adi').all(s.id);
+    res.json(out);
+  } catch (err) { console.error('[stok] sayim guncelleme:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Sayımı tamamla -> farklar için otomatik düzeltme fişi (giriş: fazla, çıkış: eksik) + onayla
+app.post('/api/stok/sayim/:id/tamamla', authMiddleware, (req, res) => {
+  if (!stokSayimPerm(req, 'can_edit')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const s = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Sayım bulunamadı' });
+  if (s.durum === 'tamamlandi') return res.status(400).json({ error: 'Sayım zaten tamamlandı' });
+  if (s.durum === 'iptal') return res.status(400).json({ error: 'İptal sayım tamamlanamaz' });
+  const satirlar = db.prepare('SELECT * FROM stok_sayim_satirlari WHERE sayim_id=?').all(s.id);
+  const fazla = satirlar.filter((r) => Number(r.fark) > 1e-9);
+  const eksik = satirlar.filter((r) => Number(r.fark) < -1e-9);
+  try {
+    const now = new Date().toISOString();
+    let girisId = null, cikisId = null;
+    db.transaction(() => {
+      const urunFiyat = (id) => db.prepare('SELECT alis_fiyati, ana_birim FROM stok_urunler WHERE id=?').get(id) || {};
+      if (fazla.length) {
+        const g = insertStokFis(_stokUUID(), { tip: 'giris', tarih: s.tarih, hedef_depo_id: s.depo_id, hedef_depo_adi: s.depo_adi,
+          belge_no: s.sayim_no, aciklama: `Sayım fazlası düzeltmesi (${s.sayim_no})` },
+          fazla.map((r) => { const uf = urunFiyat(r.urun_id); return { urun_id: r.urun_id, urun_adi: r.urun_adi, birim: uf.ana_birim || 'ADET', carpan: 1, miktar: Number(r.fark), birim_fiyat: uf.alis_fiyati || 0, raf_omru_durumu: 'Raf ömrü uygulanmaz' }; }), req.user.email);
+        const gs = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(g.id);
+        stokFifoUygulaSayim(g, gs, req.user.email);
+        db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, g.id);
+        girisId = g.id;
+      }
+      if (eksik.length) {
+        const c = insertStokFis(_stokUUID(), { tip: 'cikis', tarih: s.tarih, kaynak_depo_id: s.depo_id, kaynak_depo_adi: s.depo_adi,
+          hedef_depo_id: s.depo_id, hedef_depo_adi: s.depo_adi, belge_no: s.sayim_no, aciklama: `Sayım eksiği düzeltmesi (${s.sayim_no})` },
+          eksik.map((r) => { const uf = urunFiyat(r.urun_id); return { urun_id: r.urun_id, urun_adi: r.urun_adi, birim: uf.ana_birim || 'ADET', carpan: 1, miktar: Math.abs(Number(r.fark)), birim_fiyat: uf.alis_fiyati || 0 }; }), req.user.email);
+        const cs = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(c.id);
+        stokFifoUygulaSayim(c, cs, req.user.email);
+        db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, c.id);
+        cikisId = c.id;
+      }
+      db.prepare("UPDATE stok_sayimlar SET durum='tamamlandi', onaylayan=?, tamamlanma_tarihi=?, duzeltme_giris_fis_id=?, duzeltme_cikis_fis_id=?, farkli_satir=?, updated_date=? WHERE id=?")
+        .run(req.user.email, now, girisId, cikisId, fazla.length + eksik.length, now, s.id);
+    })();
+    res.json({ ok: true, sayim: db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(s.id), fazla: fazla.length, eksik: eksik.length });
+  } catch (err) { console.error('[stok] sayim tamamla:', err); res.status(500).json({ error: err.message }); }
+});
+
+// stokFifoUygula ile aynı ama hareketleri de yazar (sayım düzeltme fişi için)
+function stokFifoUygulaSayim(fis, satirlar, userEmail) {
+  const now = new Date().toISOString();
+  const insHrk = db.prepare(`INSERT INTO stok_hareketler
+    (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet,
+     fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  for (const s of satirlar) {
+    if (fis.tip === 'giris') {
+      insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi, s.hedef_raf_id, s.hedef_raf_adi,
+        'giris', s.miktar_ana_birim, s.birim_fiyat, fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, userEmail, now, now);
+    } else {
+      insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi, s.kaynak_raf_id, s.kaynak_raf_adi,
+        'cikis', s.miktar_ana_birim, s.birim_fiyat, fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, userEmail, now, now);
+    }
+  }
+  stokFifoUygula(fis, satirlar, userEmail);
+}
+
+app.get('/api/stok/sayim-ozet', authMiddleware, (req, res) => {
+  if (!stokSayimPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const ND = "(is_deleted=0 OR is_deleted IS NULL)";
+    const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_sayimlar WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
+    res.json({ toplam: c(''), taslak: c("durum IN ('taslak','sayiliyor','fark_onay')"), tamamlandi: c("durum='tamamlandi'") });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

@@ -91,6 +91,8 @@ const ENTITY_MAP = {
   StokHareket:       'stok_hareketler',
   StokParti:         'stok_partiler',
   StokPartiTahsis:   'stok_parti_tahsis',
+  StokSayim:         'stok_sayimlar',
+  StokSayimSatir:    'stok_sayim_satirlari',
 };
 
 function createEntityClient(entityName) {
@@ -261,6 +263,11 @@ export const stok = {
   },
   async partiOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/parti-ozet`, { credentials: 'include' })); },
   async fifoYenidenHesapla() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-yeniden-hesapla`, _sjson('POST'))); },
+  async sayimOlustur(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim`, _sjson('POST', body))); },
+  async sayimGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, { credentials: 'include' })); },
+  async sayimKaydet(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, _sjson('PUT', body))); },
+  async sayimTamamla(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}/tamamla`, _sjson('POST'))); },
+  async sayimOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim-ozet`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

@@ -8,7 +8,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
-  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler'];
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -134,6 +134,8 @@ const TABLE_TO_MODULE = {
   stok_transfer: 'stok_transfer',
   stok_partiler: 'stok_parti_takibi',
   stok_parti_tahsis: 'stok_parti_takibi',
+  stok_sayimlar: 'stok_sayim',
+  stok_sayim_satirlari: 'stok_sayim',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -245,6 +247,8 @@ const ALLOWED_COLUMNS = {
   stok_hareketler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','tip','miktar','birim_maliyet','fis_id','fis_no','fis_tip','fis_satir_id','cari_id','saha_id','tarih'],
   stok_partiler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','lot_no','uretim_tarihi','skt','kontrol_tarihi','giris_miktar','kalan_bakiye','alis_maliyeti','tedarikci_cari_id','tedarikci_adi','durum','kaynak_tip','kaynak_fis_id','kaynak_fis_no','kaynak_fis_satir_id','giris_tarihi'],
   stok_parti_tahsis: ['parti_id','cikis_fis_id','cikis_fis_no','cikis_fis_satir_id','urun_id','depo_id','dusulen_miktar','maliyet','tarih'],
+  stok_sayimlar: ['sayim_no','depo_id','depo_adi','tarih','tip','durum','aciklama','satir_sayisi','farkli_satir','olusturan','onaylayan','tamamlanma_tarihi','duzeltme_giris_fis_id','duzeltme_cikis_fis_id','is_deleted'],
+  stok_sayim_satirlari: ['sayim_id','urun_id','urun_adi','urun_kodu','raf_id','raf_adi','sistem_miktar','sayilan_miktar','fark','sayan','not_'],
 };
 
 // Zorunlu alanlar
@@ -291,6 +295,8 @@ const REQUIRED_FIELDS = {
   stok_teslimat_adresleri: ['adres'],
   stok_fisler: ['tip'],
   stok_fis_satirlari: ['fis_id'],
+  stok_sayimlar: ['depo_id'],
+  stok_sayim_satirlari: ['sayim_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

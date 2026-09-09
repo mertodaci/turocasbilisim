@@ -403,6 +403,8 @@ function initDb() {
       'stok_giris','stok_cikis','stok_transfer','stok_fisler',
       // Faz 3: FIFO / parti
       'stok_parti_takibi',
+      // Faz 4: Sayım
+      'stok_sayim',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -595,6 +597,31 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_tahsis_fis ON stok_parti_tahsis(cikis_fis_id);
     `);
   } catch(e) { console.error('stok faz3 tablolari:', e.message); }
+
+  // ── Stok Faz 4: fiziksel sayım / envanter ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_sayimlar (
+        id TEXT PRIMARY KEY, sayim_no TEXT, depo_id TEXT, depo_adi TEXT, tarih TEXT,
+        tip TEXT DEFAULT 'tam',                       -- tam | kismi
+        durum TEXT DEFAULT 'taslak',                  -- taslak | sayiliyor | fark_onay | tamamlandi | iptal
+        aciklama TEXT, satir_sayisi INTEGER DEFAULT 0, farkli_satir INTEGER DEFAULT 0,
+        olusturan TEXT, onaylayan TEXT, tamamlanma_tarihi TEXT,
+        duzeltme_giris_fis_id TEXT, duzeltme_cikis_fis_id TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_sayim_satirlari (
+        id TEXT PRIMARY KEY, sayim_id TEXT NOT NULL,
+        urun_id TEXT, urun_adi TEXT, urun_kodu TEXT, raf_id TEXT, raf_adi TEXT,
+        sistem_miktar REAL DEFAULT 0, sayilan_miktar REAL, fark REAL DEFAULT 0,
+        sayan TEXT, not_ TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_sayim_depo ON stok_sayimlar(depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_sayim_sat ON stok_sayim_satirlari(sayim_id);
+    `);
+  } catch(e) { console.error('stok faz4 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

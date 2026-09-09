@@ -52,6 +52,14 @@ export const MODULES = [
   { key: "yonetici_masasi",     label: "Yönetici Masası",        path: "/yonetici-masasi" },
   { key: "sozlesmeler",         label: "Sözleşmeler",            path: "/sozlesmeler" },
   { key: "hakedisler",          label: "Hakediş",                path: "/hakedisler" },
+  // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
+  { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
+  { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },
+  { key: "stok_depolar",        label: "Depolar",                path: "/stok/depolar" },
+  { key: "stok_raflar",         label: "Raf Tanımları",          path: "/stok/raflar" },
+  { key: "stok_urun_raf",       label: "Ürün - Raf Atama",       path: "/stok/urun-raf" },
+  { key: "stok_sahalar",        label: "Sahalar / Projeler",     path: "/stok/sahalar" },
+  { key: "stok_tedarikciler",   label: "Tedarikçiler",           path: "/stok/tedarikciler" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

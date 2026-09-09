@@ -365,6 +365,16 @@ function initDb() {
     "ALTER TABLE hakedisler ADD COLUMN pesin_tutari REAL",
     "ALTER TABLE hakedisler ADD COLUMN tahsilat TEXT",
     "ALTER TABLE messages ADD COLUMN reactions TEXT DEFAULT '{}'",
+    // Stok/Depo modulu: cari kart = customers tablosu genisletilir (ayri firma
+    // tablosu yok). Bir firma hem musteri hem tedarikci olabilir.
+    "ALTER TABLE customers ADD COLUMN is_supplier INTEGER DEFAULT 0",
+    "ALTER TABLE customers ADD COLUMN supplier_code TEXT",
+    "ALTER TABLE customers ADD COLUMN tax_office TEXT",
+    "ALTER TABLE customers ADD COLUMN payment_method TEXT",
+    "ALTER TABLE customers ADD COLUMN payment_term_days INTEGER DEFAULT 0",
+    "ALTER TABLE customers ADD COLUMN gsm TEXT",
+    "ALTER TABLE customers ADD COLUMN website TEXT",
+    "ALTER TABLE customers ADD COLUMN working_region TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -379,6 +389,10 @@ function initDb() {
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
       'project_planning','satis','satis_firsatlari','satis_teklifleri','satis_raporlari',
       'satis_masasi','satis_aktivite_ekle','hakedisler','sozlesmeler','oturum_yonetimi',
+      // ── Stok / Depo Yönetimi modülü ──────────────────────────────
+      // Faz 1: Tanımlar
+      'stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf',
+      'stok_sahalar','stok_tedarikciler',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -417,6 +431,91 @@ function initDb() {
       db.prepare("UPDATE role_permissions SET can_view=1,can_add=1,can_edit=1,can_delete=1,updated_date=datetime('now') WHERE module='oturum_yonetimi' AND role_name IN ('admin','yonetici')").run();
     }
   } catch(e) { console.error('oturum_yonetimi perms default:', e.message); }
+
+  // ===== STOK / DEPO YÖNETİMİ MODÜLÜ =====
+  // Tanım tabloları. Diğer fazların tabloları kendi bloklarında eklenecek.
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_urun_gruplari (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, ust_grup_id TEXT, ust_grup_adi TEXT,
+        sira REAL DEFAULT 0, aktif INTEGER DEFAULT 1, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_urunler (
+        id TEXT PRIMARY KEY, kod TEXT, ad TEXT NOT NULL, barkod TEXT,
+        grup_id TEXT, grup_adi TEXT, uretici_kodu TEXT, uretici TEXT, urun_tipi TEXT,
+        marka TEXT, model TEXT, ana_birim TEXT DEFAULT 'ADET', kdv REAL DEFAULT 20,
+        alis_fiyati REAL DEFAULT 0, satis_fiyati REAL DEFAULT 0,
+        varsayilan_raf_omru_ay REAL DEFAULT 0, skt_uyari_gun REAL DEFAULT 30,
+        el_aleti_takip INTEGER DEFAULT 0, seri_no_takip INTEGER DEFAULT 0,
+        gorsel_url TEXT, aktif INTEGER DEFAULT 1, notlar TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_urun_birimleri (
+        id TEXT PRIMARY KEY, urun_id TEXT NOT NULL, birim_adi TEXT NOT NULL,
+        carpan REAL DEFAULT 1, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_urun_barkodlari (
+        id TEXT PRIMARY KEY, urun_id TEXT NOT NULL, barkod TEXT NOT NULL, birim TEXT,
+        created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_depolar (
+        id TEXT PRIMARY KEY, kod TEXT, ad TEXT NOT NULL,
+        turu TEXT DEFAULT 'fiziksel',        -- fiziksel | arac | el_aleti
+        adres TEXT, plaka TEXT, sorumlu_personel_id TEXT,
+        isletim_modu TEXT DEFAULT 'normal',  -- normal | el_aleti
+        aktif INTEGER DEFAULT 1,
+        kural_giris INTEGER DEFAULT 1, kural_cikis INTEGER DEFAULT 1, kural_transfer INTEGER DEFAULT 1,
+        sira REAL DEFAULT 0, notlar TEXT, is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_raflar (
+        id TEXT PRIMARY KEY, depo_id TEXT NOT NULL, depo_adi TEXT, kod TEXT, ad TEXT,
+        tip TEXT DEFAULT 'STANDART', kapasite REAL DEFAULT 0, aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_urun_raf (
+        id TEXT PRIMARY KEY, urun_id TEXT NOT NULL, urun_adi TEXT,
+        depo_id TEXT NOT NULL, depo_adi TEXT, raf_id TEXT, raf_adi TEXT,
+        min_seviye REAL DEFAULT 0, max_seviye REAL DEFAULT 0,
+        varsayilan INTEGER DEFAULT 0, notlar TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_sahalar (
+        id TEXT PRIMARY KEY, kod TEXT, ad TEXT NOT NULL, adres TEXT, yetkili TEXT,
+        telefon TEXT, customer_id TEXT, aktif INTEGER DEFAULT 1, notlar TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_teslimat_adresleri (
+        id TEXT PRIMARY KEY, baslik TEXT, adres TEXT NOT NULL,
+        customer_id TEXT, saha_id TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_urunler_grup ON stok_urunler(grup_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_urunler_barkod ON stok_urunler(barkod);
+      CREATE INDEX IF NOT EXISTS idx_stok_urunler_kod ON stok_urunler(kod);
+      CREATE INDEX IF NOT EXISTS idx_stok_urun_birim_urun ON stok_urun_birimleri(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_urun_barkod_urun ON stok_urun_barkodlari(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_raflar_depo ON stok_raflar(depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_urun_raf_urun ON stok_urun_raf(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_urun_raf_depo ON stok_urun_raf(depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_gruplari_ust ON stok_urun_gruplari(ust_grup_id);
+    `);
+  } catch(e) { console.error('stok tablolari:', e.message); }
+
+  // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
+  // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)
+  try {
+    const anyView = db.prepare("SELECT 1 FROM role_permissions WHERE module LIKE 'stok_%' AND can_view=1 LIMIT 1").get();
+    if (!anyView) {
+      db.prepare("UPDATE role_permissions SET can_view=1,can_add=1,can_edit=1,can_delete=1,updated_date=datetime('now') WHERE module LIKE 'stok_%' AND role_name='admin'").run();
+    }
+  } catch(e) { console.error('stok perms default:', e.message); }
 
   // announcements tablosu
   try {

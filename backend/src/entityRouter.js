@@ -7,7 +7,8 @@ const { ensureUserForEmployee } = require('./userProvision');
 const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
-const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities'];
+const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -114,6 +115,16 @@ const TABLE_TO_MODULE = {
   customer_projects: 'customer_projects',
   sales_activities: 'satis',
   hakedisler: 'hakedisler',
+  // ── Stok / Depo Yönetimi ──
+  stok_urunler: 'stok_urunler',
+  stok_urun_gruplari: 'stok_gruplar',
+  stok_urun_birimleri: 'stok_urunler',
+  stok_urun_barkodlari: 'stok_urunler',
+  stok_depolar: 'stok_depolar',
+  stok_raflar: 'stok_raflar',
+  stok_urun_raf: 'stok_urun_raf',
+  stok_sahalar: 'stok_sahalar',
+  stok_teslimat_adresleri: 'stok_depolar',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -180,7 +191,7 @@ function effortLogOwnedBy(row, user) {
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
   employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_taskqube'],
-  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date'],
+  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
   activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','taskqube_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
   leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],
@@ -210,6 +221,16 @@ const ALLOWED_COLUMNS = {
   tq_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
   sales_activities: ['customer_id','customer_name','activity_type','contact_person','date','start_time','end_time','notes','outcome','next_visit_date','opportunity_id','created_by','employee_id','employee_name','duration_minutes','location','parent_activity_id','note_type','title','valid_until','deal_status','products','amount','currency','is_deleted'],
   hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
+  // ── Stok / Depo Yönetimi — Faz 1 ──
+  stok_urun_gruplari: ['ad','ust_grup_id','ust_grup_adi','sira','aktif'],
+  stok_urunler: ['kod','ad','barkod','grup_id','grup_adi','uretici_kodu','uretici','urun_tipi','marka','model','ana_birim','kdv','alis_fiyati','satis_fiyati','varsayilan_raf_omru_ay','skt_uyari_gun','el_aleti_takip','seri_no_takip','gorsel_url','aktif','notlar','is_deleted'],
+  stok_urun_birimleri: ['urun_id','birim_adi','carpan'],
+  stok_urun_barkodlari: ['urun_id','barkod','birim'],
+  stok_depolar: ['kod','ad','turu','adres','plaka','sorumlu_personel_id','isletim_modu','aktif','kural_giris','kural_cikis','kural_transfer','sira','notlar','is_deleted'],
+  stok_raflar: ['depo_id','depo_adi','kod','ad','tip','kapasite','aktif','is_deleted'],
+  stok_urun_raf: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','min_seviye','max_seviye','varsayilan','notlar'],
+  stok_sahalar: ['kod','ad','adres','yetkili','telefon','customer_id','aktif','notlar','is_deleted'],
+  stok_teslimat_adresleri: ['baslik','adres','customer_id','saha_id'],
 };
 
 // Zorunlu alanlar
@@ -245,6 +266,15 @@ const REQUIRED_FIELDS = {
   announcements: ['title','content'],
   hakedisler: ['musteri'],
   // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
+  stok_urun_gruplari: ['ad'],
+  stok_urunler: ['ad'],
+  stok_urun_birimleri: ['urun_id','birim_adi'],
+  stok_urun_barkodlari: ['urun_id','barkod'],
+  stok_depolar: ['ad'],
+  stok_raflar: ['depo_id'],
+  stok_urun_raf: ['urun_id','depo_id'],
+  stok_sahalar: ['ad'],
+  stok_teslimat_adresleri: ['adres'],
 };
 
 function validateData(tableName, data, isUpdate = false) {
@@ -281,7 +311,8 @@ const ALLOWED_SORT_COLS = new Set([
   'id','created_date','updated_date','date','name','full_name','email','status',
   'title','sort_order','last_message_at','due_date','start_date','end_date',
   'priority','ticket_number','total_amount','day_count','half_day_period','offer_date','valid_until',
-  'employee_name','customer_name','activity_type','last_message_at'
+  'employee_name','customer_name','activity_type','last_message_at',
+  'kod','ad','sira','depo_adi','urun_adi'
 ]);
 
 function createEntityRouter(tableName) {
@@ -553,6 +584,17 @@ function createEntityRouter(tableName) {
           const ticket = db.prepare('SELECT * FROM tq_tickets WHERE id = ?').get(created.ticket_id);
           if (ticket) notifyNewComment(parseJsonColumns('tq_comments', created), parseJsonColumns('tq_tickets', ticket), req.user);
         } catch (e) { console.error('[taskqubeNotify] yorum bildirimi hatasi:', e.message); }
+      }
+
+      // Stok: yeni depo olusturulunca otomatik "GENEL RAF" kaydi acilir
+      // (stok giris/cikis/transfer raf secilmezse bu rafi kullanir).
+      if (tableName === 'stok_depolar') {
+        try {
+          const now2 = new Date().toISOString();
+          db.prepare(`INSERT INTO stok_raflar (id, depo_id, depo_adi, kod, ad, tip, kapasite, aktif, created_by, created_date, updated_date)
+            VALUES (?, ?, ?, 'GENEL', 'GENEL RAF', 'STANDART', 0, 1, ?, ?, ?)`)
+            .run(uuidv4(), created.id, created.ad, req.user?.email || null, now2, now2);
+        } catch (e) { console.error('[stok] GENEL RAF olusturma hatasi:', e.message); }
       }
 
       res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });

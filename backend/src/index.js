@@ -156,6 +156,17 @@ app.use('/api/entities/tq_effort_logs',    createEntityRouter('tq_effort_logs'))
 app.use('/api/entities/tq_kanban_boards',  createEntityRouter('tq_kanban_boards'));
 app.use('/api/entities/card_logs',         createEntityRouter('card_logs'));
 
+// Stok / Depo Yönetimi entity route'ları — Faz 1: Tanımlar
+app.use('/api/entities/stok_urun_gruplari',     createEntityRouter('stok_urun_gruplari'));
+app.use('/api/entities/stok_urunler',           createEntityRouter('stok_urunler'));
+app.use('/api/entities/stok_urun_birimleri',    createEntityRouter('stok_urun_birimleri'));
+app.use('/api/entities/stok_urun_barkodlari',   createEntityRouter('stok_urun_barkodlari'));
+app.use('/api/entities/stok_depolar',           createEntityRouter('stok_depolar'));
+app.use('/api/entities/stok_raflar',            createEntityRouter('stok_raflar'));
+app.use('/api/entities/stok_urun_raf',          createEntityRouter('stok_urun_raf'));
+app.use('/api/entities/stok_sahalar',           createEntityRouter('stok_sahalar'));
+app.use('/api/entities/stok_teslimat_adresleri', createEntityRouter('stok_teslimat_adresleri'));
+
 // Dosya yükleme
 const multer = require('multer');
 const path = require('path');

@@ -28,6 +28,7 @@ const CATEGORIES = [
   { label: "Satış",            keys: ["satis", "satis_aktivite_ekle", "satis_teklifleri", "satis_raporlari"] },
   { label: "Raporlar",         keys: ["quick_report"] },
   { label: "Sistem Yönetimi",  keys: ["users", "app_version", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
+  { label: "Stok / Depo Yönetimi", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

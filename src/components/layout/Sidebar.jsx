@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Lightbulb, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, TrendingUp, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Lightbulb, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, TrendingUp, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -105,6 +105,18 @@ export const allNavItems = [
 },
 {
   labelKey: "ideas", path: "/fikirler", icon: Lightbulb, roles: ["admin", "yonetici", "kullanici"]
+},
+{
+  labelKey: "stok_yonetimi", path: null, icon: Boxes, roles: ["admin", "yonetici", "kullanici"],
+  children: [
+    { labelKey: "stok_urunler", path: "/stok/urunler", icon: Package, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_gruplar", path: "/stok/gruplar", icon: FileText, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_depolar", path: "/stok/depolar", icon: Warehouse, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_raflar", path: "/stok/raflar", icon: Rows3, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_urun_raf", path: "/stok/urun-raf", icon: PackageSearch, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_sahalar", path: "/stok/sahalar", icon: MapPin, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "stok_tedarikciler", path: "/stok/tedarikciler", icon: Building2, roles: ["admin", "yonetici", "kullanici"] },
+  ]
 },
 ];
 

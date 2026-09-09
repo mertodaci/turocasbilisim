@@ -66,6 +66,14 @@ const TaskQubeDashboard = lazy(() => import('./pages/TaskQubeDashboard'));
 const TaskQubeTickets = lazy(() => import('./pages/TaskQubeTickets'));
 const TaskQubeKanban = lazy(() => import('./pages/TaskQubeKanban'));
 const TaskQubeSettings = lazy(() => import('./pages/TaskQubeSettings'));
+// Stok / Depo Yönetimi — Faz 1: Tanımlar
+const StokUrunler = lazy(() => import('./pages/stok/StokUrunler'));
+const StokGruplar = lazy(() => import('./pages/stok/StokGruplar'));
+const StokDepolar = lazy(() => import('./pages/stok/StokDepolar'));
+const StokRaflar = lazy(() => import('./pages/stok/StokRaflar'));
+const StokUrunRaf = lazy(() => import('./pages/stok/StokUrunRaf'));
+const StokSahalar = lazy(() => import('./pages/stok/StokSahalar'));
+const StokTedarikciler = lazy(() => import('./pages/stok/StokTedarikciler'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -191,6 +199,14 @@ const AuthenticatedApp = () => {
         <Route path="/taskqube-v3/tickets" element={guard("taskqube_tickets", <TaskQubeTickets />)} />
         <Route path="/taskqube-v3/kanban" element={guard("taskqube_kanban", <TaskQubeKanban />)} />
         <Route path="/taskqube-v3/tanimlar" element={guard("taskqube_settings", <TaskQubeSettings />)} />
+        {/* Stok / Depo Yönetimi — Faz 1: Tanımlar */}
+        <Route path="/stok/urunler" element={guard("stok_urunler", <StokUrunler />)} />
+        <Route path="/stok/gruplar" element={guard("stok_gruplar", <StokGruplar />)} />
+        <Route path="/stok/depolar" element={guard("stok_depolar", <StokDepolar />)} />
+        <Route path="/stok/raflar" element={guard("stok_raflar", <StokRaflar />)} />
+        <Route path="/stok/urun-raf" element={guard("stok_urun_raf", <StokUrunRaf />)} />
+        <Route path="/stok/sahalar" element={guard("stok_sahalar", <StokSahalar />)} />
+        <Route path="/stok/tedarikciler" element={guard("stok_tedarikciler", <StokTedarikciler />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

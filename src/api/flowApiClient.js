@@ -76,6 +76,16 @@ const ENTITY_MAP = {
   CardLog:          'card_logs',
   Role:             'roles',
   RolePermission:   'role_permissions',
+  // ── Stok / Depo Yönetimi ──
+  StokUrun:          'stok_urunler',
+  StokUrunGrup:      'stok_urun_gruplari',
+  StokUrunBirim:     'stok_urun_birimleri',
+  StokUrunBarkod:    'stok_urun_barkodlari',
+  StokDepo:          'stok_depolar',
+  StokRaf:           'stok_raflar',
+  StokUrunRaf:       'stok_urun_raf',
+  StokSaha:          'stok_sahalar',
+  StokTeslimatAdres: 'stok_teslimat_adresleri',
 };
 
 function createEntityClient(entityName) {

@@ -75,6 +75,7 @@ export const allNavItems = [
 {
   labelKey: "ik_bordro", path: null, icon: Wallet, roles: ["admin", "yonetici", "ik"],
   children: [
+    { labelKey: "ikb_dashboard", path: "/ik/dashboard", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
     {
       labelKey: "ik_bordro_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
       children: [

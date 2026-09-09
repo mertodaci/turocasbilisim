@@ -3380,6 +3380,49 @@ app.get('/api/ik/hareket-rapor', authMiddleware, (req, res) => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 12: İK / PDKS Dashboard
+// ═══════════════════════════════════════════════════════════════════
+app.get('/api/ik/dashboard', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_dashboard', 'ikb_puantaj', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const today = new Date().toISOString().slice(0, 10);
+  const mmdd = today.slice(5);
+  const d = new Date();
+  const yil = d.getFullYear(), ay = d.getMonth() + 1;
+  const g = (sql, ...p) => { try { return db.prepare(sql).get(...p); } catch { return null; } };
+  const a = (sql, ...p) => { try { return db.prepare(sql).all(...p); } catch { return []; } };
+
+  const aktifPersonel = g("SELECT COUNT(*) c FROM employees WHERE (is_deleted IS NULL OR is_deleted=0) AND app_role!='musteri' AND COALESCE(status,'aktif')!='pasif'")?.c || 0;
+  const bugunPuantaj = g("SELECT COUNT(*) c FROM ik_puantaj WHERE tarih=?", today)?.c || 0;
+  const bugunGecKalan = g("SELECT COUNT(*) c, COALESCE(SUM(gec_dk),0) dk FROM ik_puantaj WHERE tarih=? AND COALESCE(gec_dk,0)>0", today) || { c: 0, dk: 0 };
+  const bugunGelmeyen = g("SELECT COUNT(*) c FROM ik_puantaj WHERE tarih=? AND durum_kodu='E'", today)?.c || 0;
+  const bugunIzinli = g("SELECT COUNT(*) c FROM leave_requests WHERE status='onaylandi' AND start_date<=? AND end_date>=?", today, today)?.c || 0;
+  const bugunDogumGunu = a("SELECT full_name FROM employees WHERE birth_date IS NOT NULL AND substr(birth_date,6,5)=? AND COALESCE(status,'aktif')!='pasif' AND (is_deleted IS NULL OR is_deleted=0)", mmdd).map(r => r.full_name);
+  const bekleyenMesai = g("SELECT COUNT(*) c FROM ik_mesai_kayitlari WHERE onay='taslak' AND is_deleted!=1")?.c || 0;
+  const eksikEvrakliIzin = g("SELECT COUNT(*) c FROM ik_izin_evraklari WHERE durum='eksik' AND is_deleted!=1")?.c || 0;
+  const tutarsizPersonel = g("SELECT COUNT(*) c FROM employees e WHERE (is_deleted IS NULL OR is_deleted=0) AND app_role!='musteri' AND COALESCE(status,'aktif')!='pasif' AND (e.tc IS NULL OR e.tc='' OR e.sube_id IS NULL OR e.sube_id='' OR e.hire_date IS NULL OR COALESCE(e.aylik_ucret,0)<=0)")?.c || 0;
+  const donem = g("SELECT durum FROM ik_bordro_donemleri WHERE yil=? AND ay=?", yil, ay);
+  const acikMesaiOnaylari = a("SELECT id, personel_adi, tarih, tur, sure_dk, tutar FROM ik_mesai_kayitlari WHERE onay='taslak' AND is_deleted!=1 ORDER BY tarih DESC LIMIT 15");
+
+  res.json({
+    tarih: today,
+    kpi: {
+      aktif_personel: aktifPersonel,
+      bugun_puantaj: bugunPuantaj,
+      bugun_izinli: bugunIzinli,
+      bugun_gec_kalan: bugunGecKalan.c || 0,
+      bugun_gec_dk: bugunGecKalan.dk || 0,
+      bugun_gelmeyen: bugunGelmeyen,
+      bekleyen_mesai: bekleyenMesai,
+      eksik_evrakli_izin: eksikEvrakliIzin,
+      tutarsiz_personel: tutarsizPersonel,
+    },
+    dogum_gunu: bugunDogumGunu,
+    bordro_donem: donem ? { yil, ay, durum: donem.durum } : { yil, ay, durum: 'yok' },
+    acik_mesai_onaylari: acikMesaiOnaylari,
+  });
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 const { startCronJobs } = require('./cronJobs');

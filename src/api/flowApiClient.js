@@ -383,6 +383,7 @@ export const ik = {
   async ozlukEvrakOnizle(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/ozluk-evrak/eslesme-onizle`, _sjson('POST', body))); },
   async ozlukEvrakTopluUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/ozluk-evrak/toplu-uygula`, _sjson('POST', body))); },
   async hareketRapor(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/hareket-rapor?${qs}`, { credentials: 'include' })); },
+  async dashboard() { return handleResponse(await fetch(`${BASE_URL}/api/ik/dashboard`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

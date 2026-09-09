@@ -1416,6 +1416,45 @@ function initDb() {
     }
   } catch(e) { console.error('stok rol seed:', e.message); }
 
+  // ── İK / Bordro Faz 12: İK rolleri + varsayılan yetkileri (idempotent) ──
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const ikRoller = [
+      ['ik', 'İK Sorumlusu', 'İK / özlük / bordro tam yetki'],
+      ['bordro_sorumlusu', 'Bordro Sorumlusu', 'Puantaj, mesai, kesinti, bordro ve ay kapanışı'],
+      ['sube_yoneticisi', 'Şube Yöneticisi', 'Kendi şubesi: puantaj/izin/mesai görüntüleme ve onay'],
+    ];
+    const insRole = db.prepare("INSERT OR IGNORE INTO roles (id, name, label, description) VALUES (lower(hex(randomblob(16))), ?, ?, ?)");
+    for (const [n, l, d] of ikRoller) insRole.run(n, l, d);
+
+    const IKP = (role, mods, v, a, e, d) => {
+      for (const m of mods) {
+        const exists = db.prepare('SELECT id FROM role_permissions WHERE role_name=? AND module=?').get(role, m);
+        if (!exists) db.prepare('INSERT INTO role_permissions (id, role_name, module, can_view, can_add, can_edit, can_delete, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?)').run(uuidv4(), role, m, v, a, e, d, now, now);
+        else db.prepare('UPDATE role_permissions SET can_view=?, can_add=?, can_edit=?, can_delete=?, updated_date=? WHERE id=?').run(v, a, e, d, now, exists.id);
+      }
+    };
+    const IK_HEP = ['ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak','ikb_cikis',
+      'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
+      'ikb_puantaj','ikb_puantaj_rapor','ikb_qr_harita','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
+      'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis',
+      'ikb_toplu_yukleme','ikb_sirket','ikb_tutanak','ikb_ilan','ikb_hareket_rapor','ikb_vip','ikb_izin_evrak','ikb_dashboard'];
+    const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_toplu_yukleme','ikb_hakedis_ayar','ikb_bordro_yemek'];
+    const IK_RAPOR = ['ikb_puantaj_rapor','ikb_qr_harita','ikb_maas_ozet','ikb_hareket_rapor','ikb_dashboard','ikb_personel'];
+    const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor','ikb_hareket_rapor','ikb_dashboard'];
+
+    const ikVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='ik' AND module LIKE 'ikb_%' AND can_view=1 LIMIT 1").get();
+    if (!ikVar) {
+      IKP('ik', IK_HEP, 1, 1, 1, 1);
+      IKP('ik', ['employees','leave_requests','leave_allowances','employee_report','pdks_cihazlari','definitions'], 1, 1, 1, 0);
+      IKP('bordro_sorumlusu', IK_ISLEM, 1, 1, 1, 1);
+      IKP('bordro_sorumlusu', IK_RAPOR, 1, 0, 0, 0);
+      IKP('bordro_sorumlusu', ['ikb_subeler','ikb_bolumler','ikb_vardiyalar','ikb_sirket'], 1, 0, 0, 0);
+      IKP('sube_yoneticisi', IK_SUBE, 1, 0, 1, 0);
+    }
+  } catch(e) { console.error('ik rol seed:', e.message); }
+
   console.log('✅ Veritabanı tabloları hazır');
 }
 

@@ -251,27 +251,27 @@ function CategoryPanel({ category, showColor = false }) {
   );
 }
 
-export default function Definitions() {
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].key);
-  const activeGroup = GROUPS.find(g => CATEGORIES.filter(c => c.group === g.key).some(c => c.key === activeCategory));
-  const activeCategoryObj = CATEGORIES.find(c => c.key === activeCategory);
+function DefinitionsScreen({ groups, categories, title, subtitle }) {
+  const [activeCategory, setActiveCategory] = useState(categories[0].key);
+  const activeGroup = groups.find(g => categories.filter(c => c.group === g.key).some(c => c.key === activeCategory));
+  const activeCategoryObj = categories.find(c => c.key === activeCategory);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Settings className="w-6 h-6 text-primary" />
-          Tanım Ekranları
+          {title}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Sistem genelinde kullanılan parametrik tanımları yönetin</p>
+        <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sol panel — kategori listesi */}
         <div className="lg:col-span-1 space-y-2">
-          {GROUPS.map(group => {
+          {groups.map(group => {
             const GroupIcon = group.icon;
-            const groupCategories = CATEGORIES.filter(c => c.group === group.key);
+            const groupCategories = categories.filter(c => c.group === group.key);
             const isActiveGroup = groupCategories.some(c => c.key === activeCategory);
 
             return (
@@ -320,5 +320,36 @@ export default function Definitions() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Sistem Yönetimi > Tanım Ekranları: İK ile ilgili "Çalışan" grubu buradan
+// çıkarıldı, İnsan Kaynakları menüsündeki Tanım alt menüsüne taşındı
+// (bkz. EmployeeDefinitions).
+const SYSTEM_GROUPS = GROUPS.filter(g => g.key !== "Çalışan");
+const SYSTEM_CATEGORIES = CATEGORIES.filter(c => c.group !== "Çalışan");
+
+export default function Definitions() {
+  return (
+    <DefinitionsScreen
+      groups={SYSTEM_GROUPS}
+      categories={SYSTEM_CATEGORIES}
+      title="Tanım Ekranları"
+      subtitle="Sistem genelinde kullanılan parametrik tanımları yönetin"
+    />
+  );
+}
+
+const EMPLOYEE_GROUPS = GROUPS.filter(g => g.key === "Çalışan");
+const EMPLOYEE_CATEGORIES = CATEGORIES.filter(c => c.group === "Çalışan");
+
+export function EmployeeDefinitions() {
+  return (
+    <DefinitionsScreen
+      groups={EMPLOYEE_GROUPS}
+      categories={EMPLOYEE_CATEGORIES}
+      title="Çalışan Tanımları"
+      subtitle="Departman, pozisyon ve diğer çalışan tanımlarını yönetin"
+    />
   );
 }

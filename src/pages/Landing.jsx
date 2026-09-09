@@ -40,7 +40,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)"}}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: "linear-gradient(135deg, #0f172a 0%, #3730a3 100%)"}}>
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-blue-900/50 to-slate-900/70" />
       <div className="relative z-20 w-full max-w-sm mx-4">
         <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/25 ring-1 ring-white/10">
@@ -61,7 +61,7 @@ export default function Landing() {
                   <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={loginData.password} onChange={e => setLoginData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 rounded-xl border-white/50 bg-white/60 text-slate-900 placeholder:text-slate-600 focus-visible:ring-blue-400/60 focus-visible:border-blue-400" required />
                   <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-900 z-10">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                 </div>
-                <Button type="submit" className="w-full rounded-xl bg-blue-500 hover:bg-blue-600 h-11 shadow-lg shadow-blue-500/30" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Giriş Yap"}</Button>
+                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11 shadow-lg shadow-indigo-600/30" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Giriş Yap"}</Button>
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-4">
@@ -78,7 +78,7 @@ export default function Landing() {
                   <Input type={showPassword ? "text" : "password"} placeholder="Sifre" value={registerData.password} onChange={e => setRegisterData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 rounded-xl border-gray-200 bg-white/70" required />
                   <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                 </div>
-                <Button type="submit" className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 h-11" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Kayit Ol"}</Button>
+                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Kayit Ol"}</Button>
               </form>
             )}
           </div>

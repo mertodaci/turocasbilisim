@@ -40,6 +40,7 @@ const RolePermissions = lazy(() => import('./pages/RolePermissions'));
 const WorkTasks = lazy(() => import('./pages/WorkTasks'));
 const AppVersion = lazy(() => import('./pages/AppVersion'));
 const Definitions = lazy(() => import('./pages/Definitions'));
+const EmployeeDefinitions = lazy(() => import('./pages/Definitions').then(m => ({ default: m.EmployeeDefinitions })));
 const TrashBin = lazy(() => import('./pages/TrashBin'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const SessionManagement = lazy(() => import('./pages/SessionManagement'));
@@ -194,6 +195,7 @@ const AuthenticatedApp = () => {
         <Route path="/yetkilendirme" element={guard("role_permissions", <RolePermissions />)} />
         <Route path="/versiyon" element={guard("app_version", <AppVersion />)} />
         <Route path="/tanimlar" element={guard("definitions", <Definitions />)} />
+        <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <EmployeeDefinitions />)} />
         <Route path="/cop-kutusu" element={guard("cop_kutusu", <TrashBin />)} />
         <Route path="/denetim-kaydi" element={guard("denetim_kaydi", <AuditLog />)} />
         <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />

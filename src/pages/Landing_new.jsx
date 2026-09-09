@@ -43,7 +43,7 @@ export default function Landing() {
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)",
+        background: "linear-gradient(135deg, #0f172a 0%, #3730a3 100%)",
       }}
     >
       {/* Overlay */}

@@ -40,20 +40,26 @@ export const allNavItems = [
 {
   labelKey: "hr", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici"],
   children: [
+    {
+      labelKey: "hr_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "ik_tanimlar", path: "/ik-tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+        { labelKey: "leave_allowances", path: "/izin-haklari", icon: CalendarDays, roles: ["admin", "yonetici"] },
+        { labelKey: "leave_types", path: "/izin-turleri", icon: CalendarDays, roles: ["admin", "yonetici"] },
+      ]
+    },
     { labelKey: "employees", path: "/calisanlar", icon: Users, roles: ["admin", "yonetici", "kullanici"] },
     { labelKey: "ik_leave_requests", path: "/ik-izin-yonetimi", icon: Umbrella, roles: ["admin", "yonetici"] },
     { labelKey: "ik_expense_requests", path: "/ik-harcama-yonetimi", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
-    { labelKey: "leave_allowances", path: "/izin-haklari", icon: CalendarDays, roles: ["admin", "yonetici"] },
-    { labelKey: "leave_types", path: "/izin-turleri", icon: CalendarDays, roles: ["admin", "yonetici"] },
     { labelKey: "employee_report", path: "/calisan-raporu", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
-    {
-      labelKey: "pdks", path: null, icon: Clock, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "personel_hareketleri", path: "/personel-hareketleri", icon: Clock, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "pdks_kart_yonetimi", path: "/kart-yonetimi", icon: CreditCard, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
     { labelKey: "org_chart", path: "/org-sema", icon: Users, roles: ["admin", "yonetici", "ik"] }
+  ]
+},
+{
+  labelKey: "pdks", path: null, icon: Clock, roles: ["admin", "yonetici", "ik"],
+  children: [
+    { labelKey: "personel_hareketleri", path: "/personel-hareketleri", icon: Clock, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "pdks_kart_yonetimi", path: "/kart-yonetimi", icon: CreditCard, roles: ["admin", "yonetici", "ik"] },
   ]
 },
 {

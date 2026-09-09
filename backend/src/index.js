@@ -858,6 +858,18 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
 // ═══════════════════════════════════════════════════════════════════
 const { randomUUID: _stokUUID } = require('crypto');
 
+// Bir deponun GENEL RAF'ı (raf seçilmemişse hareket/parti buraya yazılır).
+const _genelRafCache = new Map();
+function stokGenelRaf(depoId) {
+  if (!depoId) return { id: null, ad: null };
+  if (_genelRafCache.has(depoId)) return _genelRafCache.get(depoId);
+  let r = db.prepare("SELECT id, ad, kod FROM stok_raflar WHERE depo_id=? AND (kod='GENEL' OR ad LIKE 'GENEL%') ORDER BY created_date LIMIT 1").get(depoId)
+    || db.prepare("SELECT id, ad, kod FROM stok_raflar WHERE depo_id=? ORDER BY created_date LIMIT 1").get(depoId);
+  const out = r ? { id: r.id, ad: r.ad || r.kod || 'GENEL RAF' } : { id: null, ad: null };
+  if (out.id) _genelRafCache.set(depoId, out); // miss'i cache'leme (raf sonradan açılabilir)
+  return out;
+}
+
 function stokMevcut(urunId, depoId, rafId) {
   if (!urunId || !depoId) return 0;
   let sql = "SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END),0) AS m FROM stok_hareketler WHERE urun_id=? AND depo_id=?";
@@ -934,6 +946,11 @@ function stokPartiDurum(skt) {
 
 function stokFifoUygula(fis, satirlar, userEmail) {
   const now = new Date().toISOString();
+  const _kG = stokGenelRaf(fis.kaynak_depo_id), _hG = stokGenelRaf(fis.hedef_depo_id);
+  for (const s of satirlar) {
+    if (fis.tip !== 'giris' && !s.kaynak_raf_id && _kG.id) { s.kaynak_raf_id = _kG.id; s.kaynak_raf_adi = _kG.ad; }
+    if (fis.tip !== 'cikis' && !s.hedef_raf_id && _hG.id) { s.hedef_raf_id = _hG.id; s.hedef_raf_adi = _hG.ad; }
+  }
   const insParti = db.prepare(`INSERT INTO stok_partiler
     (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, lot_no, uretim_tarihi, skt, kontrol_tarihi,
      giris_miktar, kalan_bakiye, alis_maliyeti, tedarikci_cari_id, tedarikci_adi, durum,
@@ -1110,6 +1127,12 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
 
   try {
     const now = new Date().toISOString();
+    // Raf seçilmemişse ilgili deponun GENEL RAF'ını kullan (hareket + parti izi için).
+    const kGenel = stokGenelRaf(fis.kaynak_depo_id), hGenel = stokGenelRaf(fis.hedef_depo_id);
+    for (const s of satirlar) {
+      if (fis.tip !== 'giris' && !s.kaynak_raf_id && kGenel.id) { s.kaynak_raf_id = kGenel.id; s.kaynak_raf_adi = kGenel.ad; }
+      if (fis.tip !== 'cikis' && !s.hedef_raf_id && hGenel.id) { s.hedef_raf_id = hGenel.id; s.hedef_raf_adi = hGenel.ad; }
+    }
     const insHrk = db.prepare(`INSERT INTO stok_hareketler
       (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet,
        fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date)
@@ -1368,6 +1391,11 @@ app.post('/api/stok/sayim/:id/tamamla', authMiddleware, (req, res) => {
 // stokFifoUygula ile aynı ama hareketleri de yazar (sayım düzeltme fişi için)
 function stokFifoUygulaSayim(fis, satirlar, userEmail) {
   const now = new Date().toISOString();
+  const kGenel = stokGenelRaf(fis.kaynak_depo_id), hGenel = stokGenelRaf(fis.hedef_depo_id);
+  for (const s of satirlar) {
+    if (fis.tip !== 'giris' && !s.kaynak_raf_id && kGenel.id) { s.kaynak_raf_id = kGenel.id; s.kaynak_raf_adi = kGenel.ad; }
+    if (fis.tip !== 'cikis' && !s.hedef_raf_id && hGenel.id) { s.hedef_raf_id = hGenel.id; s.hedef_raf_adi = hGenel.ad; }
+  }
   const insHrk = db.prepare(`INSERT INTO stok_hareketler
     (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet,
      fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date)
@@ -1535,6 +1563,8 @@ app.post('/api/stok/talep/:id/sevk', authMiddleware, (req, res) => {
         if (fs.miktar_ana_birim > mevcut + 1e-9) yetersiz.push(`${fs.urun_adi}: gerekli ${fs.miktar_ana_birim}, mevcut ${mevcut}`);
       }
       if (yetersiz.length) { const e = new Error('Yetersiz stok:\n' + yetersiz.join('\n')); e.stok = true; throw e; }
+      const kGenel = stokGenelRaf(t.kaynak_depo_id);
+      for (const fs of fSat) if (!fs.kaynak_raf_id && kGenel.id) { fs.kaynak_raf_id = kGenel.id; fs.kaynak_raf_adi = kGenel.ad; }
       const insHrk = db.prepare(`INSERT INTO stok_hareketler (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet, fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
       for (const fs of fSat) insHrk.run(_stokUUID(), fs.urun_id, fs.urun_adi, t.kaynak_depo_id, t.kaynak_depo_adi, fs.kaynak_raf_id, fs.kaynak_raf_adi, 'cikis', fs.miktar_ana_birim, fs.birim_fiyat, fis.id, fis.fis_no, 'cikis', fs.id, null, t.hedef_saha_id, fis.tarih, req.user.email, now, now);
       stokFifoUygula({ ...fis, tip: 'cikis', kaynak_depo_id: t.kaynak_depo_id, hedef_saha_id: t.hedef_saha_id }, fSat, req.user.email);

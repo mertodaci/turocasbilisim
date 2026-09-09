@@ -407,6 +407,8 @@ function initDb() {
       'stok_sahalar','stok_tedarikciler',
       // Faz 2: Hareket fişleri
       'stok_giris','stok_cikis','stok_transfer','stok_fisler',
+      // Tedarikçiye iade (RMA)
+      'stok_iade',
       // Faz 3: FIFO / parti
       'stok_parti_takibi',
       // Faz 4: Sayım
@@ -952,7 +954,7 @@ function initDb() {
       }
     };
     const HEP = ['stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf','stok_sahalar','stok_tedarikciler',
-      'stok_giris','stok_cikis','stok_transfer','stok_talep','stok_fisler','stok_sayim','stok_parti_takibi',
+      'stok_giris','stok_cikis','stok_transfer','stok_iade','stok_talep','stok_fisler','stok_sayim','stok_parti_takibi',
       'stok_raporlar','stok_satinalma','stok_zimmet','stok_dashboard','stok_mobil','stok_etiket','stok_excel'];
     const RAPORLAR = ['stok_raporlar','stok_parti_takibi','stok_dashboard','stok_fisler'];
     // Sadece bu bloğun ilk çalışmasında (depo_yetkilisi'nin hiç yetkisi yoksa) uygula.

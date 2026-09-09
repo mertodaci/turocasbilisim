@@ -134,6 +134,7 @@ const TABLE_TO_MODULE = {
   stok_giris: 'stok_giris',
   stok_cikis: 'stok_cikis',
   stok_transfer: 'stok_transfer',
+  stok_iade: 'stok_iade',
   stok_partiler: 'stok_parti_takibi',
   stok_parti_tahsis: 'stok_parti_takibi',
   stok_sayimlar: 'stok_sayim',

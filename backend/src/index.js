@@ -922,7 +922,7 @@ function stokKritikListe() {
 }
 
 function stokFisNoUret(tip) {
-  const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP' }[tip] || 'FIS';
+  const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP', iade: 'IAD' }[tip] || 'FIS';
   const yil = new Date().getFullYear();
   const row = db.prepare("SELECT fis_no FROM stok_fisler WHERE fis_no LIKE ? ORDER BY fis_no DESC LIMIT 1").get(`${pre}-${yil}-%`);
   let next = 1;
@@ -934,7 +934,7 @@ function stokFisNoUret(tip) {
 }
 
 function stokFisPerm(req, action) {
-  const mods = ['stok_fisler', 'stok_giris', 'stok_cikis', 'stok_transfer'];
+  const mods = ['stok_fisler', 'stok_giris', 'stok_cikis', 'stok_transfer', 'stok_iade'];
   return req.user?.role === 'admin' || mods.some((m) => checkPermission(db, req.user?.role, m, action));
 }
 
@@ -1110,12 +1110,13 @@ function stokPartiKullanildiMi(fisId) {
 app.post('/api/stok/fis', authMiddleware, (req, res) => {
   if (!stokFisPerm(req, 'can_add')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
   const { fis = {}, satirlar = [] } = req.body || {};
-  if (!['giris', 'cikis', 'transfer'].includes(fis.tip)) return res.status(400).json({ error: 'Geçersiz fiş tipi' });
+  if (!['giris', 'cikis', 'transfer', 'iade'].includes(fis.tip)) return res.status(400).json({ error: 'Geçersiz fiş tipi' });
   if (!Array.isArray(satirlar) || satirlar.length === 0) return res.status(400).json({ error: 'En az bir ürün satırı gerekli' });
   if (fis.tip !== 'giris' && !fis.kaynak_depo_id) return res.status(400).json({ error: 'Kaynak depo zorunlu' });
   if (fis.tip === 'giris' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
   if (fis.tip === 'transfer' && !fis.hedef_depo_id) return res.status(400).json({ error: 'Hedef depo zorunlu' });
   if (fis.tip === 'cikis' && !fis.hedef_depo_id && !fis.hedef_saha_id) return res.status(400).json({ error: 'Hedef depo veya saha zorunlu' });
+  if (fis.tip === 'iade' && !fis.cari_id) return res.status(400).json({ error: 'Tedarikçi (cari) zorunlu' });
   try {
     let created;
     db.transaction(() => { created = insertStokFis(_stokUUID(), fis, satirlar, req.user.email); })();
@@ -1179,11 +1180,11 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   const depo = (id) => (id ? db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(id) : null);
   const kd = depo(fis.kaynak_depo_id), hd = depo(fis.hedef_depo_id);
   if (fis.tip === 'giris' && hd && !hd.kural_giris) return res.status(400).json({ error: `"${hd.ad}" deposunda stok girişi kapalı` });
-  if (fis.tip === 'cikis' && kd && !kd.kural_cikis) return res.status(400).json({ error: `"${kd.ad}" deposunda normal çıkış kapalı` });
+  if ((fis.tip === 'cikis' || fis.tip === 'iade') && kd && !kd.kural_cikis) return res.status(400).json({ error: `"${kd.ad}" deposunda çıkış kapalı` });
   if (fis.tip === 'transfer' && ((kd && !kd.kural_transfer) || (hd && !hd.kural_transfer)))
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
-  if (fis.tip === 'cikis' || fis.tip === 'transfer') {
+  if (fis.tip === 'cikis' || fis.tip === 'transfer' || fis.tip === 'iade') {
     // Aynı ürün + kaynak raf için birden çok satır varsa toplam ihtiyacı birlikte
     // kontrol et; satır bazlı ayrı ayrı kontrol (60 + 60, stok 100) negatif stoğa yol açardı.
     const ihtiyac = new Map();
@@ -1243,7 +1244,7 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
             fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, sn, req.user.email, now, now);
-        } else if (fis.tip === 'cikis') {
+        } else if (fis.tip === 'cikis' || fis.tip === 'iade') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
             fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, sn, req.user.email, now, now);
@@ -1942,6 +1943,41 @@ app.get('/api/stok/fiyat-gecmisi', authMiddleware, (req, res) => {
     const rows = db.prepare(`SELECT * FROM stok_fiyat_gecmisi ${where} ORDER BY tarih DESC, created_date DESC LIMIT 3000`).all(...params);
     const fiyatlar = rows.map((r) => r.alis_fiyati).filter((x) => x > 0);
     res.json({ rows, ozet: { kayit: rows.length, son: rows[0]?.alis_fiyati || 0, en_dusuk: fiyatlar.length ? Math.min(...fiyatlar) : 0, en_yuksek: fiyatlar.length ? Math.max(...fiyatlar) : 0 } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Cari ekstre — bir cariye bağlı onaylı stok fişleri + yürüyen bakiye.
+// Konvansiyon: giriş (bizim alımımız) = cariye borç (+); çıkış/iade = alacak (−).
+// Tam muhasebe cari hesabı değil; stok hareketlerinin parasal izidir.
+app.get('/api/stok/cari-ekstre', authMiddleware, (req, res) => {
+  if (!stokSatinalmaPerm(req) && !stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { cari_id, t1, t2 } = req.query;
+    if (!cari_id) return res.status(400).json({ error: 'cari_id zorunlu' });
+    const cari = db.prepare('SELECT id, company_name, tax_number, is_supplier, is_customer FROM customers WHERE id=?').get(cari_id);
+    const cond = ['f.cari_id=?', "f.durum='onayli'", '(f.is_deleted=0 OR f.is_deleted IS NULL)'];
+    const params = [cari_id];
+    if (t1) { cond.push('f.tarih>=?'); params.push(t1); }
+    if (t2) { cond.push('f.tarih<=?'); params.push(t2); }
+    const fisler = db.prepare(`SELECT f.id, f.fis_no, f.tip, f.tarih, f.aciklama, f.fatura_no, f.irsaliye_no, f.belge_no,
+        f.onay_tarihi, f.created_date,
+        (SELECT COALESCE(SUM(s.miktar_ana_birim * s.birim_fiyat),0) FROM stok_fis_satirlari s WHERE s.fis_id=f.id) AS tutar
+      FROM stok_fisler f WHERE ${cond.join(' AND ')}
+      ORDER BY COALESCE(f.tarih, f.created_date), f.created_date`).all(...params);
+    let bakiye = 0;
+    const hareketler = fisler.map((f) => {
+      const borc = f.tip === 'giris' ? +(f.tutar || 0).toFixed(2) : 0;
+      const alacak = f.tip !== 'giris' ? +(f.tutar || 0).toFixed(2) : 0;
+      bakiye = +(bakiye + borc - alacak).toFixed(2);
+      return { ...f, tutar: +(f.tutar || 0).toFixed(2), borc, alacak, bakiye };
+    });
+    const toplamBorc = hareketler.reduce((a, h) => a + h.borc, 0);
+    const toplamAlacak = hareketler.reduce((a, h) => a + h.alacak, 0);
+    res.json({
+      cari: cari || { id: cari_id },
+      hareketler,
+      ozet: { fis: hareketler.length, toplam_borc: +toplamBorc.toFixed(2), toplam_alacak: +toplamAlacak.toFixed(2), bakiye },
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

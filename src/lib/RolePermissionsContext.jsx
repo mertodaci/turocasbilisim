@@ -59,6 +59,7 @@ export const MODULES = [
   { key: "stok_giris",          label: "Stok Giriş",             path: "/stok/giris" },
   { key: "stok_cikis",          label: "Stok Çıkış",             path: "/stok/cikis" },
   { key: "stok_transfer",       label: "Depo Transfer",          path: "/stok/transfer" },
+  { key: "stok_iade",           label: "Tedarikçiye İade",       path: "/stok/iade" },
   { key: "stok_fisler",         label: "Stok Fiş Listesi",       path: "/stok/fisler" },
   { key: "stok_talep",          label: "Malzeme Talebi",         path: "/stok/talep" },
   { key: "stok_sayim",          label: "Sayım / Envanter",       path: "/stok/sayim" },

@@ -1,7 +1,7 @@
 // Stok fiş / sevk irsaliyesi yazdırma — yeni pencereye temiz bir belge yazıp
 // window.print() çağırır. jspdf/html2canvas'a göre daha güvenilir ve seçilebilir metin.
 
-const TIP_LBL = { giris: "STOK GİRİŞ FİŞİ", cikis: "STOK ÇIKIŞ FİŞİ", transfer: "DEPO TRANSFER FİŞİ", sayim: "SAYIM DÜZELTME FİŞİ", talep: "MALZEME TALEP FİŞİ" };
+const TIP_LBL = { giris: "STOK GİRİŞ FİŞİ", cikis: "STOK ÇIKIŞ FİŞİ", transfer: "DEPO TRANSFER FİŞİ", iade: "TEDARİKÇİYE İADE FİŞİ", sayim: "SAYIM DÜZELTME FİŞİ", talep: "MALZEME TALEP FİŞİ" };
 const DURUM_LBL = { taslak: "TASLAK", onay_bekliyor: "ONAY BEKLİYOR", onayli: "ONAYLI", iptal: "İPTAL" };
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

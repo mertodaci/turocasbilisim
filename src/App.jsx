@@ -71,6 +71,7 @@ const StokSahalar = lazy(() => import('./pages/stok/StokSahalar'));
 const StokTedarikciler = lazy(() => import('./pages/stok/StokTedarikciler'));
 const StokGiris = lazy(() => import('./pages/stok/StokGiris'));
 const StokCikis = lazy(() => import('./pages/stok/StokCikis'));
+const StokIade = lazy(() => import('./pages/stok/StokIade'));
 const StokTransfer = lazy(() => import('./pages/stok/StokTransfer'));
 const StokFisListesi = lazy(() => import('./pages/stok/StokFisListesi'));
 const StokPartiTakibi = lazy(() => import('./pages/stok/StokPartiTakibi'));
@@ -217,6 +218,7 @@ const AuthenticatedApp = () => {
         <Route path="/stok/giris" element={guard("stok_giris", <StokGiris />)} />
         <Route path="/stok/cikis" element={guard("stok_cikis", <StokCikis />)} />
         <Route path="/stok/transfer" element={guard("stok_transfer", <StokTransfer />)} />
+        <Route path="/stok/iade" element={guard("stok_iade", <StokIade />)} />
         <Route path="/stok/fisler" element={guard("stok_fisler", <StokFisListesi />)} />
         {/* Faz 3: FIFO / parti */}
         <Route path="/stok/partiler" element={guard("stok_parti_takibi", <StokPartiTakibi />)} />

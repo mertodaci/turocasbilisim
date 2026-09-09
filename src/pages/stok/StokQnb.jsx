@@ -118,7 +118,7 @@ export default function StokQnb() {
             </div>
             <div className="flex items-end gap-3 pb-1"><Switch checked={af.aktif === 1} onCheckedChange={(v) => setAf({ aktif: v ? 1 : 0 })} /><Label>Aktif</Label></div>
             {["genel_url", "efatura_url", "earsiv_url", "eirsaliye_url", "api_kullanici", "api_sifre", "firma_unvan", "vkn", "vergi_dairesi", "adres", "il", "ilce", "eposta", "telefon"].map((f) => (
-              <div key={f}><Label className="mb-1.5 block capitalize">{f.replace(/_/g, " ")}</Label><Input value={af[f] || ""} onChange={(e) => setAf({ [f]: e.target.value })} /></div>
+              <div key={f}><Label className="mb-1.5 block capitalize">{f.replace(/_/g, " ")}</Label><Input type={f === "api_sifre" ? "password" : "text"} autoComplete={f === "api_sifre" ? "new-password" : undefined} value={af[f] || ""} onChange={(e) => setAf({ [f]: e.target.value })} /></div>
             ))}
             <div><Label className="mb-1.5 block">Log Saklama (gün)</Label><Input type="number" value={af.log_saklama_gun ?? 90} onChange={(e) => setAf({ log_saklama_gun: parseInt(e.target.value) || 0 })} /></div>
             <div><Label className="mb-1.5 block">Geçici Eşleşme (gün)</Label><Input type="number" value={af.gecici_eslesme_gun ?? 30} onChange={(e) => setAf({ gecici_eslesme_gun: parseInt(e.target.value) || 0 })} /></div>

@@ -19,7 +19,12 @@ function parseSheet(file, cb) {
       for (const key of Object.keys(r)) k[String(key).trim().toLowerCase()] = r[key];
       return { kod: k["kod"] || k["urun_kodu"] || k["ürün kodu"] || k["stok kodu"] || "", barkod: k["barkod"] || "", miktar: k["miktar"] || k["adet"] || 0, birim_fiyat: k["birim_fiyat"] || k["fiyat"] || k["alis_fiyati"] || "" };
     }).filter((r) => (r.kod || r.barkod) && Number(r.miktar) > 0);
-    cb(rows);
+    // Guvenilirlik: kolon adlari beklenenle eslesmezse (veya miktar 0/bos ise)
+    // rows bombos donuyordu ve onizleme paneli sessizce hic gorunmuyordu --
+    // kullanici dosyanin bozuk oldugunu sanip anlamsizca ugrasiyordu. Bunun
+    // yerine cagirana kac ham satir okundugu da bildirilir ki net bir uyari
+    // gosterilebilsin.
+    cb(rows, raw.length);
   };
   reader.readAsBinaryString(file);
 }
@@ -50,7 +55,21 @@ export default function StokExcel() {
       <div className="bg-card border rounded-2xl p-4 space-y-3">
         <div className="flex flex-wrap gap-2 items-end">
           <div className="w-64"><SearchableSelect value={depoId} onChange={setDepoId} options={depolar.map((d) => ({ value: d.id, label: d.ad }))} placeholder="Hedef depo *" /></div>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="text-sm" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setDosya(f.name); parseSheet(f, setRows); } }} />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="text-sm" onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            setDosya(f.name);
+            parseSheet(f, (parsed, rawCount) => {
+              setRows(parsed);
+              if (parsed.length === 0) {
+                toast.error(
+                  rawCount > 0
+                    ? `Dosyada ${rawCount} satır bulundu ama hiçbiri okunamadı. Sütun adlarının "kod"/"urun_kodu"/"barkod" ve "miktar" (0'dan büyük) ile eşleştiğinden emin olun.`
+                    : "Dosyada okunacak satır bulunamadı."
+                );
+              }
+            });
+          }} />
         </div>
         {rows.length > 0 && (
           <>

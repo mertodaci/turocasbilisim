@@ -145,8 +145,9 @@ app.use('/api/entities/roles', createEntityRouter('roles'));
 app.use('/api/entities/role_permissions', createEntityRouter('role_permissions'));
 
 // İş Takibi entity route'ları
-app.use('/api/entities/customer_projects',  createEntityRouter('customer_projects'));
-app.use('/api/entities/offers',              createEntityRouter('offers'));
+// NOT: 'customer_projects' ve 'offers' TaskQube -> İş Takibi rename'inden
+// kalan olu route'lardi (job_projects/sales_activities'e devraldi); tablolari
+// hic olusmadigi icin cagrildiklarinda 500 donuyorlardi -- kaldirildi.
 app.use('/api/entities/job_projects',       createEntityRouter('job_projects'));
 app.use('/api/entities/job_tickets',        createEntityRouter('job_tickets'));
 app.use('/api/entities/job_ticket_statuses', createEntityRouter('job_ticket_statuses'));

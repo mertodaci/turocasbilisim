@@ -119,7 +119,6 @@ const TABLE_TO_MODULE = {
   job_effort_plans: 'is_takibi_biletler',
   job_effort_logs: 'is_takibi_biletler',
   job_kanban_boards: 'is_takibi_kanban',
-  customer_projects: 'customer_projects',
   sales_activities: 'satis',
   hakedisler: 'hakedisler',
   // ── Stok / Depo Yönetimi ──
@@ -712,7 +711,7 @@ function createEntityRouter(tableName) {
       // Yeni calisan olusturulunca giris (users) hesabi da otomatik acilir
       // (varsayilan sifre Turocas2026x, ilk giriste degistirilir). Calisan kaydini
       // asla bozmaz. _login_created yanita eklenir ki UI kullaniciyi bilgilendirsin.
-      let loginCreated = false;
+      let loginCreated = { created: false };
       if (tableName === 'employees') {
         loginCreated = ensureUserForEmployee(db, created, req.user?.email);
       }
@@ -772,7 +771,7 @@ function createEntityRouter(tableName) {
         } catch (e) { console.error('[stok] personel kod:', e.message); }
       }
 
-      res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });
+      res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated.created, _generated_password: loginCreated.password || undefined } : {}) });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -839,6 +838,25 @@ function createEntityRouter(tableName) {
         }
       }
 
+      // GUVENLIK: izin/harcama talepleri icin ONAYLAMA ayri bir route degil,
+      // bu genel PUT uzerinden yapiliyor. Modul yetkisi (can_edit) "kendi
+      // talebini duzenle/geri cek" icin verilse bile, ayni yetkiyle satir
+      // sahipligi hic kontrol edilmiyordu -- bir calisan baska bir calisanin
+      // talebini degistirebiliyor, hatta kendi talebini kendisi onaylayabiliyordu
+      // (DELETE'te sahiplik kontrolu vardi, PUT'ta unutulmustu).
+      if ((tableName === 'leave_requests' || tableName === 'expense_reports') && req.user?.role !== 'admin') {
+        const isApproverRole = req.user?.role === 'ik' || req.user?.role === 'yonetici';
+        const isOwner = !!existing.employee_email && existing.employee_email === req.user?.email;
+        if (!isOwner && !isApproverRole) {
+          return res.status(403).json({ error: 'Bu talebi düzenleme yetkiniz yok' });
+        }
+        const APPROVAL_FIELDS = ['status', 'approver_id', 'approver_name', 'approval_date', 'approval_history', 'rejection_reason'];
+        const triesToChangeApproval = APPROVAL_FIELDS.some(f => req.body[f] !== undefined && req.body[f] !== existing[f]);
+        if (triesToChangeApproval && !isApproverRole) {
+          return res.status(403).json({ error: 'Onay/red işlemi yalnızca İK veya Yönetici tarafından yapılabilir' });
+        }
+      }
+
       const validationErrors = validateData(tableName, req.body, true);
       if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
       // İlişkili bilet (child) ise status değiştirilemez — musteri_onay/kurum_test hariç (müşteri onaylayabilmeli)
@@ -895,12 +913,27 @@ function createEntityRouter(tableName) {
         } catch (e) { console.error('employee->user status senkron hatasi:', e.message); }
       }
 
+      // GUVENLIK/DUZELTME: calisanin "Uygulama Rolu" (app_role) degisince,
+      // zaten var olan giris hesabinin gercek yetkisi (users.role) daha once
+      // hic guncellenmiyordu -- yalnizca hesap ILK olusturulurken kopyalaniyordu.
+      // Admin bir calisanin rolunu Kullanicidan Yoneticiye vb. degistirdiginde
+      // hicbir sey olmuyordu ("degistirdim ama etkisi yok" sorunu). app_role
+      // buraya ancak req.user admin ise ulasir (yukarida non-admin icin silindi).
+      if (tableName === 'employees' && updates.app_role !== undefined && updates.app_role !== existing.app_role && updates.app_role !== 'musteri') {
+        try {
+          const emp = db.prepare('SELECT email FROM employees WHERE id = ?').get(req.params.id);
+          if (emp && emp.email) {
+            db.prepare("UPDATE users SET role = ?, updated_at=datetime('now') WHERE email = ?").run(updates.app_role, emp.email);
+          }
+        } catch (e) { console.error('employee->user role senkron hatasi:', e.message); }
+      }
+
       const updated = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
 
       // Calisan duzenlemesinde giris hesabi hala yoksa olustur (or. once
       // e-postasiz olusturulup sonra e-posta eklendi). E-posta RENAME'inde
       // calistirma -- yeni adrese 2. hesap acmasin.
-      let loginCreated = false;
+      let loginCreated = { created: false };
       if (tableName === 'employees') {
         const oldEmailEmpty = !existing.email || !String(existing.email).trim();
         const emailRenamed = !oldEmailEmpty && updates.email !== undefined && updates.email !== existing.email;
@@ -951,7 +984,7 @@ function createEntityRouter(tableName) {
         }
       }
 
-      res.json({ ...parseJsonColumns(tableName, updated), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });
+      res.json({ ...parseJsonColumns(tableName, updated), ...(tableName === 'employees' ? { _login_created: loginCreated.created, _generated_password: loginCreated.password || undefined } : {}) });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });

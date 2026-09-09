@@ -136,12 +136,19 @@ export function useRolePermissions() {
   const role = user?.role || "kullanici";
   const dbPerms = user?.permissions || [];
 
+  // NOT: roleKey parametresi burada yalniz "admin" kisayolu icin kullanilir --
+  // baska bir deger verilse bile lookup her zaman GIRIS YAPMIS KULLANICININ
+  // KENDI izinlerine (dbPerms/useAuth) bakar, verilen roleKey'e ait izinlere
+  // degil. Bugune kadar tum cagiranlar zaten user.role'u verdigi icin sorun
+  // cikmadi, ama "baska bir rolu onizle" gibi bir ozellik eklenirse bu
+  // fonksiyon o rolun degil, hala mevcut kullanicinin izinlerini dondurur.
   const hasPermission = (roleKey, moduleKey) => {
     if (roleKey === "admin") return true;
     const perm = dbPerms.find(p => p.module === moduleKey);
     return perm ? perm.can_view == 1 : false;
   };
 
+  // can() da ayni sekilde yalnizca mevcut kullanicinin kendi izinlerine bakar (yukaridaki not gecerli).
   const can = (roleKey, moduleKey, action = "view") => {
     if (roleKey === "admin") return true;
     const map = { view: "can_view", add: "can_add", edit: "can_edit", delete: "can_delete" };
@@ -154,9 +161,7 @@ export function useRolePermissions() {
     permissions: DEFAULT_PERMISSIONS,
     hasPermission,
     can,
-    updatePermission: () => {},
     dbPermissions: dbPerms,
     isLoadingPermissions: false,
-    resetToDefaults: () => {},
   };
 }

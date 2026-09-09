@@ -125,7 +125,11 @@ const AuthenticatedApp = () => {
   const guard = (moduleKey, component) => {
     if (userRole === "admin") return component;
     if (!authChecked) return null;
-    if (userPerms.length > 0) { const p = userPerms.find(x => x.module === moduleKey); if (p) return p.can_view == 1 ? component : <Navigate to="/" replace />; return hasPermission(userRole, moduleKey) ? component : <Navigate to="/" replace />; }
+    // NOT: userPerms icinde bu modul icin satir varsa dogrudan onu kullan;
+    // yoksa hasPermission(userRole, moduleKey) da zaten ayni userPerms
+    // dizisinde ayni aramayi yapip bulamayacagindan sonuc her zaman ret olurdu
+    // -- o yuzden burada dogrudan reddediliyor, gereksiz cift arama yapilmiyor.
+    if (userPerms.length > 0) { const p = userPerms.find(x => x.module === moduleKey); return p && p.can_view == 1 ? component : <Navigate to="/" replace />; }
     return hasPermission(userRole, moduleKey) ? component : <Navigate to="/" replace />;
   };
   if (showSessionWarning) {

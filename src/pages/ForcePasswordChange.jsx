@@ -15,7 +15,11 @@ export default function ForcePasswordChange() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (newPassword.length < 4) { toast.error("Yeni şifre en az 4 karakter olmalı."); return; }
+    // Backend (validatePasswordStrength) zaten en az 8 karakter sartiyor;
+    // burasi 4 karakter kabul edip kullaniciyi sunduktan sonra sunucudan
+    // genel bir hatayla geri gonderiyordu -- esik client tarafinda da
+    // tutarli hale getirildi.
+    if (newPassword.length < 8) { toast.error("Yeni şifre en az 8 karakter olmalı."); return; }
     if (newPassword !== confirmPassword) { toast.error("Yeni şifreler eşleşmiyor."); return; }
     if (newPassword === currentPassword) { toast.error("Yeni şifre geçici şifreyle aynı olamaz."); return; }
     setLoading(true);
@@ -64,7 +68,7 @@ export default function ForcePasswordChange() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="En az 4 karakter"
+              placeholder="En az 8 karakter"
               className="rounded-xl"
             />
           </div>

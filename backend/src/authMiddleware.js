@@ -7,8 +7,8 @@ let _stmtById = null;
 let _stmtByEmail = null;
 function lookupUser(id, email) {
   if (!_stmtById) {
-    _stmtById = db.prepare('SELECT id, email, role, customer_id, status FROM users WHERE id = ?');
-    _stmtByEmail = db.prepare('SELECT id, email, role, customer_id, status FROM users WHERE email = ?');
+    _stmtById = db.prepare('SELECT id, email, role, customer_id, status, must_change_password FROM users WHERE id = ?');
+    _stmtByEmail = db.prepare('SELECT id, email, role, customer_id, status, must_change_password FROM users WHERE email = ?');
   }
   if (id) return _stmtById.get(id);
   if (email) return _stmtByEmail.get(email);
@@ -76,6 +76,20 @@ function authMiddleware(req, res, next) {
   }
   if (row.status === 'pasif') {
     return res.status(401).json({ error: 'Hesabiniz pasif durumda' });
+  }
+
+  // GUVENLIK: sifre degistirmesi zorunlu (must_change_password=1) hesaplar --
+  // varsayilan/rastgele sifreyle acilmis, henuz ilk giris sifresini
+  // belirlememis hesaplar -- daha once yalnizca frontend'in yonlendirmesine
+  // guveniyordu; dogrudan API cagrisiyla bu kisitlama tamamen bypass
+  // edilebiliyordu. Artik sifre degistirme ve kendi bilgilerini gorme disinda
+  // hicbir uc noktaya bu bayrak acikken erisilemez.
+  if (row.must_change_password) {
+    const isChangePassword = req.method === 'PUT' && req.path.endsWith('/change-password');
+    const isMe = req.method === 'GET' && req.path.endsWith('/me');
+    if (!isChangePassword && !isMe) {
+      return res.status(403).json({ error: 'Once sifrenizi degistirmelisiniz', must_change_password: true });
+    }
   }
 
   req.user = {

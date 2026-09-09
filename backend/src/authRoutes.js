@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('./db');
 const authMiddleware = require('./authMiddleware');
-const { DEFAULT_USER_PASSWORD } = require('./constants');
+const { generateDefaultPassword } = require('./constants');
 
 const router = express.Router();
 
@@ -29,32 +29,13 @@ function validatePasswordStrength(password) {
 const DUMMY_PASSWORD_HASH = '$2b$10$1TP.yqF.LUfqTc4BiIzE.eHhUnOp5tZEiAvm1MsmL0NZ3bmRSq4Im';
 
 // KAYIT OL
-router.post('/register', async (req, res) => {
-  try {
-    return res.status(403).json({ error: 'Kayit kapalidir. Lutfen yoneticinizle iletisime gecin.' });
-    const { email, password, full_name, role } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email ve şifre zorunlu' });
-    }
-    const pwErr = validatePasswordStrength(password);
-    if (pwErr) return res.status(400).json({ error: pwErr });
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-    if (existing) {
-      return res.status(409).json({ error: 'Bu email zaten kayıtlı' });
-    }
-    const password_hash = await bcrypt.hash(password, 10);
-    const id = uuidv4();
-    db.prepare(`INSERT INTO users (id, email, password_hash, full_name, role) VALUES (?, ?, ?, ?, ?)`).run(id, email, password_hash, full_name || '', role || 'musteri');
-    const user = db.prepare('SELECT id, email, full_name, role FROM users WHERE id = ?').get(id);
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, full_name: user.full_name }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    const regPerms = db.prepare("SELECT module, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE role_name = ?").all(user.role);
-    user.permissions = regPerms;
-    res.cookie('auth_token', token, { httpOnly: true, secure: COOKIE_SECURE, sameSite: 'Strict', maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.status(201).json({ user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+// GUVENLIK: kayit tamamen kapali. Asagida calisan bir kayit akisi DAHA ONCE
+// duruyordu (erisilemez oldugu icin zararsizdi), ama caginin kendi rolunu
+// (varsayilan 'musteri') secebilmesi nedeniyle biri o erisilemez kodu ileride
+// farkinda olmadan geri acarsa acik kayit + serbest rol secimi doner --
+// tuzagi ortadan kaldirmak icin olu kod tamamen silindi.
+router.post('/register', (req, res) => {
+  res.status(403).json({ error: 'Kayit kapalidir. Lutfen yoneticinizle iletisime gecin.' });
 });
 
 // GİRİŞ YAP
@@ -158,11 +139,19 @@ router.put('/users/:id', authMiddleware, (req, res) => {
       return res.status(403).json({ error: 'Bu islem icin yetkiniz yok' });
     }
     const { role, full_name, customer_id, status } = req.body;
-    const existing = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);
+    const existing = db.prepare('SELECT id, role FROM users WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
     // GUVENLIK: kendi rolunu bu yoldan da yukseltemez (dolayli yetki yukseltme koruması)
     if (role && req.params.id === req.user.id) {
       return res.status(403).json({ error: 'Kendi rolunuzu degistiremezsiniz' });
+    }
+    // GUVENLIK: yetki yukseltme acigi -- 'yonetici' bu route'a admin ile ayni
+    // erisime sahipti ve role alanina istedigi degeri (ornegin 'admin')
+    // yazabiliyordu, boylece kendini/baskasini tam admin yapabiliyordu. 'admin'
+    // rolunu atamak veya mevcut bir admin'i baska bir role dusurmek artik
+    // yalnizca gercek admin'e acik.
+    if (req.user?.role !== 'admin' && ((role && role === 'admin') || existing.role === 'admin')) {
+      return res.status(403).json({ error: 'Bu islem icin yetkiniz yok' });
     }
     if (role) db.prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`).run(role, req.params.id);
     if (full_name) db.prepare(`UPDATE users SET full_name = ?, updated_at = datetime('now') WHERE id = ?`).run(full_name, req.params.id);
@@ -246,8 +235,16 @@ router.post('/users', authMiddleware, async (req, res) => {
     if (!email) {
       return res.status(400).json({ error: 'Email zorunlu' });
     }
-    // Sifre bos birakilirsa varsayilan sifre atanir (kullanici ilk giriste degistirir).
-    const effectivePassword = (password && String(password).trim()) ? password : DEFAULT_USER_PASSWORD;
+    // GUVENLIK: yetki yukseltme acigi -- 'yonetici' bu route'a admin ile ayni
+    // erisime sahip oldugu icin role='admin' gonderip kendisine/baskasina
+    // dogrudan tam admin hesabi acabiliyordu. Admin rolunde hesap acmak
+    // artik yalnizca gercek admin'e acik.
+    if (role === 'admin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Bu islem icin yetkiniz yok' });
+    }
+    // Sifre bos birakilirsa rastgele, tek seferlik bir sifre uretilir (kullanici ilk giriste degistirir).
+    const generatedPassword = (password && String(password).trim()) ? null : generateDefaultPassword();
+    const effectivePassword = generatedPassword || password;
     const pwErr = validatePasswordStrength(effectivePassword);
     if (pwErr) return res.status(400).json({ error: pwErr });
     const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
@@ -261,6 +258,7 @@ router.post('/users', authMiddleware, async (req, res) => {
       db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)").run(uuidv4(), req.user.email, 'kullanici_olusturuldu', email, '', 'rol: ' + (role || 'kullanici'));
     } catch (e) {}
     const user = db.prepare('SELECT id, email, full_name, role, customer_id, status FROM users WHERE id = ?').get(id);
+    if (generatedPassword) user.generated_password = generatedPassword;
     res.status(201).json({ user });
   } catch (err) {
     console.error(err);

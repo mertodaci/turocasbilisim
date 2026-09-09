@@ -475,6 +475,11 @@ function initDb() {
     const allModules = [
       'dashboard','employees','customers','calendar','activities','add_activity','work_tracking',
       'ideas','messages','todos','leave_requests','my_leave_requests','ik_leave_requests',
+      // GUVENLIK/DUZELTME: 'personel_hareketleri' (PDKS/card_logs) burada hic
+      // listede degildi -- checkPermission fail-closed oldugu icin admin
+      // disinda HICBIR role bu modul hicbir zaman verilemiyordu, admin
+      // ekranindan izin verilse bile etkisizdi.
+      'personel_hareketleri',
       'personal_calendar','reports','employee_report','users','app_version','definitions',
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar','control_panel',

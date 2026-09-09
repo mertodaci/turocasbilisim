@@ -159,7 +159,11 @@ function createEntityClient(entityName) {
 
     // flowApi.entities.X.filter({ key: value, ... })
     async filter(filters = {}, sort, limit) {
-      const params = new URLSearchParams(filters);
+      // URLSearchParams her degeri oldugu gibi string'e cevirir -- undefined/null
+      // bir filtre degeri "field=undefined" gibi anlamsiz bir sorgu parametresine
+      // donusurdu, sessizce yanlis/bos sonuc dondururdu. Bu degerler once elenir.
+      const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined && v !== null));
+      const params = new URLSearchParams(cleanFilters);
       if (sort) params.set("sort", sort); if (limit) params.set("limit", String(limit));
       const _res = handleResponse(await fetch(`${url}?${params}`, { headers: authHeaders(), credentials: 'include' }));
       return _scrubEmployees(path, await _res);
@@ -195,6 +199,7 @@ function createEntityClient(entityName) {
       return handleResponse(await fetch(`${url}/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
+        credentials: 'include',
       }));
     },
 
@@ -247,7 +252,7 @@ export const auth = {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/users`, { headers: authHeaders(), credentials: 'include' }));
   },
   async updateUser(id, data) {
-    return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }));
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify(data) }));
   },
   async createUser(data) {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/users`, { method: 'POST', headers: authHeaders(), credentials: 'include', body: JSON.stringify(data) }));
@@ -256,10 +261,10 @@ export const auth = {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/favorites`, { headers: authHeaders(), credentials: 'include' }));
   },
   async updateFavorites(favorites) {
-    return handleResponse(await fetch(`${BASE_URL}/api/auth/favorites`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ favorites }) }));
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/favorites`, { method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify({ favorites }) }));
   },
   async deleteUser(id) {
-    return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'DELETE', headers: authHeaders() }));
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'DELETE', headers: authHeaders(), credentials: 'include' }));
   },
   async sessions() {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/sessions`, { headers: authHeaders(), credentials: 'include' }));

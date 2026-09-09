@@ -32,9 +32,18 @@ export default function CreateUserDialog({ onClose, customers = [], currentUserR
 
   const createMutation = useMutation({
     mutationFn: (data) => flowApi.auth.createUser(data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["users-list"] });
-      toast.success("Kullanıcı oluşturuldu");
+      // Güvenlik: artık sabit/bilinen bir varsayılan şifre yok — şifre boş
+      // bırakıldıysa backend rastgele bir tane üretip bir kerelik burada
+      // döndürür, admin'in çalışana iletmesi için toast'ta gösterilir.
+      const generated = res?.user?.generated_password;
+      toast.success(
+        generated
+          ? `Kullanıcı oluşturuldu. Geçici şifre: ${generated} (ilk girişte değiştirilecek)`
+          : "Kullanıcı oluşturuldu",
+        generated ? { duration: 15000 } : undefined
+      );
       onClose();
     },
     onError: (err) => {
@@ -98,12 +107,12 @@ export default function CreateUserDialog({ onClose, customers = [], currentUserR
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Şifre (boş bırakılırsa Turocas2026x)</label>
+            <label className="text-xs font-medium text-muted-foreground">Şifre (boş bırakılırsa otomatik üretilir)</label>
             <input
               type="text"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Boş bırak → Turocas2026x"
+              placeholder="Boş bırak → rastgele geçici şifre üretilir"
               className="w-full mt-1 px-3 py-2 text-sm border border-border/50 rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             />
             <p className="text-[11px] text-muted-foreground mt-1">Kullanıcı ilk girişte kendi şifresini belirler. Elle girilirse en az 8 karakter.</p>

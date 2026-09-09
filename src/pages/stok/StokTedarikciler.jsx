@@ -15,7 +15,7 @@ const empty = {
   company_name: "", contact_person: "", phone: "", gsm: "", email: "", website: "",
   working_region: "", payment_method: "CARİ", payment_term_days: 0,
   tax_office: "", tax_number: "", city: "", district: "", address: "", notes: "",
-  status: "aktif",
+  status: "aktif", also_customer: false,
 };
 
 // Tedarikçiler = customers tablosu (is_supplier=1). Ayrı firma tablosu yok.
@@ -34,7 +34,8 @@ export default function StokTedarikciler() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["customers-all"] });
 
   const createMutation = useMutation({
-    mutationFn: (data) => flowApi.entities.Customer.create({ ...data, is_supplier: 1 }),
+    mutationFn: ({ also_customer, ...data }) =>
+      flowApi.entities.Customer.create({ ...data, is_supplier: 1, is_customer: also_customer ? 1 : 0 }),
     onSuccess: () => { invalidate(); setDialog({ open: false, item: null }); toast.success("Tedarikçi eklendi"); },
     onError: (e) => toast.error("Eklenemedi: " + (e?.message || "hata")),
   });
@@ -56,12 +57,14 @@ export default function StokTedarikciler() {
       payment_method: c.payment_method || "CARİ", payment_term_days: c.payment_term_days || 0,
       tax_office: c.tax_office || "", tax_number: c.tax_number || "", city: c.city || "", district: c.district || "",
       address: c.address || "", notes: c.notes || "", status: c.status || "aktif",
+      also_customer: c.is_customer !== 0,
     });
     setDialog({ open: true, item: c });
   };
   const handleSubmit = () => {
     if (!form.company_name.trim()) { toast.error("Firma ünvanı zorunlu"); return; }
-    if (dialog.item) updateMutation.mutate({ id: dialog.item.id, data: form });
+    const { also_customer, ...rest } = form;
+    if (dialog.item) updateMutation.mutate({ id: dialog.item.id, data: { ...rest, is_customer: also_customer ? 1 : 0 } });
     else createMutation.mutate(form);
   };
 
@@ -196,6 +199,13 @@ export default function StokTedarikciler() {
             <div className="flex items-center gap-3">
               <Switch checked={form.status === "aktif"} onCheckedChange={(v) => setForm({ ...form, status: v ? "aktif" : "pasif" })} />
               <Label>Aktif</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.also_customer} onCheckedChange={(v) => setForm({ ...form, also_customer: v })} />
+              <div>
+                <Label>Cari (müşteri) olarak da çalış</Label>
+                <p className="text-xs text-muted-foreground">Kapalıysa firma yalnızca Tedarikçiler listesinde görünür, satış "Müşteriler" ekranına çıkmaz.</p>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" onClick={() => setDialog({ open: false, item: null })}>İptal</Button>

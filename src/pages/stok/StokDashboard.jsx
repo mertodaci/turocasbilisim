@@ -32,7 +32,7 @@ export default function StokDashboard() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Kart icon={PackageX} lbl="Stok Biten" val={data.stok_biten} alt="mevcut ≤ 0" to="/stok/raporlar" cls="text-red-500" />
-            <Kart icon={AlertTriangle} lbl="Kritik Stok" val={data.kritik} alt="0 < mevcut ≤ 10" to="/stok/raporlar" cls="text-amber-500" />
+            <Kart icon={AlertTriangle} lbl="Kritik Stok" val={data.kritik} alt="min. seviyenin altında" to="/stok/raporlar" cls="text-amber-500" />
             <Kart icon={ArrowDownToLine} lbl="Bugün Giriş" val={data.bugun_giris?.m} alt={`${data.bugun_giris?.n || 0} fiş`} cls="text-emerald-600" />
             <Kart icon={ArrowUpFromLine} lbl="Bugün Çıkış/Transfer" val={data.bugun_cikis?.m} alt={`${data.bugun_cikis?.n || 0} fiş`} cls="text-red-600" />
             <Kart icon={FileText} lbl="En Çok Çalışan" val={data.en_cok_calisan?.hareket || 0} alt={data.en_cok_calisan?.kullanici || "—"} />
@@ -47,6 +47,9 @@ export default function StokDashboard() {
               <Kart icon={Undo2} lbl="Geciken Zimmet" val={k.geciken_zimmet} alt="termin geçti" to="/stok/zimmet" cls="text-red-500" />
               <Kart icon={CalendarClock} lbl="SKT Geçen Parti" val={k.skt_gecen} alt="bakiyeli" to="/stok/partiler" cls="text-red-500" />
               <Kart icon={CalendarClock} lbl="SKT Yaklaşan" val={k.skt_yaklasan} alt="30 gün içinde" to="/stok/partiler" cls="text-amber-500" />
+              {data.fifo_tutarsiz > 0 && (
+                <Kart icon={AlertTriangle} lbl="FIFO Tutarsız" val={data.fifo_tutarsiz} alt="parti izi ≠ stok" to="/stok/partiler" cls="text-red-500" />
+              )}
             </div>
           </div>
 

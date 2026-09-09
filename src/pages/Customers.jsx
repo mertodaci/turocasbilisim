@@ -53,10 +53,13 @@ export default function Customers() {
   const canEditCustomer = user?.role === "admin" || user?.role === "yonetici" || user?.role === "satis" || can(user?.role, "customers", "edit");
   const isPrivileged = canAddCustomer || canEditCustomer;
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customersRaw = [], isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => flowApi.entities.Customer.list("-created_date", 500),
   });
+  // Stok modülünden eklenen saf tedarikçiler (is_customer=0) satış müşteri
+  // listesine karışmaz; hem müşteri hem tedarikçi olan firmalar (is_customer=1) görünür.
+  const customers = useMemo(() => customersRaw.filter(c => c.is_customer !== 0), [customersRaw]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => flowApi.entities.Customer.delete(id),

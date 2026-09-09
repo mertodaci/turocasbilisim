@@ -381,6 +381,12 @@ function initDb() {
     "ALTER TABLE customers ADD COLUMN gsm TEXT",
     "ALTER TABLE customers ADD COLUMN website TEXT",
     "ALTER TABLE customers ADD COLUMN working_region TEXT",
+    // is_customer: satis "Musteriler" listesi bunu 1 kabul eder. Mevcut kayitlar
+    // ve normal musteri girisi 1 (varsayilan). Stok modulunden acilan saf tedarikci
+    // is_customer=0 ile eklenir -> satis listesinde gorunmez, sadece Tedarikciler'de.
+    "ALTER TABLE customers ADD COLUMN is_customer INTEGER DEFAULT 1",
+    // Seri no takibi: hareket satırına seri no (çıkışta "bu SN bu depoda mı" kontrolü için).
+    "ALTER TABLE stok_hareketler ADD COLUMN seri_no TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -417,6 +423,8 @@ function initDb() {
       'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
       // Faz 13: QNB e-Belge
       'stok_qnb',
+      // Faz 14: Fiyat Araştır
+      'stok_fiyat_arastir',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();

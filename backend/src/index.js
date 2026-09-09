@@ -527,6 +527,15 @@ function pollDB() {
       messages: db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0,
       todos: db.prepare("SELECT COUNT(*) as c FROM todos").get()?.c || 0,
       work_tasks: db.prepare("SELECT COUNT(*) as c FROM work_tasks").get()?.c || 0,
+      stok_uyari: (() => {
+        try {
+          return db.prepare(`SELECT
+              (SELECT COUNT(*) FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL))
+            + (SELECT COUNT(*) FROM stok_hareketler)
+            + (SELECT COUNT(*) FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < date('now'))
+            + (SELECT COUNT(*) FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < date('now')) AS c`).get()?.c || 0;
+        } catch { return 0; }
+      })(),
     };
     const changed = Object.keys(counts).some(k => counts[k] !== lastCounts[k]);
     if (changed) {
@@ -894,6 +903,24 @@ function stokMevcut(urunId, depoId, rafId) {
   return db.prepare(sql).get(...params).m || 0;
 }
 
+// Kritik stok satırları — (urun,depo) bazında mevcut > 0 ve mevcut <= o (urun,depo)
+// için tanımlı min_seviye (stok_urun_raf). Tanım yoksa 10 varsayılır. Dashboard,
+// Rapor Merkezi ve kritik-stok bildirimleri tek kaynaktan bu listeyi kullanır.
+function stokKritikListe() {
+  const minMap = {};
+  for (const m of db.prepare('SELECT urun_id, depo_id, MAX(min_seviye) min_seviye FROM stok_urun_raf GROUP BY urun_id, depo_id').all())
+    minMap[`${m.urun_id}|${m.depo_id}`] = m.min_seviye || 0;
+  const bakiye = db.prepare(`SELECT urun_id, MAX(urun_adi) urun_adi, depo_id, MAX(depo_adi) depo_adi,
+      SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m
+    FROM stok_hareketler GROUP BY urun_id, depo_id`).all();
+  const out = [];
+  for (const r of bakiye) {
+    const min = minMap[`${r.urun_id}|${r.depo_id}`] || 10;
+    if (r.m > 0 && r.m <= min) out.push({ urun_id: r.urun_id, urun_adi: r.urun_adi, depo_id: r.depo_id, depo_adi: r.depo_adi, mevcut: r.m, min_seviye: min });
+  }
+  return out;
+}
+
 function stokFisNoUret(tip) {
   const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP' }[tip] || 'FIS';
   const yil = new Date().getFullYear();
@@ -1024,9 +1051,13 @@ function stokFifoUygula(fis, satirlar, userEmail) {
       }
       ihtiyac = +(ihtiyac - al).toFixed(6);
     }
-    // Parti kapsamı yetmezse (parti/hareket senkron değilse) kalanı sessiz geç —
-    // stok_hareketler zaten miktarı doğruladı; parti izi eksik kalır, FIFO Yeniden
-    // Hesapla ile düzeltilebilir.
+    // Parti kapsamı yetmezse (parti/hareket senkron değilse) kalanı geç —
+    // stok_hareketler zaten miktarı doğruladı; parti izi eksik kalır. Artık
+    // sessiz değil: uyarı loglanır, /api/stok/fifo-tutarlilik bunu raporlar,
+    // "FIFO Yeniden Hesapla" ile düzeltilir.
+    if (ihtiyac > 1e-6) {
+      console.warn(`[stok] FIFO parti eksik: fis=${fis.fis_no} urun=${s.urun_id} depo=${fis.kaynak_depo_id} karsilanmayan=${ihtiyac}`);
+    }
   }
 }
 
@@ -1153,12 +1184,44 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
   if (fis.tip === 'cikis' || fis.tip === 'transfer') {
-    const yetersiz = [];
+    // Aynı ürün + kaynak raf için birden çok satır varsa toplam ihtiyacı birlikte
+    // kontrol et; satır bazlı ayrı ayrı kontrol (60 + 60, stok 100) negatif stoğa yol açardı.
+    const ihtiyac = new Map();
     for (const s of satirlar) {
-      const mevcut = stokMevcut(s.urun_id, fis.kaynak_depo_id, s.kaynak_raf_id || null);
-      if (s.miktar_ana_birim > mevcut + 1e-9) yetersiz.push(`${s.urun_adi || s.urun_id}: gerekli ${s.miktar_ana_birim}, mevcut ${mevcut}`);
+      const key = `${s.urun_id}|${s.kaynak_raf_id || ''}`;
+      const cur = ihtiyac.get(key) || {
+        urun_id: s.urun_id, raf_id: s.kaynak_raf_id || null,
+        urun_adi: s.urun_adi || s.urun_id, miktar: 0,
+      };
+      cur.miktar += Number(s.miktar_ana_birim) || 0;
+      ihtiyac.set(key, cur);
+    }
+    const yetersiz = [];
+    for (const g of ihtiyac.values()) {
+      const mevcut = stokMevcut(g.urun_id, fis.kaynak_depo_id, g.raf_id);
+      if (g.miktar > mevcut + 1e-9) yetersiz.push(`${g.urun_adi}: gerekli ${g.miktar}, mevcut ${mevcut}`);
     }
     if (yetersiz.length) return res.status(400).json({ error: 'Yetersiz stok — onaylanamadı:\n' + yetersiz.join('\n') });
+  }
+
+  // Seri no takipli ürünler: her satır tek adet + seri no zorunlu. Çıkış/transferde
+  // seri no o an kaynak depoda "içeride" olmalı; girişte hedef depoda zaten olmamalı.
+  {
+    const seriHatalar = [];
+    const seriBak = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?");
+    for (const s of satirlar) {
+      const u = db.prepare('SELECT seri_no_takip FROM stok_urunler WHERE id=?').get(s.urun_id);
+      if (!u || !u.seri_no_takip) continue;
+      if (Math.abs((Number(s.miktar_ana_birim) || 0) - 1) > 1e-9) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no takipli — her satır 1 ana birim olmalı`); continue; }
+      const sn = s.seri_no ? String(s.seri_no).trim() : '';
+      if (!sn) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no zorunlu`); continue; }
+      if (fis.tip === 'giris') {
+        if (seriBak.get(s.urun_id, fis.hedef_depo_id, sn).n > 0) seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu seri no zaten hedef depoda kayıtlı`);
+      } else {
+        if (seriBak.get(s.urun_id, fis.kaynak_depo_id, sn).n <= 0) seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu seri no kaynak depoda değil`);
+      }
+    }
+    if (seriHatalar.length) return res.status(400).json({ error: 'Seri no kontrolü başarısız:\n' + seriHatalar.join('\n') });
   }
 
   try {
@@ -1171,25 +1234,26 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     }
     const insHrk = db.prepare(`INSERT INTO stok_hareketler
       (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, tip, miktar, birim_maliyet,
-       fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, created_by, created_date, updated_date)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+       fis_id, fis_no, fis_tip, fis_satir_id, cari_id, saha_id, tarih, seri_no, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     db.transaction(() => {
       for (const s of satirlar) {
+        const sn = s.seri_no ? String(s.seri_no).trim() : null;
         if (fis.tip === 'giris') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, null, fis.tarih, sn, req.user.email, now, now);
         } else if (fis.tip === 'cikis') {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, fis.cari_id, fis.hedef_saha_id, fis.tarih, sn, req.user.email, now, now);
         } else {
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.kaynak_depo_id, fis.kaynak_depo_adi,
             s.kaynak_raf_id, s.kaynak_raf_adi, 'cikis', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, sn, req.user.email, now, now);
           insHrk.run(_stokUUID(), s.urun_id, s.urun_adi, fis.hedef_depo_id, fis.hedef_depo_adi,
             s.hedef_raf_id, s.hedef_raf_adi, 'giris', s.miktar_ana_birim, s.birim_fiyat,
-            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, req.user.email, now, now);
+            fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, sn, req.user.email, now, now);
         }
       }
       // Faz 3: FIFO parti oluştur / tüket
@@ -1279,6 +1343,31 @@ app.get('/api/stok/parti-ozet', authMiddleware, (req, res) => {
     const suresiYaklasan = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days')").get(bugun, bugun).n;
     const kontrolGelen = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND kontrol_tarihi IS NOT NULL AND kontrol_tarihi<>'' AND substr(kontrol_tarihi,1,10) <= ?").get(bugun).n;
     res.json({ acik_parti: acik.n, acik_miktar: acik.m, suresi_gecen: suresiGecen, suresi_yaklasan: suresiYaklasan, kontrol_tarihi_gelen: kontrolGelen });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// FIFO tutarlılık kontrolü — (urun,depo) bazında stok_hareketler net bakiyesi ile
+// stok_partiler kalan_bakiye toplamı karşılaştırılır. Fark varsa parti izi ile
+// gerçek stok senkron değil (bkz. stokFifoUygula "parti kapsamı yetmezse").
+app.get('/api/stok/fifo-tutarlilik', authMiddleware, (req, res) => {
+  if (!stokPartiPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const hareket = db.prepare(`SELECT urun_id, depo_id, MAX(urun_adi) urun_adi, MAX(depo_adi) depo_adi,
+        SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) net
+      FROM stok_hareketler GROUP BY urun_id, depo_id`).all();
+    const partiMap = {};
+    for (const p of db.prepare("SELECT urun_id, depo_id, SUM(kalan_bakiye) k FROM stok_partiler WHERE durum!='kapali' GROUP BY urun_id, depo_id").all())
+      partiMap[`${p.urun_id}|${p.depo_id}`] = p.k || 0;
+    const tutarsiz = [];
+    for (const h of hareket) {
+      const parti = partiMap[`${h.urun_id}|${h.depo_id}`] || 0;
+      const fark = +((h.net || 0) - parti).toFixed(4);
+      if (Math.abs(fark) > 0.001) tutarsiz.push({
+        urun_id: h.urun_id, urun_adi: h.urun_adi, depo_id: h.depo_id, depo_adi: h.depo_adi,
+        hareket_net: +(h.net || 0).toFixed(4), parti_kalan: +parti.toFixed(4), fark,
+      });
+    }
+    res.json({ tutarsiz, sayisi: tutarsiz.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1756,7 +1845,7 @@ app.get('/api/stok/rapor/merkez', authMiddleware, (req, res) => {
     const aktifDepo = db.prepare("SELECT COUNT(*) n FROM stok_depolar WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const aktifRaf = db.prepare("SELECT COUNT(*) n FROM stok_raflar WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const stokBiten = db.prepare(`SELECT COUNT(*) n FROM (SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id HAVING m<=0)`).get().n;
-    const kritik = db.prepare(`SELECT COUNT(*) n FROM (SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id HAVING m>0 AND m<=10)`).get().n;
+    const kritik = stokKritikListe().length;
     const depoYogunluk = db.prepare(`SELECT depo_adi, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY depo_id ORDER BY m DESC LIMIT 8`).all();
     const sonHareket = db.prepare("SELECT fis_no, urun_adi, depo_adi, raf_adi, tip, miktar, tarih FROM stok_hareketler ORDER BY created_date DESC LIMIT 12").all();
     res.json({ aktif_urun: aktifUrun, aktif_depo: aktifDepo, aktif_raf: aktifRaf, stok_biten: stokBiten, kritik, depo_yogunluk: depoYogunluk, son_hareket: sonHareket });
@@ -2008,7 +2097,7 @@ app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
     const bugun = new Date().toISOString().slice(0, 10);
     const bakiye = db.prepare("SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id").all();
     const stokBiten = bakiye.filter((r) => r.m <= 0).length;
-    const kritik = bakiye.filter((r) => r.m > 0 && r.m <= 10).length;
+    const kritik = stokKritikListe().length;
     const bugunGiris = db.prepare("SELECT COALESCE(SUM(toplam_miktar),0) m, COUNT(*) n FROM stok_fisler WHERE tip='giris' AND durum='onayli' AND tarih=?").get(bugun);
     const bugunCikis = db.prepare("SELECT COALESCE(SUM(toplam_miktar),0) m, COUNT(*) n FROM stok_fisler WHERE tip IN ('cikis','transfer') AND durum='onayli' AND tarih=?").get(bugun);
     const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
@@ -2019,10 +2108,42 @@ app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
     const sktYaklasan = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days')").get(bugun, bugun).n;
     const sonHareket = db.prepare("SELECT fis_no, urun_adi, depo_adi, tip, miktar, tarih FROM stok_hareketler ORDER BY created_date DESC LIMIT 10").all();
     const enCokCalisan = db.prepare("SELECT created_by kullanici, COUNT(*) hareket FROM stok_hareketler WHERE tarih=? GROUP BY created_by ORDER BY hareket DESC LIMIT 1").get(bugun);
+    // FIFO parti izi ↔ stok bakiyesi tutarsızlığı (veri bütünlüğü göstergesi)
+    let fifoTutarsiz = 0;
+    try {
+      const partiMap = {};
+      for (const p of db.prepare("SELECT urun_id, depo_id, SUM(kalan_bakiye) k FROM stok_partiler WHERE durum!='kapali' GROUP BY urun_id, depo_id").all())
+        partiMap[`${p.urun_id}|${p.depo_id}`] = p.k || 0;
+      fifoTutarsiz = bakiye.filter((r) => Math.abs((r.m || 0) - (partiMap[`${r.urun_id}|${r.depo_id}`] || 0)) > 0.001).length;
+    } catch { fifoTutarsiz = 0; }
     res.json({
-      stok_biten: stokBiten, kritik, bugun_giris: bugunGiris, bugun_cikis: bugunCikis,
+      stok_biten: stokBiten, kritik, bugun_giris: bugunGiris, bugun_cikis: bugunCikis, fifo_tutarsiz: fifoTutarsiz,
       is_kuyrugu: { bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep, sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan },
       son_hareket: sonHareket, en_cok_calisan: enCokCalisan || null,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Konsolide uyarı feed'i — kritik stok, SKT, bekleyen onay, geciken zimmet.
+// Sidebar rozeti + bildirim toast'u bu tek endpoint'i yoklar (15 sn'de bir).
+app.get('/api/stok/uyarilar', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_dashboard', 'can_view') || stokFisPerm(req, 'can_view')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const bugun = new Date().toISOString().slice(0, 10);
+    const kritik = stokKritikListe();
+    const sktGecen = db.prepare("SELECT id, urun_id, urun_adi, depo_adi, lot_no, skt, kalan_bakiye FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ? ORDER BY skt LIMIT 100").all(bugun);
+    const sktYaklasan = db.prepare("SELECT id, urun_id, urun_adi, depo_adi, lot_no, skt, kalan_bakiye FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days') ORDER BY skt LIMIT 100").all(bugun, bugun);
+    const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const bekleyenTalep = db.prepare("SELECT COUNT(*) n FROM stok_talepler WHERE durum IN ('onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor','fark_onay') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const gecikenZimmet = db.prepare("SELECT COUNT(*) n FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < ?").get(bugun).n;
+    const toplam = kritik.length + sktGecen.length + sktYaklasan.length + bekleyenFis + bekleyenTalep + sayimGorevi + gecikenZimmet;
+    res.json({
+      toplam,
+      kritik, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan,
+      bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep,
+      sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2114,6 +2235,31 @@ app.post('/api/stok/qnb/taslak', authMiddleware, (req, res) => {
       VALUES (?,?, 'giden', ?, ?,?,?,?, 'taslak', ?,?,?,?,?,?,?)`).run(id, belgeNo, tur, f.cari_id || null, f.cari_adi || null, now.slice(0, 10), tutar, f.id, f.fis_no, f.satir_sayisi, `${f.fis_no} fişinden taslak`, req.user.email, now, now);
     stokQnbLog('giden_taslak', 'basarili', id, `${belgeNo} (${tur})`);
     res.status(201).json(db.prepare('SELECT * FROM stok_qnb_belgeler WHERE id=?').get(id));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 14: Fiyat Araştır — araştırılan fiyatı ürün Satış alanına + fiyat geçmişine yaz
+// (Referanstaki Cimri web-scraping otomasyonu, canlı sunucu izni ve kırılganlığı
+//  nedeniyle bilinçli olarak dahil edilmedi; workflow manuel/yarı-otomatik.)
+// ═══════════════════════════════════════════════════════════════════
+app.post('/api/stok/fiyat-arastir/uygula', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_fiyat_arastir', 'can_edit') || checkPermission(db, req.user?.role, 'stok_urunler', 'can_edit')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { urun_id, fiyat, hedef = 'satis', not: notu } = req.body || {};
+  const f = Number(fiyat);
+  if (!urun_id || !(f > 0)) return res.status(400).json({ error: 'Ürün ve geçerli fiyat gerekli' });
+  const u = db.prepare('SELECT * FROM stok_urunler WHERE id=?').get(urun_id);
+  if (!u) return res.status(404).json({ error: 'Ürün bulunamadı' });
+  try {
+    const now = new Date().toISOString();
+    const kolon = hedef === 'alis' ? 'alis_fiyati' : 'satis_fiyati';
+    db.prepare(`UPDATE stok_urunler SET ${kolon}=?, updated_date=? WHERE id=?`).run(f, now, urun_id);
+    if (hedef === 'alis') {
+      db.prepare(`INSERT INTO stok_fiyat_gecmisi (id, urun_id, urun_adi, alis_fiyati, para_birimi, tarih, kaynak, not_, created_by, created_date, updated_date)
+        VALUES (?,?,?,?, 'TRY', ?, 'manuel', ?, ?, ?, ?)`).run(_stokUUID(), urun_id, u.ad, f, now.slice(0, 10), notu || 'Fiyat araştırma', req.user.email, now, now);
+    }
+    res.json({ ok: true, urun: db.prepare('SELECT id, kod, ad, alis_fiyati, satis_fiyati FROM stok_urunler WHERE id=?').get(urun_id) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

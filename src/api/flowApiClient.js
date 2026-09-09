@@ -276,6 +276,8 @@ export const stok = {
   },
   async partiOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/parti-ozet`, { credentials: 'include' })); },
   async fifoYenidenHesapla() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-yeniden-hesapla`, _sjson('POST'))); },
+  async fifoTutarlilik() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-tutarlilik`, { credentials: 'include' })); },
+  async uyarilar() { return handleResponse(await fetch(`${BASE_URL}/api/stok/uyarilar`, { credentials: 'include' })); },
   async sayimOlustur(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim`, _sjson('POST', body))); },
   async sayimGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, { credentials: 'include' })); },
   async sayimKaydet(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, _sjson('PUT', body))); },
@@ -317,6 +319,7 @@ export const stok = {
   async qnbPanel() { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/panel`, { credentials: 'include' })); },
   async qnbGelenAktar(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/gelen-aktar`, _sjson('POST', body))); },
   async qnbTaslak(fis_id, tur) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/taslak`, _sjson('POST', { fis_id, tur }))); },
+  async fiyatArastirUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fiyat-arastir/uygula`, _sjson('POST', body))); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

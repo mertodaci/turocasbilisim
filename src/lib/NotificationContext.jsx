@@ -39,6 +39,7 @@ export const NotificationProvider = ({ children }) => {
             queryClient.invalidateQueries({ queryKey: ['notif-expense'] });
             queryClient.invalidateQueries({ queryKey: ['notif-worktask'] });
             queryClient.invalidateQueries({ queryKey: ['notif-tq'] });
+            queryClient.invalidateQueries({ queryKey: ['notif-stok-uyari'] });
             queryClient.invalidateQueries({ queryKey: ['messages'] });
             queryClient.invalidateQueries({ queryKey: ['notif-conversations'] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
@@ -235,6 +236,27 @@ export const NotificationProvider = ({ children }) => {
     [assignedTickets]
   );
 
+  // ── Stok uyarıları (kritik stok / SKT / bekleyen onay / geciken zimmet) ──
+  const { data: stokUyari } = useQuery({
+    queryKey: ['notif-stok-uyari'],
+    queryFn: () => fetch('/api/stok/uyarilar', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null)).catch(() => null),
+    enabled: !!user && user?.role !== 'musteri',
+    refetchInterval: 15000,
+  });
+  const stokUyariCount = stokUyari?.toplam || 0;
+  const prevStokUyari = useRef(null);
+  useEffect(() => {
+    if (!stokUyari) return;
+    const prev = prevStokUyari.current;
+    prevStokUyari.current = stokUyari;
+    if (prev == null) return; // ilk yükleme — sessiz
+    const yeniKritik = (stokUyari.kritik?.length || 0) - (prev.kritik?.length || 0);
+    const yeniSktGecen = (stokUyari.skt_gecen?.length || 0) - (prev.skt_gecen?.length || 0);
+    if (yeniKritik > 0) toast.warning(`${yeniKritik} ürün kritik stok seviyesine düştü`, { description: 'Stok › Kontrol Merkezi', duration: 6000 });
+    if (yeniSktGecen > 0) toast.error(`${yeniSktGecen} parti son kullanım tarihini geçti`, { description: 'Stok › Parti & Raf Ömrü', duration: 6000 });
+  }, [stokUyari]);
+
   // ── Subscribe to realtime events ─────────────────────────────────
   useEffect(() => {
     if (!user?.email) return;
@@ -257,6 +279,8 @@ export const NotificationProvider = ({ children }) => {
       pendingWorkTaskCount,
       assignedTicketCount,
       assignedTickets,
+      stokUyariCount,
+      stokUyari,
       fetchLeaveCount,
       fetchExpenseCount,
       activeConversationId,
@@ -297,4 +321,8 @@ export const useMessages = () => {
 export const useTQNotifications = () => {
   const { assignedTicketCount, assignedTickets } = useNotifications();
   return { assignedTicketCount, assignedTickets };
+};
+export const useStokAlerts = () => {
+  const { stokUyariCount, stokUyari } = useNotifications();
+  return { stokUyariCount, stokUyari };
 };

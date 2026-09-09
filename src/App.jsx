@@ -1,0 +1,221 @@
+import { lazy, Suspense } from 'react';
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClientInstance } from '@/lib/query-client'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import PageNotFound from './lib/PageNotFound';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { LanguageProvider } from '@/lib/LanguageContext';
+import { RolePermissionsProvider, useRolePermissions } from '@/lib/RolePermissionsContext';
+import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { Navigate } from 'react-router-dom';
+
+import Landing from './pages/Landing';
+import ForcePasswordChange from './pages/ForcePasswordChange';
+import AppLayout from './components/layout/AppLayout';
+import Dashboard from './pages/Dashboard';
+import { NotificationProvider } from './lib/NotificationContext';
+const Employees = lazy(() => import('./pages/Employees'));
+const PersonnelMovements = lazy(() => import('./pages/PersonnelMovements'));
+const CardManagement = lazy(() => import('./pages/CardManagement'));
+const AddActivity = lazy(() => import('./pages/AddActivity'));
+const AddSalesActivity = lazy(() => import('./pages/AddSalesActivity'));
+const EmployeeDetail = lazy(() => import('./pages/EmployeeDetail'));
+const CalendarView = lazy(() => import('./pages/CalendarView'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Ideas = lazy(() => import('./pages/Ideas'));
+const Customers = lazy(() => import('./pages/Customers'));
+const CustomerMap = lazy(() => import('./pages/CustomerMap'));
+const Activities = lazy(() => import('./pages/Activities'));
+const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
+const ActivityDetail = lazy(() => import('./pages/ActivityDetail'));
+const Todos = lazy(() => import('./pages/Todos'));
+const Messages = lazy(() => import('./pages/Messages'));
+const LeaveRequests = lazy(() => import('./pages/LeaveRequests'));
+const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
+const CalendarV2 = lazy(() => import('./pages/CalendarV2'));
+const EmployeeReport = lazy(() => import('./pages/EmployeeReport'));
+const OrgChart = lazy(() => import('./pages/OrgChart'));
+const QuickReport = lazy(() => import('./pages/QuickReport'));
+const Users = lazy(() => import('./pages/Users'));
+const RolePermissions = lazy(() => import('./pages/RolePermissions'));
+const WorkTasks = lazy(() => import('./pages/WorkTasks'));
+const AppVersion = lazy(() => import('./pages/AppVersion'));
+const Definitions = lazy(() => import('./pages/Definitions'));
+const TrashBin = lazy(() => import('./pages/TrashBin'));
+const AuditLog = lazy(() => import('./pages/AuditLog'));
+const SessionManagement = lazy(() => import('./pages/SessionManagement'));
+const CustomerUsers = lazy(() => import('./pages/CustomerUsers'));
+const Announcements = lazy(() => import('./pages/Announcements'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const MyLeaveRequests = lazy(() => import('./pages/MyLeaveRequests'));
+const IKLeaveRequests = lazy(() => import('./pages/IKLeaveRequests'));
+const IKExpenseRequests = lazy(() => import('./pages/IKExpenseRequests'));
+const LeaveAllowances = lazy(() => import('./pages/LeaveAllowances'));
+const ProjectPlanning = lazy(() => import('./pages/ProjectPlanning'));
+const OffersPage = lazy(() => import('./pages/OffersPage'));
+const SalesReportPage = lazy(() => import('./pages/SalesReportPage'));
+const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'));
+const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
+const Hakedisler = lazy(() => import('./pages/Hakedisler'));
+const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
+const SozlesmeForm = lazy(() => import('./pages/SozlesmeForm'));
+const TaskQubeV3 = lazy(() => import('./pages/TaskQubeV3'));
+const TaskQubeDashboard = lazy(() => import('./pages/TaskQubeDashboard'));
+const TaskQubeTickets = lazy(() => import('./pages/TaskQubeTickets'));
+const TaskQubeKanban = lazy(() => import('./pages/TaskQubeKanban'));
+const TaskQubeSettings = lazy(() => import('./pages/TaskQubeSettings'));
+
+const AuthenticatedApp = () => {
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
+  const { hasPermission } = useRolePermissions();
+  const userPerms = user?.permissions || [];
+  const userRole = user?.role || "kullanici";
+
+  const guard = (moduleKey, component) => {
+    if (userRole === "admin") return component;
+    if (!authChecked) return null;
+    if (userPerms.length > 0) { const p = userPerms.find(x => x.module === moduleKey); if (p) return p.can_view == 1 ? component : <Navigate to="/" replace />; return hasPermission(userRole, moduleKey) ? component : <Navigate to="/" replace />; }
+    return hasPermission(userRole, moduleKey) ? component : <Navigate to="/" replace />;
+  };
+  if (showSessionWarning) {
+    return (
+      <>
+        {/* Mevcut sayfa arkaplanda */}
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card text-card-foreground rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+            <div className="text-4xl mb-4">⏱️</div>
+            <h2 className="text-xl font-semibold mb-2">Oturumunuz Kapanmak Üzere</h2>
+            <p className="text-gray-500 mb-6">60 saniye içinde işlem yapmazsanız oturumunuz kapanacak.</p>
+            <button
+              onClick={extendSession}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors"
+            >
+              Devam Et
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (isLoadingAuth || isLoadingPublicSettings || !authChecked) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    if (authError.type === 'user_not_registered') {
+      return <UserNotRegisteredError />;
+    } else if (authError.type === 'auth_required') {
+      return (
+        <Routes>
+          <Route path="/landing" element={<Landing />} />
+          <Route path="*" element={<Navigate to="/landing" replace />} />
+        </Routes>
+      );
+    }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/landing" element={<Landing />} />
+        <Route path="*" element={<Navigate to="/landing" replace />} />
+      </Routes>
+    );
+  }
+  // Ilk giris: gecici sifreyle giren kullanici kendi sifresini belirlemeden ice giremez
+  if (user?.must_change_password) {
+    return <ForcePasswordChange />;
+  }
+
+  return (
+    <Suspense fallback={<div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"60vh",color:"#888"}}>Yükleniyor...</div>}>
+    <Routes>
+      <Route path="/landing" element={<Navigate to="/" replace />} />
+      <Route element={<AppLayout />}>
+        <Route path="/" element={guard("dashboard", <Dashboard />)} />
+        <Route path="/takvim" element={guard("calendar", <CalendarView />)} />
+        <Route path="/aktivite-ekle" element={guard("add_activity", <AddActivity />)} />
+        <Route path="/satis-aktivite-ekle" element={guard("satis_aktivite_ekle", <AddSalesActivity />)} />
+        <Route path="/profil" element={<Profile />} />
+        <Route path="/fikirler" element={guard("ideas", <Ideas />)} />
+        <Route path="/musteriler" element={guard("customers", <Customers />)} />
+        <Route path="/musteriler-haritasi" element={guard("customer_map", <CustomerMap />)} />
+        <Route path="/aktiviteler" element={guard("activities", <Activities />)} />
+        <Route path="/musteri/:id" element={guard("customers", <CustomerDetail />)} />
+        <Route path="/aktivite/:id" element={guard("activities", <ActivityDetail />)} />
+        <Route path="/yapilacaklar" element={guard("todos", <Todos />)} />
+        <Route path="/mesajlar" element={guard("messages", <Messages />)} />
+        <Route path="/izin-talepleri" element={guard("leave_requests", <LeaveRequests />)} />
+        <Route path="/izinlerim" element={guard("my_leave_requests", <MyLeaveRequests />)} />
+        <Route path="/ik-izin-yonetimi" element={guard("ik_leave_requests", <IKLeaveRequests />)} />
+        <Route path="/ik-harcama-yonetimi" element={guard("ik_expense_requests", <IKExpenseRequests />)} />
+        <Route path="/izin-haklari" element={guard("leave_allowances", <LeaveAllowances />)} />
+        <Route path="/proje-planlama" element={guard("project_planning", <ProjectPlanning />)} />
+        <Route path="/satis-teklifleri" element={guard("satis_teklifleri", <OffersPage />)} />
+        <Route path="/satis-raporlari" element={guard("satis_raporlari", <SalesReportPage />)} />
+        <Route path="/yonetici-masasi" element={guard("yonetici_masasi", <ExecutiveDashboard />)} />
+        <Route path="/izin-turleri" element={guard("leave_types", <LeaveTypes />)} />
+        <Route path="/harcamalar" element={guard("expenses", <Expenses />)} />
+        <Route path="/kisisel-takvim" element={guard("personal_calendar", <PersonalCalendar />)} />
+        <Route path="/takvim-v2" element={guard("personal_calendar", <CalendarV2 />)} />
+        <Route path="/calisanlar" element={guard("employees", <Employees />)} />
+        <Route path="/calisan/:id" element={guard("employees", <EmployeeDetail />)} />
+        <Route path="/calisan-raporu" element={guard("employee_report", <EmployeeReport />)} />
+        <Route path="/hakedisler" element={guard("hakedisler", <Hakedisler />)} />
+        <Route path="/sozlesmeler" element={guard("sozlesmeler", <Sozlesmeler />)} />
+        <Route path="/sozlesmeler/yeni" element={guard("sozlesmeler", <SozlesmeForm />)} />
+        <Route path="/sozlesmeler/:id" element={guard("sozlesmeler", <SozlesmeForm />)} />
+        <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />
+        <Route path="/kart-yonetimi" element={guard("personel_hareketleri", <CardManagement />)} />
+        <Route path="/org-sema" element={guard("employees", <OrgChart />)} />
+        <Route path="/hizli-rapor" element={guard("reports", <QuickReport />)} />
+        <Route path="/kullanicilar" element={guard("users", <Users />)} />
+        <Route path="/yetkilendirme" element={guard("role_permissions", <RolePermissions />)} />
+        <Route path="/versiyon" element={guard("app_version", <AppVersion />)} />
+        <Route path="/tanimlar" element={guard("definitions", <Definitions />)} />
+        <Route path="/cop-kutusu" element={guard("cop_kutusu", <TrashBin />)} />
+        <Route path="/denetim-kaydi" element={guard("denetim_kaydi", <AuditLog />)} />
+        <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />
+        <Route path="/musteri-kullanicilari" element={guard("musteri_kullanicilari", <CustomerUsers />)} />
+        <Route path="/duyurular" element={guard("announcements", <Announcements />)} />
+        <Route path="/is-takip" element={guard("work_tracking", <WorkTasks />)} />
+        <Route path="/taskqube-v3" element={guard("taskqube_projects", <TaskQubeV3 />)} />
+        <Route path="/taskqube-v3/dashboard" element={guard("taskqube_dashboard", <TaskQubeDashboard />)} />
+        <Route path="/taskqube-v3/tickets" element={guard("taskqube_tickets", <TaskQubeTickets />)} />
+        <Route path="/taskqube-v3/kanban" element={guard("taskqube_kanban", <TaskQubeKanban />)} />
+        <Route path="/taskqube-v3/tanimlar" element={guard("taskqube_settings", <TaskQubeSettings />)} />
+      </Route>
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
+    </Suspense>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <LanguageProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <NotificationProvider>
+                  <RolePermissionsProvider>
+                    <Router>
+                      <AuthenticatedApp />
+                    </Router>
+                    <Toaster />
+                    <SonnerToaster closeButton />
+                  </RolePermissionsProvider>
+          </NotificationProvider>
+        </QueryClientProvider>
+      </LanguageProvider>
+    </AuthProvider>
+  )
+}
+
+export default App

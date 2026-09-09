@@ -1,0 +1,808 @@
+const express = require('express');
+const { db } = require('./db');
+const { v4: uuidv4 } = require('uuid');
+const authMiddleware = require('./authMiddleware');
+const { notifyTicketUpdate, notifyNewComment } = require('./taskqubeNotify');
+const { ensureUserForEmployee } = require('./userProvision');
+const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
+
+// Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
+const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities'];
+
+// JSON kolonları olan tablolar (array/object tipindeki alanlar)
+const JSON_COLUMNS = {
+  employees: ['education_documents', 'education_history'],
+  correspondences: ['recipient_ids', 'recipient_names', 'attachments', 'tags'],
+  conversations: ['participants', 'last_read_message_id_by_user', 'archived_by', 'deleted_by'],
+  messages: ['reactions'],
+  work_tasks: ['tags', 'attachments'],
+  customer_contracts: ['products'],
+  leave_requests: ['approval_history'],
+  task_comments: ['attachments'],
+  tq_projects: ['team_member_ids'],
+  tq_tickets: ['tags', 'attachments', 'assigned_to_ids', 'assigned_to_names'],
+  tq_comments: ['attachments'],
+  tq_kanban_boards: ['columns'],
+  tq_ticket_statuses: ['board_ids'],
+  hakedisler: ['tahsilat'],
+};
+
+function parseJsonColumns(tableName, row) {
+  if (!row) return row;
+  const cols = JSON_COLUMNS[tableName] || [];
+  const result = { ...row };
+  for (const col of cols) {
+    if (result[col] && typeof result[col] === 'string') {
+      try { result[col] = JSON.parse(result[col]); } catch { /* bırak */ }
+    }
+  }
+  return result;
+}
+
+function stringifyJsonColumns(tableName, data) {
+  const cols = JSON_COLUMNS[tableName] || [];
+  const result = { ...data };
+  for (const col of cols) {
+    if (result[col] !== undefined && typeof result[col] !== 'string') {
+      result[col] = JSON.stringify(result[col]);
+    }
+  }
+  return result;
+}
+
+// Bir tablonun GERCEK sutun adlari (PRAGMA'dan bir kez okunur, cache'lenir).
+// INSERT/UPDATE govdesinde tabloda olmayan bir alan gelirse SQLite tum
+// ifadeyi "no such column" ile dusuruyor -- bu, yazma oncesi bilinmeyen
+// alanlari elemek icin. Ground-truth oldugu icin sadece zaten hata verecek
+// alanlar duser.
+const _colCache = new Map();
+function knownColumns(tableName) {
+  if (_colCache.has(tableName)) return _colCache.get(tableName);
+  let set = null;
+  try {
+    const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
+    if (rows.length) set = new Set(rows.map(r => r.name));
+  } catch { set = null; }
+  _colCache.set(tableName, set);
+  return set;
+}
+// record'daki tablo-disi anahtarlari sil (yerinde). cols yoksa dokunma.
+function dropUnknownColumns(tableName, record) {
+  const cols = knownColumns(tableName);
+  if (!cols) return;
+  for (const k of Object.keys(record)) {
+    if (!cols.has(k)) {
+      console.warn(`[entityRouter] ${tableName}: bilinmeyen alan atlandi -> ${k}`);
+      delete record[k];
+    }
+  }
+}
+
+// Tablo adı → role_permissions modül adı eşlemesi
+const TABLE_TO_MODULE = {
+  employees: 'employees',
+  card_logs: 'personel_hareketleri',
+  customers: 'customers',
+  activities: 'activities',
+  leave_requests: 'leave_requests',
+  todos: 'todos',
+  ideas: 'ideas',
+  customer_contacts: 'customers',
+  customer_contracts: 'customers',
+  customer_modules: 'customers',
+  products: 'definitions',
+  product_modules: 'definitions',
+  correspondences: 'messages',
+  conversations: 'messages',
+  messages: 'messages',
+  work_tasks: 'work_tracking',
+  leave_allowances: 'leave_requests',
+  leave_types: 'leave_types',
+  definitions: 'definitions',
+  expense_reports: 'expenses',
+  expense_items: 'expenses',
+  
+  task_comments: 'work_tracking',
+  announcements: 'announcements',
+  tq_projects: 'taskqube_projects',
+  tq_tickets: 'taskqube_tickets',
+  tq_ticket_statuses: 'taskqube_settings',
+  tq_comments: 'taskqube_tickets',
+  tq_effort_plans: 'taskqube_tickets',
+  tq_effort_logs: 'taskqube_tickets',
+  tq_kanban_boards: 'taskqube_kanban',
+  customer_projects: 'customer_projects',
+  sales_activities: 'satis',
+  hakedisler: 'hakedisler',
+};
+
+function checkPermission(db, role, tableName, action) {
+  // admin her şeyi yapabilir
+  if (role === 'admin') return true;
+  // Okuma-istisnasi: form/liste icin herkese gereken referans tablolari (sadece goruntuleme)
+  if (action === 'can_view' && ['definitions','leave_types','tq_ticket_statuses','tq_kanban_boards','customer_modules','announcements'].includes(tableName)) return true;
+  // employees: ic ekip formlar icin acik, ama musteri portali personel rehberini
+  // enumere edemesin (KVKK) -- musteri normal role_permissions kontrolune duser
+  if (action === 'can_view' && tableName === 'employees') return role !== 'musteri';
+
+  // Tablo -> modül eşlemesi yoksa: GÜVENLİ TARAF = reddet (fail-closed)
+  const module = TABLE_TO_MODULE[tableName];
+  if (!module) return false;
+
+  // IK ve yonetici, masraf tablolarında ik_expense_requests modülüne göre yetkilenir
+  if ((tableName === 'expense_reports' || tableName === 'expense_items') && (role === 'ik' || role === 'yonetici')) {
+    const permX = db.prepare('SELECT * FROM role_permissions WHERE role_name = ? AND module = ?').get(role, 'ik_expense_requests');
+    if (permX && permX[action]) return true;
+  }
+
+  // Tek yetki kaynağı: role_permissions tablosu
+  const perm = db.prepare(
+    'SELECT * FROM role_permissions WHERE role_name = ? AND module = ?'
+  ).get(role, module);
+  if (!perm) return false;            // kayıt yoksa reddet (fail-closed)
+  return perm[action] === 1;
+}
+
+// Bir tq_comments satiri istekteki kullaniciya mi ait? (kendi yorumunu
+// duzenleme/silme yetkisi icin). created_by (POST'ta req.user.email),
+// author_email, ya da author_id (ic kullanicida employees.id, musteride users.id).
+function commentOwnedBy(c, user) {
+  if (!c || !user) return false;
+  if (c.created_by && c.created_by === user.email) return true;
+  if (c.author_email && c.author_email === user.email) return true;
+  if (c.author_id) {
+    if (user.id && user.id === c.author_id) return true;
+    try {
+      const emp = db.prepare('SELECT id FROM employees WHERE lower(email) = lower(?)').get(user.email || '');
+      if (emp && emp.id === c.author_id) return true;
+    } catch (e) { /* yoksay */ }
+  }
+  return false;
+}
+
+// Istekteki kullanicinin employees.id'si (email uzerinden eslesme)
+function employeeIdForUser(user) {
+  if (!user?.email) return null;
+  try { return db.prepare('SELECT id FROM employees WHERE lower(email) = lower(?)').get(user.email)?.id || null; }
+  catch { return null; }
+}
+
+// Bir tq_effort_logs satiri istekteki kullaniciya mi ait? (kendi girdigi
+// efor saatini duzenleme/silme yetkisi icin — tq_comments'daki
+// commentOwnedBy ile ayni desen).
+function effortLogOwnedBy(row, user) {
+  const empId = employeeIdForUser(user);
+  return !!empId && row?.person_id === empId;
+}
+
+
+// Tablo bazlı izin verilen kolonlar (SQL injection koruması)
+const ALLOWED_COLUMNS = {
+  card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
+  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_taskqube'],
+  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date'],
+  activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','taskqube_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
+  leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
+  leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],
+  leave_types: ['name','description','max_days','is_active'],
+  todos: ['title','description','status','priority','due_date','assigned_to','employee_id','owner_email'],
+  ideas: ['title','description','category','status','employee_id','employee_name'],
+  customer_contacts: ['customer_id','full_name','email','phone','position','is_primary','notes'],
+  customer_contracts: ['customer_id','title','type','contract_type','start_date','end_date','value','status','notes','file_url','product_id','product_name','selected_modules','price','currency','special_terms','products','contract_value','hakedis_start_date','installment_count','pesin_orani','pesin_tutari','hakedis_period','kdv_durumu'],
+  customer_modules: ['customer_id','module_name','is_active','notes'],
+  products: ['name','description','is_active','sort_order'],
+  product_modules: ['product_id','name','description','is_active','sort_order'],
+  correspondences: ['title','type','direction','customer_id','customer_name','recipient_ids','recipient_names','content','attachments','tags','status','date'],
+  conversations: ['title','type','name','participants','last_message','last_message_id','last_message_at','last_message_sender_email','last_read_message_id_by_user','status','archived_by','deleted_by'],
+  messages: ['conversation_id','content','sender_id','sender_name','sender_email','message_type','file_url','file_name','file_size','file_type','meet_link','reply_to_id','reactions'],
+  work_tasks: ['title','description','status','priority','due_date','assigned_to_id','assigned_to_name','project','tags','attachments','estimated_hours','actual_hours'],
+  definitions: ['category','name','value','description','is_active','sort_order','color','icon','label'],
+  announcements: ['title','content','target_roles','start_date','end_date','is_active','priority'],
+  expense_reports: ['title','employee_id','employee_name','employee_email','status','total_amount','currency','period','notes','approver_id','approver_name','approval_date','project_name','trip_start_date','trip_end_date','advance_amount','department_manager','rejection_reason'],
+  expense_items: ['report_id','category','description','amount','currency','date','receipt_url','notes'],
+  task_comments: ['task_id','content','attachments','author_id','author_name','author_email','type','old_status','new_status'],
+  tq_projects: ['name','description','status','customer_id','customer_name','start_date','end_date','team_member_ids','notes','type','priority','budget','manager_id','manager_name','is_active'],
+  tq_tickets: ['title','description','status','priority','project_id','customer_id','customer_name','assigned_to_id','assigned_to_name','assigned_to_ids','assigned_to_names','due_date','tags','attachments','ticket_number','kanban_board_id','kanban_column_id','parent_ticket_id','board_id','board_name','pilot_customer_id','pilot_customer_name','customer_contact_id','customer_contact_name','board_sort'],
+  tq_ticket_statuses: ['name','color','sort_order','is_default','is_closed','key','is_active','is_final','board_id','board_ids','group_key'],
+  tq_comments: ['ticket_id','content','attachments','author_id','author_name','author_email','is_internal','comment_type'],
+  tq_effort_plans: ['ticket_id','team','planned_hours','planned_start','assignee_id','assignee_name','end_at','note'],
+  tq_effort_logs: ['ticket_id','team','person_id','person_name','hours','work_date','note'],
+  tq_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
+  sales_activities: ['customer_id','customer_name','activity_type','contact_person','date','start_time','end_time','notes','outcome','next_visit_date','opportunity_id','created_by','employee_id','employee_name','duration_minutes','location','parent_activity_id','note_type','title','valid_until','deal_status','products','amount','currency','is_deleted'],
+  hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
+};
+
+// Zorunlu alanlar
+// employees tablosunda disariya sizmamasi gereken hassas kisisel veriler (KVKK)
+const SENSITIVE_EMPLOYEE_FIELDS = ['tc','iban','bank_name','tax_office','tax_number','sgk_number','disability_status','blood_type','emergency_contact','emergency_phone','address','notes','exit_reason','exit_notes','exit_document','marital_status','military_status','education_documents','birth_date','gender','card_uid'];
+
+function isPrivilegedForEmployeeData(role) {
+  if (role === 'admin' || role === 'yonetici') return true;
+  if (checkPermission(db, role, 'employees', 'can_edit')) return true;
+  const repPerm = db.prepare('SELECT can_view FROM role_permissions WHERE role_name = ? AND module = ?').get(role, 'employee_report');
+  if (repPerm && repPerm.can_view === 1) return true;
+  return false;
+}
+
+function stripSensitiveEmployeeFields(row, req) {
+  if (!row) return row;
+  if (isPrivilegedForEmployeeData(req.user?.role)) return row;
+  if (req.user?.email && row.email === req.user.email) return row;
+  const clone = { ...row };
+  for (const f of SENSITIVE_EMPLOYEE_FIELDS) delete clone[f];
+  return clone;
+}
+
+const REQUIRED_FIELDS = {
+  employees: ['full_name','email'],
+  customers: ['company_name'],
+  leave_requests: ['employee_id','start_date','end_date','leave_type'],
+  leave_allowances: ['employee_id','year','total_days','notes'],
+  tq_tickets: ['title'],
+  tq_effort_plans: ['ticket_id','team'],
+  tq_effort_logs: ['ticket_id','team','person_id','hours'],
+  tq_projects: ['name'],
+  announcements: ['title','content'],
+  hakedisler: ['musteri'],
+  // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
+};
+
+function validateData(tableName, data, isUpdate = false) {
+  const errors = [];
+
+  // Sadece zorunlu alan kontrolü (sadece create'te)
+  if (!isUpdate) {
+    const required = REQUIRED_FIELDS[tableName] || [];
+    for (const field of required) {
+      if (!data[field] && data[field] !== 0) {
+        errors.push(field + ' alani zorunludur');
+      }
+    }
+  }
+
+
+  // Genel girdi dogrulama (tip/uzunluk) — bozuk/asiri veri girisini engeller
+  const MAX_LEN = 50000;
+  for (const [key, val] of Object.entries(data)) {
+    if (typeof val === 'string' && val.length > MAX_LEN) {
+      errors.push(key + ' alani cok uzun (max ' + MAX_LEN + ' karakter)');
+    }
+    if (key === 'email' && val && typeof val === 'string' && val.trim() !== '') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        errors.push('Gecerli bir e-posta adresi giriniz');
+      }
+    }
+  }
+
+  return errors;
+}
+
+const ALLOWED_SORT_COLS = new Set([
+  'id','created_date','updated_date','date','name','full_name','email','status',
+  'title','sort_order','last_message_at','due_date','start_date','end_date',
+  'priority','ticket_number','total_amount','day_count','half_day_period','offer_date','valid_until',
+  'employee_name','customer_name','activity_type','last_message_at'
+]);
+
+function createEntityRouter(tableName) {
+  const router = express.Router();
+
+  // Tüm route'lar auth gerektirir
+  router.use(authMiddleware);
+
+  // LIST - GET /api/:entity?sort=-created_date&limit=100
+  router.get('/', (req, res) => {
+      if (!checkPermission(db, req.user?.role, tableName, 'can_view')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+    try {
+      const { sort, limit, ...filters } = req.query;
+        if (req.user?.role === 'musteri') {
+          delete filters.customer_id;
+        }
+
+        // musteri rolü: sadece kendi customer_id'sine ait verileri görsün
+        if (req.user?.role === 'musteri') {
+          if (tableName === 'tq_tickets' || tableName === 'tq_projects' || tableName === 'customer_modules' || tableName === 'customer_contacts' || tableName === 'customer_contracts') {
+            filters.customer_id = req.user.customer_id || '__no_customer__';
+          }
+          // GUVENLIK: 'customers' tablosunun kendisi bu listede yoktu -- musteri
+          // rolu LIST cagirdiginda TUM musterilerin (diger firmalarin) kayitlarini
+          // aliyordu, sadece frontend'de kendi firmasina filtreleniyordu (IDOR)
+          if (tableName === 'customers') {
+            filters.id = req.user.customer_id || '__no_customer__';
+          }
+        }
+      
+      let query = `SELECT * FROM ${tableName}`;
+      const params = [];
+
+      // Filtreleme
+      const filterKeys = Object.keys(filters);
+      const conditions = [];
+      if (filterKeys.length > 0) {
+        filterKeys.forEach(k => {
+          if (k === 'exclude_archived') {
+            if (tableName === 'tq_tickets') conditions.push("status != 'arsivlendi'");
+            return;
+          }
+          // GUVENLIK: filtre anahtari ALLOWED_COLUMNS ile dogrulanir (SQL injection korumasi)
+          // 'id' her tabloda birincil anahtar oldugu icin ozel olarak her zaman izinli
+          const allowedCols = ALLOWED_COLUMNS[tableName] || [];
+          if (k !== 'id' && !allowedCols.includes(k)) return;
+          const val = filters[k]; const parsed = val === 'true' ? 1 : val === 'false' ? 0 : (/^-?\d+$/.test(val) ? parseInt(val, 10) : val); params.push(parsed);
+          conditions.push(`${k} = ?`);
+        });
+      }
+      // Soft delete: silinmis kayitlari listeleme
+      if (SOFT_DELETE_TABLES.includes(tableName)) {
+        conditions.push('(is_deleted = 0 OR is_deleted IS NULL)');
+      }
+      // Mesajlasma gizliligi (KVKK): admin dahil HERKES sadece kendi
+      // katilimcisi oldugu konusma/mesajlari gorebilir (guvenlik acigi fix)
+      if ((tableName === 'conversations' || tableName === 'messages') && req.user?.email) {
+        if (tableName === 'conversations') {
+          conditions.push("EXISTS (SELECT 1 FROM json_each(participants) WHERE json_each.value = ?)");
+        } else {
+          conditions.push("conversation_id IN (SELECT id FROM conversations c WHERE EXISTS (SELECT 1 FROM json_each(c.participants) WHERE json_each.value = ?))");
+        }
+        params.push(req.user.email);
+      }
+      // GUVENLIK: TaskQube ic notlari (is_internal=1) musteri rolune asla
+      // gitmemeli -- frontend zaten gizliyordu ama API yaniti filtresizdi
+      // (F12/network sekmesinden goruntulenebiliyordu)
+      if (tableName === 'tq_comments' && req.user?.role === 'musteri') {
+        conditions.push('(is_internal = 0 OR is_internal IS NULL)');
+      }
+      if (conditions.length > 0) {
+        query += ` WHERE ${conditions.join(' AND ')}`;
+      }
+
+      // Sıralama
+      if (sort) {
+        const desc = sort.startsWith('-');
+        const col = desc ? sort.slice(1) : sort;
+        const safeCol = ALLOWED_SORT_COLS.has(col) ? col : 'created_date';
+        query += ` ORDER BY ${safeCol} ${desc ? 'DESC' : 'ASC'}`;
+      } else {
+        query += ` ORDER BY created_date DESC`;
+      }
+
+      // Arsivlileri disla
+      if (filters.exclude_archived === '1' || filters.exclude_archived === 1) {
+        delete filters.exclude_archived;
+        if (tableName === 'tq_tickets') {
+          conditions.push("status != 'arsivlendi'");
+        }
+      }
+      // Limit
+      if (limit) {
+        query += ` LIMIT ?`;
+        params.push(parseInt(limit));
+      }
+
+      const rows = db.prepare(query).all(...params);
+      const parsed = rows.map(r => parseJsonColumns(tableName, r));
+      const finalRows = tableName === 'employees' ? parsed.map(r => stripSensitiveEmployeeFields(r, req)) : parsed;
+      res.json(finalRows);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET BY ID - GET /api/:entity/:id
+  router.get('/:id', (req, res) => {
+      if (!checkPermission(db, req.user?.role, tableName, 'can_view')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+    try {
+      const row = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
+      if (!row) return res.status(404).json({ error: 'Bulunamadı' });
+      // Soft delete: silinmis kayit acilamaz
+      if (SOFT_DELETE_TABLES.includes(tableName) && row.is_deleted === 1) {
+        return res.status(404).json({ error: 'Bulunamadı' });
+      }
+      // GUVENLIK: mesajlasma gizliligi (KVKK) -- LIST'teki katilimci kontrolu
+      // (yukarida, GET / handler'inda) GET-by-id'de eksikti (IDOR acigi: katilimci
+      // olmayan biri ID'yi bilirse tek kayit endpoint'inden okuyabiliyordu).
+      // Admin dahil HERKES sadece kendi katilimcisi oldugu konusma/mesaji gorebilir.
+      if ((tableName === 'conversations' || tableName === 'messages') && req.user?.email) {
+        let participants = [];
+        try {
+          if (tableName === 'conversations') {
+            participants = JSON.parse(row.participants || '[]');
+          } else {
+            const conv = db.prepare('SELECT participants FROM conversations WHERE id = ?').get(row.conversation_id);
+            participants = JSON.parse(conv?.participants || '[]');
+          }
+        } catch { participants = []; }
+        if (!participants.includes(req.user.email)) {
+          return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
+        }
+      }
+      // musteri rolü: sadece kendi customer_id'sine ait kayda erişebilir (IDOR koruması)
+      if (req.user?.role === 'musteri') {
+        const ownCustomerTables = ['tq_tickets','tq_projects','customer_contacts','customer_contracts','customer_modules'];
+        if (ownCustomerTables.includes(tableName) && row.customer_id && row.customer_id !== req.user.customer_id) {
+          return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
+        }
+        if (tableName === 'customers' && row.id !== req.user.customer_id) {
+          return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
+        }
+        // GUVENLIK: TaskQube ic notu tek kayit olarak da musteriye acilmasin
+        if (tableName === 'tq_comments' && row.is_internal === 1) {
+          return res.status(404).json({ error: 'Bulunamadı' });
+        }
+      }
+      const parsedRow = parseJsonColumns(tableName, row);
+      res.json(tableName === 'employees' ? stripSensitiveEmployeeFields(parsedRow, req) : parsedRow);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // CREATE - POST /api/:entity
+  router.post('/', (req, res) => {
+      // Efor saati girisi: atanan kisi kendi adina, sadece atandigi bilette
+      // girebilir -- modul izni (taskqube_tickets can_add) olmasa bile.
+      let ownEffortLogCreate = false;
+      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin') {
+        const empId = employeeIdForUser(req.user);
+        if (empId && req.body?.person_id === empId) {
+          const t = db.prepare('SELECT assigned_to_ids FROM tq_tickets WHERE id = ?').get(req.body.ticket_id);
+          let ids = []; try { ids = JSON.parse(t?.assigned_to_ids || '[]'); } catch { ids = []; }
+          ownEffortLogCreate = ids.includes(empId);
+        }
+      }
+      if (!ownEffortLogCreate && !checkPermission(db, req.user?.role, tableName, 'can_add')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      // GUVENLIK: mesaj olusturmada iki kontrol eksikti -- (1) gonderenin
+      // hedef konusmanin bir katilimcisi oldugu hic dogrulanmiyordu (hic
+      // dahil olunmayan bir konusmaya mesaj enjekte edilebiliyordu), (2)
+      // sender_email/sender_name istemciden geldigi gibi kabul ediliyordu
+      // (kimlige burunme / baskasi adina mesaj yazma riski). Ikisi de
+      // sunucu tarafinda req.user'dan sabitlenerek kapatildi.
+      if (tableName === 'messages') {
+        if (req.user?.role !== 'admin') {
+          let participants = [];
+          try {
+            const conv = db.prepare('SELECT participants FROM conversations WHERE id = ?').get(req.body?.conversation_id);
+            participants = JSON.parse(conv?.participants || '[]');
+          } catch { participants = []; }
+          if (!participants.includes(req.user?.email)) {
+            return res.status(403).json({ error: 'Bu konuşmaya mesaj gönderme yetkiniz yok' });
+          }
+        }
+        req.body.sender_email = req.user?.email;
+        req.body.sender_id = req.user?.id;
+        req.body.sender_name = req.user?.full_name || req.user?.email;
+      }
+    try {
+      const validationErrors = validateData(tableName, req.body, false);
+      if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
+      const data = stringifyJsonColumns(tableName, req.body);
+      // GUVENLIK: admin disindaki roller yeni calisan olustururken de
+      // ayricalik/kimlik alanlarini set edemez (bkz. PUT)
+      if (tableName === 'employees' && req.user?.role !== 'admin') {
+        for (const f of ['role', 'app_role', 'card_uid']) delete data[f];
+      }
+      const id = uuidv4();
+      const now = new Date().toISOString();
+
+      // tq_tickets için otomatik bilet numarası
+      if (tableName === 'tq_tickets' && !data.ticket_number) {
+        // COUNT(*)+1 degil MAX+1: gecmis gocler sirasinda satir sayisi ile en
+        // buyuk numara birbirini tutmuyor, COUNT tabanli uretim mevcut
+        // numaralarla cakisiyordu.
+        const maxRow = db.prepare("SELECT MAX(CAST(ticket_number AS INTEGER)) as mx FROM tq_tickets WHERE ticket_number GLOB '[0-9]*'").get();
+        const nextNum = (maxRow?.mx || 0) + 1;
+        data.ticket_number = String(nextNum);
+      }
+
+      // tq_tickets: board_sort verilmediyse yeni bilet ait oldugu kolonun
+      // USTUNE gelsin (min - 1). Pano kolon ici manuel sirayi bozmadan triyaj.
+      if (tableName === 'tq_tickets' && (data.board_sort === undefined || data.board_sort === null)) {
+        try {
+          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM tq_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
+            .get(data.board_id ?? null, data.status ?? null);
+          data.board_sort = (r && r.mn !== null && r.mn !== undefined) ? r.mn - 1 : 0;
+        } catch (e) { data.board_sort = 0; }
+      }
+
+      // Bileti olusturan kisi (musteri haric) otomatik olarak sorumlu
+      // kisilere eklenir -- kaydeden kisi biletten haberdar/takipte kalsin.
+      if (tableName === 'tq_tickets' && req.user?.role !== 'musteri') {
+        try {
+          const emp = db.prepare('SELECT id, full_name FROM employees WHERE email = ?').get(req.user.email);
+          if (emp) {
+            let ids = []; let names = [];
+            try { ids = JSON.parse(data.assigned_to_ids || '[]'); } catch { ids = []; }
+            try { names = JSON.parse(data.assigned_to_names || '[]'); } catch { names = []; }
+            if (!ids.includes(emp.id)) { ids.push(emp.id); names.push(emp.full_name); }
+            data.assigned_to_ids = JSON.stringify(ids);
+            data.assigned_to_names = JSON.stringify(names);
+            if (!data.assigned_to_id) { data.assigned_to_id = emp.id; data.assigned_to_name = emp.full_name; }
+          }
+        } catch (e) { console.error('[entityRouter] otomatik sorumlu atama hatasi:', e.message); }
+      }
+
+      const record = {
+        id,
+        ...data,
+        created_by: req.user.email,
+        created_date: now,
+        updated_date: now,
+      };
+      dropUnknownColumns(tableName, record);
+
+      const keys = Object.keys(record);
+      const placeholders = keys.map(() => '?').join(', ');
+      const values = keys.map(k => { const v = record[k]; if (v === undefined || v === null) return null; if (typeof v === "boolean") return v ? 1 : 0; if (typeof v === "object") return JSON.stringify(v); return v; });
+
+      db.prepare(`INSERT INTO ${tableName} (${keys.join(', ')}) VALUES (${placeholders})`).run(...values);
+      
+      const created = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(id);
+
+      // Yeni calisan olusturulunca giris (users) hesabi da otomatik acilir
+      // (varsayilan sifre Ind2026x, ilk giriste degistirilir). Calisan kaydini
+      // asla bozmaz. _login_created yanita eklenir ki UI kullaniciyi bilgilendirsin.
+      let loginCreated = false;
+      if (tableName === 'employees') {
+        loginCreated = ensureUserForEmployee(db, created, req.user?.email);
+      }
+
+      // TaskQube mail bildirimi: yeni yorum eklendiginde atanan kisilere haber ver
+      if (tableName === 'tq_comments') {
+        try {
+          const ticket = db.prepare('SELECT * FROM tq_tickets WHERE id = ?').get(created.ticket_id);
+          if (ticket) notifyNewComment(parseJsonColumns('tq_comments', created), parseJsonColumns('tq_tickets', ticket), req.user);
+        } catch (e) { console.error('[taskqubeNotify] yorum bildirimi hatasi:', e.message); }
+      }
+
+      res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // UPDATE - PUT /api/:entity/:id
+  router.put('/:id', (req, res) => {
+    try {
+      const existing = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
+      if (!existing) return res.status(404).json({ error: 'Bulunamadı' });
+
+      // Yorum duzenleme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
+      // baskasininkini duzenleyemez; musteri rolu hicbir yorumu duzenleyemez.
+      const ownCommentEdit = tableName === 'tq_comments'
+        && existing.comment_type !== 'system'
+        && req.user?.role !== 'musteri'
+        && commentOwnedBy(existing, req.user);
+      const ownEffortLogEdit = tableName === 'tq_effort_logs' && effortLogOwnedBy(existing, req.user);
+      if (tableName === 'tq_comments' && !ownCommentEdit) {
+        if (existing.comment_type === 'system') return res.status(403).json({ error: 'Sistem kayıtları düzenlenemez' });
+        return res.status(403).json({ error: 'Yalnızca kendi yorumunuzu düzenleyebilirsiniz' });
+      }
+      if (!ownCommentEdit && !ownEffortLogEdit && !checkPermission(db, req.user?.role, tableName, 'can_edit')) {
+        return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      }
+      if (tableName === 'tq_comments') {
+        for (const f of ['is_internal', 'comment_type', 'author_id', 'author_name', 'author_email', 'ticket_id']) delete req.body[f];
+      }
+      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin') {
+        if (!ownEffortLogEdit) return res.status(403).json({ error: 'Yalnızca kendi girdiğiniz efor kaydını düzenleyebilirsiniz' });
+        for (const f of ['ticket_id', 'team', 'person_id', 'person_name']) delete req.body[f];
+      }
+
+      // GUVENLIK: sadece konusmanin bir katilimcisi o konusmayi guncelleyebilir
+      // (sorumlu ekleme/cikarma, kisisel arsivleme vb.) -- LIST zaten katilimciya
+      // gore filtreleniyordu, PUT'ta bu kontrol eksikti.
+      if (tableName === 'conversations' && req.user?.role !== 'admin') {
+        let currentParticipants = [];
+        try { currentParticipants = JSON.parse(existing.participants || '[]'); } catch {}
+        if (!currentParticipants.includes(req.user?.email)) {
+          return res.status(403).json({ error: 'Bu konuşmaya erişim yetkiniz yok' });
+        }
+      }
+      // GUVENLIK: sadece mesajin ait oldugu konusmanin bir katilimcisi o
+      // mesaji guncelleyebilir (tepki/emoji ekleme vb.) -- GET-by-id'de
+      // ayni kontrol vardi, PUT'ta eksikti: herhangi bir kullanici, hic
+      // katilimcisi olmadigi bir konusmadaki mesaji guncelleyebiliyordu.
+      if (tableName === 'messages' && req.user?.role !== 'admin') {
+        let participants = [];
+        try {
+          const conv = db.prepare('SELECT participants FROM conversations WHERE id = ?').get(existing.conversation_id);
+          participants = JSON.parse(conv?.participants || '[]');
+        } catch { participants = []; }
+        if (!participants.includes(req.user?.email)) {
+          return res.status(403).json({ error: 'Bu mesaja erişim yetkiniz yok' });
+        }
+      }
+      // GUVENLIK: bir grubu (tumu icin) silmek sadece grubu olusturan kisiye
+      // acik -- herhangi bir katilimci grubu herkesten kaybetmesin.
+      if (tableName === 'conversations' && existing.type === 'group' && req.body.status === 'deleted') {
+        if (existing.created_by !== req.user?.email && req.user?.role !== 'admin') {
+          return res.status(403).json({ error: 'Bu grubu sadece oluşturan kişi silebilir' });
+        }
+      }
+
+      const validationErrors = validateData(tableName, req.body, true);
+      if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
+      // İlişkili bilet (child) ise status değiştirilemez — musteri_onay/kurum_test hariç (müşteri onaylayabilmeli)
+      if (tableName === 'tq_tickets' && req.body.status !== undefined && existing.parent_ticket_id) {
+        if (req.body.status !== existing.status && !CUSTOMER_APPROVAL_STATUSES.includes(existing.status)) {
+          return res.status(400).json({ error: 'Bu bilet bir ana bilete bağlı, durumu bağımsız değiştirilemez.' });
+        }
+      }
+
+      const data = stringifyJsonColumns(tableName, req.body);
+      const now = new Date().toISOString();
+      
+      const updates = { ...data, updated_date: now };
+      delete updates.id;
+      delete updates.created_date;
+      delete updates.created_by;
+
+      // tq_tickets: durum degisti VE cagiran taraf board_sort'u kendisi
+      // belirtmediyse (surukle-birak her zaman board_sort'u acikca gonderir,
+      // o durumda buraya hic girilmez -- tam biraktigin yere yazilmaya devam
+      // eder) bileti yeni kolonun EN USTUNE koy (POST'taki yeni-bilet mantigiyla
+      // ayni: min(board_sort)-1). Boylece durum degisince en uste gelir, ama
+      // sonradan elle suruklenirse orada kalir.
+      if (tableName === 'tq_tickets' && req.body.board_sort === undefined && updates.status !== undefined && updates.status !== existing.status) {
+        try {
+          const targetBoardId = updates.board_id !== undefined ? updates.board_id : existing.board_id;
+          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM tq_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
+            .get(targetBoardId ?? null, updates.status ?? null);
+          updates.board_sort = (r && r.mn !== null && r.mn !== undefined) ? r.mn - 1 : 0;
+        } catch (e) { /* board_sort ayarlanamazsa durum degisikligi yine de calissin */ }
+      }
+
+      // GUVENLIK: admin disindaki roller employees uzerinde ayricalik/kimlik
+      // alanlarini degistiremez (rol yukseltme, hesap e-postasi / kart kimligi
+      // degistirme). Bu alanlar yalnizca admin tarafindan yonetilir.
+      if (tableName === 'employees' && req.user?.role !== 'admin') {
+        for (const f of ['role', 'app_role', 'email', 'card_uid']) delete updates[f];
+      }
+      dropUnknownColumns(tableName, updates);
+
+      const keys = Object.keys(updates);
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      const values = [...keys.map(k => { const v = updates[k]; if (v === undefined || v === null) return null; if (typeof v === "boolean") return v ? 1 : 0; if (typeof v === "object") return JSON.stringify(v); return v; }), req.params.id];
+
+      db.prepare(`UPDATE ${tableName} SET ${setClause} WHERE id = ?`).run(...values);
+
+      // Calisan durumu degisince ilgili user hesabini da senkronla (musteri rolu haric)
+      if (tableName === 'employees' && (updates.status === 'pasif' || updates.status === 'aktif')) {
+        try {
+          const emp = db.prepare('SELECT email FROM employees WHERE id = ?').get(req.params.id);
+          if (emp && emp.email) {
+            db.prepare("UPDATE users SET status = ?, updated_at=datetime('now') WHERE email = ? AND role != 'musteri' AND status != ?").run(updates.status, emp.email, updates.status);
+          }
+        } catch (e) { console.error('employee->user status senkron hatasi:', e.message); }
+      }
+
+      const updated = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
+
+      // Calisan duzenlemesinde giris hesabi hala yoksa olustur (or. once
+      // e-postasiz olusturulup sonra e-posta eklendi). E-posta RENAME'inde
+      // calistirma -- yeni adrese 2. hesap acmasin.
+      let loginCreated = false;
+      if (tableName === 'employees') {
+        const oldEmailEmpty = !existing.email || !String(existing.email).trim();
+        const emailRenamed = !oldEmailEmpty && updates.email !== undefined && updates.email !== existing.email;
+        if (!emailRenamed) loginCreated = ensureUserForEmployee(db, updated, req.user?.email);
+      }
+
+      // TaskQube mail bildirimi: durum ozel bir asamaya cekildiyse musteriye,
+      // aksi halde (yorum haric her guncelleme) atanan kisilere (aktor haric) mail
+      if (tableName === 'tq_tickets') {
+        try {
+          notifyTicketUpdate(parseJsonColumns('tq_tickets', existing), parseJsonColumns('tq_tickets', updated), req.user);
+        } catch (e) { console.error('[taskqubeNotify] bilet bildirimi hatasi:', e.message); }
+      }
+
+      // AUDIT LOG — yetki ve rol degisikliklerini kaydet
+      try {
+        if (tableName === 'role_permissions') {
+          const oldV = `view:${existing.can_view} add:${existing.can_add} edit:${existing.can_edit} del:${existing.can_delete}`;
+          const newV = `view:${updated.can_view} add:${updated.can_add} edit:${updated.can_edit} del:${updated.can_delete}`;
+          if (oldV !== newV) {
+            db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+              .run(uuidv4(), req.user?.email || 'bilinmiyor', 'yetki_degisikligi', `${existing.role_name} / ${existing.module}`, oldV, newV);
+          }
+        } else if (tableName === 'users' && existing.role !== updated.role) {
+          db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+            .run(uuidv4(), req.user?.email || 'bilinmiyor', 'rol_degisikligi', updated.email || existing.email, existing.role, updated.role);
+        }
+      } catch(e) {}
+
+      // İlişkili bilet senkronizasyonu (durum)
+      if (tableName === 'tq_tickets' && data.status !== undefined && data.status !== existing.status) {
+        const children = db.prepare('SELECT id FROM tq_tickets WHERE parent_ticket_id = ?').all(req.params.id);
+        if (children.length > 0) {
+          const updateChild = db.prepare('UPDATE tq_tickets SET status = ?, updated_date = ? WHERE id = ?');
+          for (const child of children) {
+            updateChild.run(data.status, now, child.id);
+          }
+        }
+      }
+      // İlişkili bilet senkronizasyonu (pano) — ana bilet taşınınca child'lar da aynı panoya taşınır
+      if (tableName === 'tq_tickets' && data.board_id !== undefined && data.board_id !== existing.board_id) {
+        const childrenB = db.prepare('SELECT id FROM tq_tickets WHERE parent_ticket_id = ?').all(req.params.id);
+        if (childrenB.length > 0) {
+          const updateChildBoard = db.prepare('UPDATE tq_tickets SET board_id = ?, board_name = ?, updated_date = ? WHERE id = ?');
+          for (const child of childrenB) {
+            updateChildBoard.run(data.board_id, data.board_name ?? existing.board_name ?? null, now, child.id);
+          }
+        }
+      }
+
+      res.json({ ...parseJsonColumns(tableName, updated), ...(tableName === 'employees' ? { _login_created: loginCreated } : {}) });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE - DELETE /api/:entity/:id
+  router.delete('/:id', (req, res) => {
+    try {
+      const existing = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
+      if (!existing) return res.status(404).json({ error: 'Bulunamadı' });
+
+      // Yorum silme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
+      // baskasininkini silemez; musteri rolu hicbir yorumu silemez.
+      const ownCommentDelete = tableName === 'tq_comments'
+        && existing.comment_type !== 'system'
+        && req.user?.role !== 'musteri'
+        && commentOwnedBy(existing, req.user);
+      const ownEffortLogDelete = tableName === 'tq_effort_logs' && effortLogOwnedBy(existing, req.user);
+      if (tableName === 'tq_comments' && !ownCommentDelete) {
+        return res.status(403).json({ error: 'Bu yorumu silme yetkiniz yok' });
+      }
+      if (!ownCommentDelete && !ownEffortLogDelete && !checkPermission(db, req.user?.role, tableName, 'can_delete')) {
+        return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      }
+      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin' && !ownEffortLogDelete) {
+        return res.status(403).json({ error: 'Yalnızca kendi girdiğiniz efor kaydını silebilirsiniz' });
+      }
+
+      // GUVENLIK: mesaj/konusma silmede de katilimci kontrolu yoktu --
+      // messages hard-delete oldugu icin (SOFT_DELETE_TABLES'te degil) bu
+      // ozellikle riskliydi: modulde genel silme izni olan biri, hic
+      // katilimcisi olmadigi bir konusmadaki mesajlari kalici olarak
+      // silebiliyordu. PUT'takiyle ayni desen.
+      if ((tableName === 'messages' || tableName === 'conversations') && req.user?.role !== 'admin') {
+        let participants = [];
+        try {
+          if (tableName === 'conversations') {
+            participants = JSON.parse(existing.participants || '[]');
+          } else {
+            const conv = db.prepare('SELECT participants FROM conversations WHERE id = ?').get(existing.conversation_id);
+            participants = JSON.parse(conv?.participants || '[]');
+          }
+        } catch { participants = []; }
+        if (!participants.includes(req.user?.email)) {
+          return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
+        }
+      }
+      if (tableName === 'leave_requests' && req.user?.role !== 'admin' && req.user?.role !== 'ik') {
+        const ownEmail = req.user?.email;
+        const isOwner = existing.created_by === ownEmail || existing.employee_email === ownEmail;
+        if (!isOwner) return res.status(403).json({ error: 'Bu izin talebini yalnizca sahibi silebilir' });
+        if (existing.status === 'onaylandi') return res.status(403).json({ error: 'Onaylanmis izin talebi silinemez' });
+      }
+      if (SOFT_DELETE_TABLES.includes(tableName)) {
+        // Soft delete: kaydi silme, is_deleted=1 yap (geri getirilebilir)
+        db.prepare(`UPDATE ${tableName} SET is_deleted = 1, updated_date = ? WHERE id = ?`).run(new Date().toISOString(), req.params.id);
+      } else {
+        db.prepare(`DELETE FROM ${tableName} WHERE id = ?`).run(req.params.id);
+      }
+      res.json({ success: true, id: req.params.id });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  return router;
+}
+
+module.exports = createEntityRouter;
+module.exports.checkPermission = checkPermission;

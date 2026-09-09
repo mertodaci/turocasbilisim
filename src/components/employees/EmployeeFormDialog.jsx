@@ -173,8 +173,10 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
       payload.education_department = form.education_history[0].department || "";
       payload.graduation_date = form.education_history[0].graduation_date || "";
     }
-    // Özlük & Ücret — sayısallaştır (şube/bölüm adı denormalize edilmez; bordro sube_id ile JOIN eder)
+    // Özlük & Ücret — sayısallaştır + saatlik/dakikalık türet (aylık/225, /60). Bordro & mesai bunları kullanır.
     payload.aylik_ucret = Number(form.aylik_ucret) || 0;
+    payload.saatlik_ucret = payload.aylik_ucret > 0 ? +(payload.aylik_ucret / 225).toFixed(6) : 0;
+    payload.dakikalik_ucret = payload.saatlik_ucret > 0 ? +(payload.saatlik_ucret / 60).toFixed(6) : 0;
     payload.ticket_aylik = Number(form.ticket_aylik) || 0;
     payload.sahsi_hesap_tutar = Number(form.sahsi_hesap_tutar) || 0;
     payload.emekli_mi = form.emekli_mi ? 1 : 0;

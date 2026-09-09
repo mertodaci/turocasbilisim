@@ -44,7 +44,19 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
   const kesYol = kesOrtak + ctYol;
   const kesYemek = kesOrtak + ctYemek;
   // Maaş eksik günü: ücretsiz izin + gelmedi (+ cumartesi kuralı 'maas' ise CT). İ/R maaşı etkilemez.
-  const eksikGun = p.u + p.e + ctMaas;
+  let eksikGun = p.u + p.e + ctMaas;
+
+  // Ay ortası işe giriş / işten çıkış → dönem içi kısmi gün (giriş öncesi / çıkış sonrası maaşsız)
+  const ayIlk = `${yil}-${String(ay).padStart(2, '0')}-01`;
+  const ayGunSayisi = new Date(Number(yil), Number(ay), 0).getDate();
+  const aySon = `${yil}-${String(ay).padStart(2, '0')}-${String(ayGunSayisi).padStart(2, '0')}`;
+  if (emp.hire_date && emp.hire_date > ayIlk && emp.hire_date <= aySon) {
+    eksikGun += (new Date(emp.hire_date + 'T00:00:00') - new Date(ayIlk + 'T00:00:00')) / 86400000;
+  }
+  if (emp.exit_date && emp.exit_date >= ayIlk && emp.exit_date < aySon) {
+    eksikGun += (new Date(aySon + 'T00:00:00') - new Date(emp.exit_date + 'T00:00:00')) / 86400000;
+  }
+  eksikGun = Math.round(eksikGun * 100) / 100;
   const calisilanGun = Math.max(0, 30 - eksikGun);
 
   const aylik = Number(emp.aylik_ucret) || 0;
@@ -209,7 +221,7 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
   const params = [];
   if (personel_id) { cond.push('id=?'); params.push(personel_id); }
   else cond.push("(status IS NULL OR status != 'pasif')");
-  const emps = db.prepare(`SELECT id, full_name, sube_id, tc, position, meslek_kodu, aylik_ucret, saatlik_ucret, dakikalik_ucret, sahsi_hesap_aktif, sahsi_hesap_tutar FROM employees WHERE ${cond.join(' AND ')}`).all(...params);
+  const emps = db.prepare(`SELECT id, full_name, sube_id, tc, position, meslek_kodu, aylik_ucret, saatlik_ucret, dakikalik_ucret, sahsi_hesap_aktif, sahsi_hesap_tutar, hire_date, exit_date FROM employees WHERE ${cond.join(' AND ')}`).all(...params);
 
   const ins = db.prepare(`INSERT INTO ik_bordro_satirlari
     (id, donem_id, personel_id, personel_adi, sube_id, tc, gorev, aylik_ucret, saatlik_ucret, dakikalik_ucret, calisilan_gun, eksik_gun,

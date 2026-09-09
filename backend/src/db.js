@@ -401,6 +401,8 @@ function initDb() {
       'stok_sahalar','stok_tedarikciler',
       // Faz 2: Hareket fişleri
       'stok_giris','stok_cikis','stok_transfer','stok_fisler',
+      // Faz 3: FIFO / parti
+      'stok_parti_takibi',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -562,6 +564,37 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_hrk_fis ON stok_hareketler(fis_id);
     `);
   } catch(e) { console.error('stok faz2 tablolari:', e.message); }
+
+  // ── Stok Faz 3: FIFO partileri + tahsis (raf ömrü / lot / maliyet izi) ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_partiler (
+        id TEXT PRIMARY KEY, urun_id TEXT, urun_adi TEXT,
+        depo_id TEXT, depo_adi TEXT, raf_id TEXT, raf_adi TEXT,
+        lot_no TEXT, uretim_tarihi TEXT, skt TEXT, kontrol_tarihi TEXT,
+        giris_miktar REAL DEFAULT 0, kalan_bakiye REAL DEFAULT 0,
+        alis_maliyeti REAL DEFAULT 0,                 -- ana birim başına
+        tedarikci_cari_id TEXT, tedarikci_adi TEXT,
+        durum TEXT DEFAULT 'acik',                    -- acik | kapali | suresi_gecti
+        kaynak_tip TEXT,                              -- giris | transfer | sayim | fifo_rebuild
+        kaynak_fis_id TEXT, kaynak_fis_no TEXT, kaynak_fis_satir_id TEXT,
+        giris_tarihi TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_parti_tahsis (
+        id TEXT PRIMARY KEY, parti_id TEXT NOT NULL,
+        cikis_fis_id TEXT, cikis_fis_no TEXT, cikis_fis_satir_id TEXT,
+        urun_id TEXT, depo_id TEXT, dusulen_miktar REAL DEFAULT 0, maliyet REAL DEFAULT 0,
+        tarih TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_parti_urun_depo ON stok_partiler(urun_id, depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_parti_durum ON stok_partiler(durum);
+      CREATE INDEX IF NOT EXISTS idx_stok_parti_kaynak ON stok_partiler(kaynak_fis_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_tahsis_parti ON stok_parti_tahsis(parti_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_tahsis_fis ON stok_parti_tahsis(cikis_fis_id);
+    `);
+  } catch(e) { console.error('stok faz3 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

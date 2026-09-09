@@ -29,7 +29,7 @@ const CATEGORIES = [
   { label: "Raporlar",         keys: ["quick_report"] },
   { label: "Sistem Yönetimi",  keys: ["users", "app_version", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
-  { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_fisler"] },
+  { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_fisler", "stok_parti_takibi"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

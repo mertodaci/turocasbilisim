@@ -80,6 +80,7 @@ const translations = {
     stok_cikis: "Stok Çıkış",
     stok_transfer: "Depo Transfer",
     stok_fisler: "Stok Fiş Listesi",
+    stok_parti_takibi: "Parti & Raf Ömrü",
   },
   en: {
     dashboard: "Dashboard",
@@ -150,6 +151,7 @@ const translations = {
     stok_cikis: "Stock Out",
     stok_transfer: "Warehouse Transfer",
     stok_fisler: "Stock Vouchers",
+    stok_parti_takibi: "Batch & Shelf Life",
   },
 };
 

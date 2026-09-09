@@ -132,6 +132,8 @@ const TABLE_TO_MODULE = {
   stok_giris: 'stok_giris',
   stok_cikis: 'stok_cikis',
   stok_transfer: 'stok_transfer',
+  stok_partiler: 'stok_parti_takibi',
+  stok_parti_tahsis: 'stok_parti_takibi',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -241,6 +243,8 @@ const ALLOWED_COLUMNS = {
   stok_fisler: ['fis_no','tip','tarih','durum','cari_id','cari_adi','kaynak_depo_id','kaynak_depo_adi','hedef_depo_id','hedef_depo_adi','hedef_saha_id','hedef_saha_adi','fatura_no','irsaliye_no','belge_no','aciklama','teslim_eden','teslim_alan','gonderim_adresi','kaynak_ref_tip','kaynak_ref_id','satir_sayisi','toplam_miktar','olusturan','onaylayan','onay_tarihi','is_deleted'],
   stok_fis_satirlari: ['fis_id','urun_id','urun_adi','urun_kodu','barkod','kaynak_raf_id','kaynak_raf_adi','hedef_raf_id','hedef_raf_adi','birim','carpan','miktar','miktar_ana_birim','birim_fiyat','tutar','icerik_aciklamasi','lot_no','uretim_tarihi','raf_omru_ay','kontrol_tarihi','skt','raf_omru_durumu','seri_no'],
   stok_hareketler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','tip','miktar','birim_maliyet','fis_id','fis_no','fis_tip','fis_satir_id','cari_id','saha_id','tarih'],
+  stok_partiler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','lot_no','uretim_tarihi','skt','kontrol_tarihi','giris_miktar','kalan_bakiye','alis_maliyeti','tedarikci_cari_id','tedarikci_adi','durum','kaynak_tip','kaynak_fis_id','kaynak_fis_no','kaynak_fis_satir_id','giris_tarihi'],
+  stok_parti_tahsis: ['parti_id','cikis_fis_id','cikis_fis_no','cikis_fis_satir_id','urun_id','depo_id','dusulen_miktar','maliyet','tarih'],
 };
 
 // Zorunlu alanlar

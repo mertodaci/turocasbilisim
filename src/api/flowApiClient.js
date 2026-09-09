@@ -89,6 +89,8 @@ const ENTITY_MAP = {
   StokFis:           'stok_fisler',
   StokFisSatir:      'stok_fis_satirlari',
   StokHareket:       'stok_hareketler',
+  StokParti:         'stok_partiler',
+  StokPartiTahsis:   'stok_parti_tahsis',
 };
 
 function createEntityClient(entityName) {
@@ -253,6 +255,12 @@ export const stok = {
     return handleResponse(await fetch(`${BASE_URL}/api/stok/stok-durum?${p}`, { credentials: 'include' }));
   },
   async fisOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis-ozet`, { credentials: 'include' })); },
+  async partiler(filtre = {}) {
+    const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/partiler?${p}`, { credentials: 'include' }));
+  },
+  async partiOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/parti-ozet`, { credentials: 'include' })); },
+  async fifoYenidenHesapla() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-yeniden-hesapla`, _sjson('POST'))); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

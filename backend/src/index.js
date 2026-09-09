@@ -170,6 +170,9 @@ app.use('/api/entities/stok_teslimat_adresleri', createEntityRouter('stok_teslim
 app.use('/api/entities/stok_fisler',            createEntityRouter('stok_fisler'));
 app.use('/api/entities/stok_fis_satirlari',     createEntityRouter('stok_fis_satirlari'));
 app.use('/api/entities/stok_hareketler',        createEntityRouter('stok_hareketler'));
+// Faz 3: FIFO partileri
+app.use('/api/entities/stok_partiler',          createEntityRouter('stok_partiler'));
+app.use('/api/entities/stok_parti_tahsis',      createEntityRouter('stok_parti_tahsis'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -914,6 +917,105 @@ function insertStokFis(fisId, fis, satirlar, userEmail) {
   return db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(fisId);
 }
 
+// ── Faz 3: FIFO parti mantığı ─────────────────────────────────────
+// Onaylı giriş -> parti oluşur. Onaylı çıkış/transfer -> en eski uygun
+// partiden (SKT, sonra giriş tarihi) düşülür (tahsis). Transferde tüketilen
+// her parça hedef depoda yeni bir parti olarak açılır (lot/tarih/maliyet taşınır).
+function stokPartiDurum(skt) {
+  if (skt && String(skt).slice(0, 10) < new Date().toISOString().slice(0, 10)) return 'suresi_gecti';
+  return 'acik';
+}
+
+function stokFifoUygula(fis, satirlar, userEmail) {
+  const now = new Date().toISOString();
+  const insParti = db.prepare(`INSERT INTO stok_partiler
+    (id, urun_id, urun_adi, depo_id, depo_adi, raf_id, raf_adi, lot_no, uretim_tarihi, skt, kontrol_tarihi,
+     giris_miktar, kalan_bakiye, alis_maliyeti, tedarikci_cari_id, tedarikci_adi, durum,
+     kaynak_tip, kaynak_fis_id, kaynak_fis_no, kaynak_fis_satir_id, giris_tarihi, created_by, created_date, updated_date)
+    VALUES (@id,@urun_id,@urun_adi,@depo_id,@depo_adi,@raf_id,@raf_adi,@lot_no,@uretim_tarihi,@skt,@kontrol_tarihi,
+     @giris_miktar,@kalan_bakiye,@alis_maliyeti,@tedarikci_cari_id,@tedarikci_adi,@durum,
+     @kaynak_tip,@kaynak_fis_id,@kaynak_fis_no,@kaynak_fis_satir_id,@giris_tarihi,@created_by,@cd,@ud)`);
+  const insTahsis = db.prepare(`INSERT INTO stok_parti_tahsis
+    (id, parti_id, cikis_fis_id, cikis_fis_no, cikis_fis_satir_id, urun_id, depo_id, dusulen_miktar, maliyet, tarih, created_by, created_date, updated_date)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const updParti = db.prepare("UPDATE stok_partiler SET kalan_bakiye=?, durum=?, updated_date=? WHERE id=?");
+
+  if (fis.tip === 'giris') {
+    for (const s of satirlar) {
+      const anaMaliyet = (Number(s.carpan) || 1) > 0 ? (Number(s.birim_fiyat) || 0) / (Number(s.carpan) || 1) : (Number(s.birim_fiyat) || 0);
+      insParti.run({
+        id: _stokUUID(), urun_id: s.urun_id, urun_adi: s.urun_adi,
+        depo_id: fis.hedef_depo_id, depo_adi: fis.hedef_depo_adi,
+        raf_id: s.hedef_raf_id || null, raf_adi: s.hedef_raf_adi || null,
+        lot_no: s.lot_no || null, uretim_tarihi: s.uretim_tarihi || null, skt: s.skt || null, kontrol_tarihi: s.kontrol_tarihi || null,
+        giris_miktar: s.miktar_ana_birim, kalan_bakiye: s.miktar_ana_birim, alis_maliyeti: anaMaliyet,
+        tedarikci_cari_id: fis.cari_id || null, tedarikci_adi: fis.cari_adi || null, durum: stokPartiDurum(s.skt),
+        kaynak_tip: 'giris', kaynak_fis_id: fis.id, kaynak_fis_no: fis.fis_no, kaynak_fis_satir_id: s.id,
+        giris_tarihi: fis.tarih || now.slice(0, 10), created_by: userEmail, cd: now, ud: now,
+      });
+    }
+    return;
+  }
+
+  // cikis / transfer -> FIFO tüketim
+  for (const s of satirlar) {
+    let ihtiyac = s.miktar_ana_birim;
+    const acikPartiler = db.prepare(`SELECT * FROM stok_partiler
+      WHERE urun_id=? AND depo_id=? AND durum!='kapali' AND kalan_bakiye > 0
+      ${s.kaynak_raf_id ? 'AND (raf_id=? OR raf_id IS NULL)' : ''}
+      ORDER BY COALESCE(NULLIF(skt,''),'9999-12-31'), COALESCE(giris_tarihi, created_date), created_date`).all(
+      ...(s.kaynak_raf_id ? [s.urun_id, fis.kaynak_depo_id, s.kaynak_raf_id] : [s.urun_id, fis.kaynak_depo_id]));
+    for (const p of acikPartiler) {
+      if (ihtiyac <= 1e-9) break;
+      const al = Math.min(p.kalan_bakiye, ihtiyac);
+      const yeniKalan = +(p.kalan_bakiye - al).toFixed(6);
+      updParti.run(yeniKalan, yeniKalan <= 1e-9 ? 'kapali' : (p.durum === 'suresi_gecti' ? 'suresi_gecti' : 'acik'), now, p.id);
+      insTahsis.run(_stokUUID(), p.id, fis.id, fis.fis_no, s.id, s.urun_id, fis.kaynak_depo_id, al, p.alis_maliyeti, fis.tarih || now.slice(0, 10), userEmail, now, now);
+      if (fis.tip === 'transfer') {
+        insParti.run({
+          id: _stokUUID(), urun_id: s.urun_id, urun_adi: s.urun_adi,
+          depo_id: fis.hedef_depo_id, depo_adi: fis.hedef_depo_adi,
+          raf_id: s.hedef_raf_id || null, raf_adi: s.hedef_raf_adi || null,
+          lot_no: p.lot_no, uretim_tarihi: p.uretim_tarihi, skt: p.skt, kontrol_tarihi: p.kontrol_tarihi,
+          giris_miktar: al, kalan_bakiye: al, alis_maliyeti: p.alis_maliyeti,
+          tedarikci_cari_id: p.tedarikci_cari_id, tedarikci_adi: p.tedarikci_adi, durum: stokPartiDurum(p.skt),
+          kaynak_tip: 'transfer', kaynak_fis_id: fis.id, kaynak_fis_no: fis.fis_no, kaynak_fis_satir_id: s.id,
+          giris_tarihi: fis.tarih || now.slice(0, 10), created_by: userEmail, cd: now, ud: now,
+        });
+      }
+      ihtiyac = +(ihtiyac - al).toFixed(6);
+    }
+    // Parti kapsamı yetmezse (parti/hareket senkron değilse) kalanı sessiz geç —
+    // stok_hareketler zaten miktarı doğruladı; parti izi eksik kalır, FIFO Yeniden
+    // Hesapla ile düzeltilebilir.
+  }
+}
+
+// Bir fişin FIFO etkisini geri al (iptal). Fişin oluşturduğu partiler başkası
+// tarafından tüketildiyse geri alma engellenir (çağıran kontrol eder).
+function stokFifoGeriAl(fis) {
+  const now = new Date().toISOString();
+  // 1) Bu fişin yaptığı tahsisleri geri ver
+  const tahsisler = db.prepare('SELECT * FROM stok_parti_tahsis WHERE cikis_fis_id=?').all(fis.id);
+  for (const t of tahsisler) {
+    const p = db.prepare('SELECT * FROM stok_partiler WHERE id=?').get(t.parti_id);
+    if (p) {
+      const yeniKalan = +(p.kalan_bakiye + t.dusulen_miktar).toFixed(6);
+      db.prepare("UPDATE stok_partiler SET kalan_bakiye=?, durum=?, updated_date=? WHERE id=?")
+        .run(yeniKalan, stokPartiDurum(p.skt), now, p.id);
+    }
+  }
+  db.prepare('DELETE FROM stok_parti_tahsis WHERE cikis_fis_id=?').run(fis.id);
+  // 2) Bu fişin oluşturduğu partileri sil (giriş partileri + transfer hedef partileri)
+  db.prepare('DELETE FROM stok_partiler WHERE kaynak_fis_id=?').run(fis.id);
+}
+
+// Bir fişin oluşturduğu parti başka fiş tarafından tüketilmiş mi?
+function stokPartiKullanildiMi(fisId) {
+  return !!db.prepare(`SELECT 1 FROM stok_parti_tahsis t JOIN stok_partiler p ON p.id=t.parti_id
+    WHERE p.kaynak_fis_id=? AND t.cikis_fis_id<>? LIMIT 1`).get(fisId, fisId);
+}
+
 // Fiş + satırları tek transaction'da oluştur
 app.post('/api/stok/fis', authMiddleware, (req, res) => {
   if (!stokFisPerm(req, 'can_add')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
@@ -1025,6 +1127,8 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
             fis.id, fis.fis_no, fis.tip, s.id, null, null, fis.tarih, req.user.email, now, now);
         }
       }
+      // Faz 3: FIFO parti oluştur / tüket
+      stokFifoUygula(fis, satirlar, req.user.email);
       db.prepare("UPDATE stok_fisler SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?")
         .run(req.user.email, now, now, fis.id);
     })();
@@ -1032,16 +1136,22 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   } catch (err) { console.error('[stok] fis onaylama:', err); res.status(500).json({ error: err.message }); }
 });
 
-// Fişi iptal et -> onaylıysa stok hareketlerini geri al
+// Fişi iptal et -> onaylıysa stok hareketleri + FIFO partileri geri alınır
 app.post('/api/stok/fis/:id/iptal', authMiddleware, (req, res) => {
   if (!stokFisPerm(req, 'can_edit')) return res.status(403).json({ error: 'İptal yetkiniz yok' });
   const fis = db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(req.params.id);
   if (!fis) return res.status(404).json({ error: 'Fiş bulunamadı' });
   if (fis.durum === 'iptal') return res.status(400).json({ error: 'Fiş zaten iptal' });
+  if (fis.durum === 'onayli' && stokPartiKullanildiMi(fis.id)) {
+    return res.status(400).json({ error: 'Bu fişin oluşturduğu partiler sonraki çıkış/transfer işlemlerinde kullanılmış. Önce o hareketleri iptal edin.' });
+  }
   try {
     const now = new Date().toISOString();
     db.transaction(() => {
-      db.prepare('DELETE FROM stok_hareketler WHERE fis_id=?').run(fis.id);
+      if (fis.durum === 'onayli') {
+        stokFifoGeriAl(fis);
+        db.prepare('DELETE FROM stok_hareketler WHERE fis_id=?').run(fis.id);
+      }
       db.prepare("UPDATE stok_fisler SET durum='iptal', updated_date=? WHERE id=?").run(now, fis.id);
     })();
     res.json(db.prepare('SELECT * FROM stok_fisler WHERE id=?').get(fis.id));
@@ -1068,6 +1178,66 @@ app.get('/api/stok/fis-ozet', authMiddleware, (req, res) => {
       onayli: c("durum='onayli'"), iptal: c("durum='iptal'"),
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Faz 3: parti / raf ömrü ─────────────────────────────────────
+function stokPartiPerm(req, action) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_parti_takibi', action) || stokFisPerm(req, action);
+}
+
+app.get('/api/stok/partiler', authMiddleware, (req, res) => {
+  if (!stokPartiPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { q, urun_id, depo_id, durum, skt1, skt2 } = req.query;
+    const cond = [], params = [];
+    if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
+    if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
+    if (durum === 'acik') cond.push("durum!='kapali' AND kalan_bakiye>0");
+    else if (durum) { cond.push('durum=?'); params.push(durum); }
+    if (skt1) { cond.push('skt>=?'); params.push(skt1); }
+    if (skt2) { cond.push('skt<=?'); params.push(skt2); }
+    if (q) { cond.push('(lot_no LIKE ? OR urun_adi LIKE ? OR tedarikci_adi LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+    const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+    const rows = db.prepare(`SELECT * FROM stok_partiler ${where} ORDER BY COALESCE(NULLIF(skt,''),'9999-12-31'), giris_tarihi LIMIT 3000`).all(...params);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/parti-ozet', authMiddleware, (req, res) => {
+  if (!stokPartiPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const bugun = new Date().toISOString().slice(0, 10);
+    const acik = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(kalan_bakiye),0) m FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0").get();
+    const suresiGecen = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ?").get(bugun).n;
+    const suresiYaklasan = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days')").get(bugun, bugun).n;
+    const kontrolGelen = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND kontrol_tarihi IS NOT NULL AND kontrol_tarihi<>'' AND substr(kontrol_tarihi,1,10) <= ?").get(bugun).n;
+    res.json({ acik_parti: acik.n, acik_miktar: acik.m, suresi_gecen: suresiGecen, suresi_yaklasan: suresiYaklasan, kontrol_tarihi_gelen: kontrolGelen });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// FIFO Yeniden Hesapla (admin): tüm parti/tahsis silinir, onaylı giriş fişlerinden
+// partiler yeniden kurulur, sonra onaylı çıkış/transfer fişleri tarih sırasıyla FIFO uygulanır.
+app.post('/api/stok/fifo-yeniden-hesapla', authMiddleware, (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Sadece admin' });
+  try {
+    let sonuc = { parti: 0, tahsis: 0, fis: 0 };
+    db.transaction(() => {
+      db.prepare('DELETE FROM stok_parti_tahsis').run();
+      db.prepare('DELETE FROM stok_partiler').run();
+      const fisler = db.prepare("SELECT * FROM stok_fisler WHERE durum='onayli' AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY COALESCE(tarih, created_date), created_date").all();
+      for (const f of fisler) {
+        const sats = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(f.id);
+        if (!sats.length) continue;
+        stokFifoUygula(f, sats, req.user.email);
+        sonuc.fis++;
+      }
+      sonuc.parti = db.prepare('SELECT COUNT(*) n FROM stok_partiler').get().n;
+      sonuc.tahsis = db.prepare('SELECT COUNT(*) n FROM stok_parti_tahsis').get().n;
+      // SKT geçmiş açık partileri işaretle
+      db.prepare("UPDATE stok_partiler SET durum='suresi_gecti' WHERE durum='acik' AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ?").run(new Date().toISOString().slice(0, 10));
+    })();
+    res.json({ ok: true, ...sonuc });
+  } catch (err) { console.error('[stok] fifo yeniden hesapla:', err); res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

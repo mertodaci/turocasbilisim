@@ -715,6 +715,16 @@ function createEntityRouter(tableName) {
       let loginCreated = false;
       if (tableName === 'employees') {
         loginCreated = ensureUserForEmployee(db, created, req.user?.email);
+        // Bordro/mesai motoru saatlik/dakikalık ücreti kullanır — aylık girilip
+        // türetilmemişse burada da türet (form dışı: Excel import, API, entegrasyon).
+        try {
+          const a = Number(created.aylik_ucret) || 0;
+          if (a > 0 && !(Number(created.saatlik_ucret) > 0)) {
+            const s = +(a / 225).toFixed(6), d = +(a / 225 / 60).toFixed(6);
+            db.prepare("UPDATE employees SET saatlik_ucret=?, dakikalik_ucret=? WHERE id=?").run(s, d, created.id);
+            created.saatlik_ucret = s; created.dakikalik_ucret = d;
+          }
+        } catch (e) { console.error('[ik] saatlik turet (create):', e.message); }
       }
 
       // İş Takibi mail bildirimi: yeni yorum eklendiginde atanan kisilere haber ver
@@ -905,6 +915,17 @@ function createEntityRouter(tableName) {
         const oldEmailEmpty = !existing.email || !String(existing.email).trim();
         const emailRenamed = !oldEmailEmpty && updates.email !== undefined && updates.email !== existing.email;
         if (!emailRenamed) loginCreated = ensureUserForEmployee(db, updated, req.user?.email);
+        // aylık ücret değiştiyse saatlik/dakikalık türet (form zaten gönderir; API/import için ağ)
+        try {
+          if ('aylik_ucret' in updates) {
+            const a = Number(updated.aylik_ucret) || 0;
+            const s = a > 0 ? +(a / 225).toFixed(6) : 0, d = a > 0 ? +(a / 225 / 60).toFixed(6) : 0;
+            if (Number(updated.saatlik_ucret || 0) !== s) {
+              db.prepare("UPDATE employees SET saatlik_ucret=?, dakikalik_ucret=? WHERE id=?").run(s, d, updated.id);
+              updated.saatlik_ucret = s; updated.dakikalik_ucret = d;
+            }
+          }
+        } catch (e) { console.error('[ik] saatlik turet (update):', e.message); }
       }
 
       // İş Takibi mail bildirimi: durum ozel bir asamaya cekildiyse musteriye,

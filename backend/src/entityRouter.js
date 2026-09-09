@@ -10,7 +10,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
-  'ik_subeler','ik_bolumler'];
+  'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -29,6 +29,7 @@ const JSON_COLUMNS = {
   job_ticket_statuses: ['board_ids'],
   hakedisler: ['tahsilat'],
   stok_etiket_fisleri: ['satirlar_json'],
+  ik_vardiya_planlari: ['adimlar_json', 'personel_ids_json'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -162,6 +163,10 @@ const TABLE_TO_MODULE = {
   ik_subeler: 'ikb_subeler',
   ik_bolumler: 'ikb_bolumler',
   ik_ucret_gecmisi: 'ikb_personel',
+  ik_vardiyalar: 'ikb_vardiyalar',
+  ik_vardiya_atamalari: 'ikb_vardiya_atama',
+  ik_vardiya_planlari: 'ikb_vardiya_planlari',
+  ik_resmi_tatiller: 'ikb_tatil_sihirbazi',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -294,6 +299,10 @@ const ALLOWED_COLUMNS = {
   ik_subeler: ['ad','adres','ip_araligi','gps_enlem','gps_boylam','sapma_metre','telefon','yetkili','sira','aktif','is_deleted'],
   ik_bolumler: ['ad','sube_id','sube_adi','hedef_personel_sayisi','aciklama','aktif','is_deleted'],
   ik_ucret_gecmisi: ['personel_id','personel_adi','alan','eski_tutar','yeni_tutar','gecerlilik','aciklama','kaynak'],
+  ik_vardiyalar: ['ad','kisa_kod','renk','baslama_saati','bitis_saati','gec_tolerans_dk','erken_tolerans_dk','fazla_mesai_katsayisi','gece_mi','ertesi_gune_tasar','rt_mesaisi_hesapla','planlamada_kullan','haftalik_izin_sayacina_ekle','varsayilan','aktif','is_deleted'],
+  ik_vardiya_atamalari: ['personel_id','personel_adi','vardiya_id','vardiya_adi','baslangic_tarihi','aciklama'],
+  ik_vardiya_planlari: ['ad','baslangic_tarihi','bitis_tarihi','ana_vardiya_id','adimlar_json','haftalik_izin_kac_gun_calis','haftalik_izin_kac_gun','haftalik_izin_devret','dongu_baslangic','personel_ids_json','aktif','is_deleted'],
+  ik_resmi_tatiller: ['tarih','ad','tip','kaynak','aktif'],
 };
 
 // Zorunlu alanlar
@@ -350,6 +359,10 @@ const REQUIRED_FIELDS = {
   ik_subeler: ['ad'],
   ik_bolumler: ['ad'],
   ik_ucret_gecmisi: ['personel_id','alan'],
+  ik_vardiyalar: ['ad'],
+  ik_vardiya_atamalari: ['personel_id','vardiya_id','baslangic_tarihi'],
+  ik_vardiya_planlari: ['ad'],
+  ik_resmi_tatiller: ['tarih','ad'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

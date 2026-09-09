@@ -110,6 +110,10 @@ const ENTITY_MAP = {
   IkSube:            'ik_subeler',
   IkBolum:           'ik_bolumler',
   IkUcretGecmisi:    'ik_ucret_gecmisi',
+  IkVardiya:         'ik_vardiyalar',
+  IkVardiyaAtama:    'ik_vardiya_atamalari',
+  IkVardiyaPlan:     'ik_vardiya_planlari',
+  IkResmiTatil:      'ik_resmi_tatiller',
 };
 
 function createEntityClient(entityName) {
@@ -336,6 +340,8 @@ export const ik = {
   async zamUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/zam-uygula`, _sjson('POST', body))); },
   async cikisVer(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/personel/${id}/cikis`, _sjson('POST', body))); },
   async ucretSenkron(id) { return handleResponse(await fetch(`${BASE_URL}/api/ik/personel/${id}/ucret-senkron`, _sjson('POST'))); },
+  async vardiyaTransfer(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/vardiya-transfer`, _sjson('POST', body))); },
+  async tatilTakvimi(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/tatil-takvimi?${qs}`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

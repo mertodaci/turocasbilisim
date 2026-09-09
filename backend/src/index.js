@@ -200,6 +200,10 @@ app.use('/api/entities/stok_qnb_cari_sorgu',    createEntityRouter('stok_qnb_car
 app.use('/api/entities/ik_subeler',            createEntityRouter('ik_subeler'));
 app.use('/api/entities/ik_bolumler',           createEntityRouter('ik_bolumler'));
 app.use('/api/entities/ik_ucret_gecmisi',      createEntityRouter('ik_ucret_gecmisi'));
+app.use('/api/entities/ik_vardiyalar',         createEntityRouter('ik_vardiyalar'));
+app.use('/api/entities/ik_vardiya_atamalari',  createEntityRouter('ik_vardiya_atamalari'));
+app.use('/api/entities/ik_vardiya_planlari',   createEntityRouter('ik_vardiya_planlari'));
+app.use('/api/entities/ik_resmi_tatiller',     createEntityRouter('ik_resmi_tatiller'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2552,6 +2556,45 @@ app.post('/api/ik/personel/:id/ucret-senkron', authMiddleware, (req, res) => {
   db.prepare('UPDATE employees SET saatlik_ucret=?, dakikalik_ucret=?, updated_date=? WHERE id=?')
     .run(t.saatlik_ucret, t.dakikalik_ucret, new Date().toISOString(), emp.id);
   res.json({ ok: true, ...t });
+});
+
+// ── İK Faz 2: vardiya transferi + tatil sihirbazı ──
+// Seçili personelleri hedef vardiyaya transfer et (tarihsel: atama kaydı + personeller.vardiya_id).
+app.post('/api/ik/vardiya-transfer', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_vardiya_atama', 'ikb_vardiyalar')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { personel_ids = [], vardiya_id, transfer_tarihi, aciklama } = req.body || {};
+  if (!vardiya_id || !transfer_tarihi || !Array.isArray(personel_ids) || !personel_ids.length)
+    return res.status(400).json({ error: 'Hedef vardiya, transfer tarihi ve en az bir personel gerekli' });
+  const v = db.prepare('SELECT id, ad FROM ik_vardiyalar WHERE id=?').get(vardiya_id);
+  if (!v) return res.status(404).json({ error: 'Vardiya bulunamadı' });
+  try {
+    const now = new Date().toISOString();
+    const ins = db.prepare(`INSERT INTO ik_vardiya_atamalari (id, personel_id, personel_adi, vardiya_id, vardiya_adi, baslangic_tarihi, aciklama, created_by, created_date)
+      VALUES (?,?,?,?,?,?,?,?,?)`);
+    let n = 0;
+    db.transaction(() => {
+      for (const pid of personel_ids) {
+        const emp = db.prepare('SELECT id, full_name FROM employees WHERE id=?').get(pid);
+        if (!emp) continue;
+        ins.run(_stokUUID(), pid, emp.full_name, v.id, v.ad, transfer_tarihi, aciklama || null, req.user.email, now);
+        db.prepare('UPDATE employees SET vardiya_id=?, updated_date=? WHERE id=?').run(v.id, now, pid);
+        n++;
+      }
+    })();
+    res.json({ ok: true, transfer: n });
+  } catch (err) { console.error('[ik] vardiya transfer:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Tatil sihirbazı — seçili tatilleri personellere puantaj kaydı olarak işle (Faz 3'te ik_puantaj'a yazar).
+// Şimdilik ik_resmi_tatiller listesi entity router ile yönetilir; toplu API Faz 3'te puantajla bağlanır.
+app.get('/api/ik/tatil-takvimi', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_tatil_sihirbazi', 'ikb_vardiyalar')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { t1, t2 } = req.query;
+  const cond = ['aktif=1'], params = [];
+  if (t1) { cond.push('tarih>=?'); params.push(t1); }
+  if (t2) { cond.push('tarih<=?'); params.push(t2); }
+  const rows = db.prepare(`SELECT * FROM ik_resmi_tatiller WHERE ${cond.join(' AND ')} ORDER BY tarih`).all(...params);
+  res.json({ rows });
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

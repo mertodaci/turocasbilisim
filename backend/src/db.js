@@ -500,6 +500,22 @@ function initDb() {
       // ── İK / Özlük / Bordro modülü (önek: ikb_) ──────────────────
       // Faz 1: şube, bölüm, personel özlük+ücret, zam, şahsi hesap
       'ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak','ikb_cikis',
+      // Faz 2: vardiya + tatil
+      'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
+      // Faz 3-4: puantaj
+      'ikb_puantaj','ikb_puantaj_rapor','ikb_qr_harita',
+      // Faz 5: mesai
+      'ikb_mesai',
+      // Faz 6: hak ediş ayarları
+      'ikb_hakedis_ayar','ikb_bordro_yemek',
+      // Faz 7-8: kesinti + borç + masraf
+      'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf',
+      // Faz 9-10: bordro + ay kapanışı
+      'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_toplu_yukleme','ikb_sirket',
+      // Faz 11: evrak + tutanak + ilan + raporlar
+      'ikb_tutanak','ikb_ilan','ikb_hareket_rapor',
+      // Faz 12: dashboard
+      'ikb_dashboard',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -925,6 +941,70 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_employees_sube ON employees(sube_id);
     `);
   } catch(e) { console.error('ik faz1 tablolari:', e.message); }
+
+  // ── İK / Özlük / Bordro — Faz 2: vardiya + resmî tatil ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_vardiyalar (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, kisa_kod TEXT DEFAULT 'G',   -- G | N
+        renk TEXT DEFAULT '#2563eb',
+        baslama_saati TEXT DEFAULT '08:30', bitis_saati TEXT DEFAULT '18:00',
+        gec_tolerans_dk INTEGER DEFAULT 0, erken_tolerans_dk INTEGER DEFAULT 0,
+        fazla_mesai_katsayisi REAL DEFAULT 1.5,
+        gece_mi INTEGER DEFAULT 0, ertesi_gune_tasar INTEGER DEFAULT 0,
+        rt_mesaisi_hesapla INTEGER DEFAULT 1, planlamada_kullan INTEGER DEFAULT 1,
+        haftalik_izin_sayacina_ekle INTEGER DEFAULT 1,
+        varsayilan INTEGER DEFAULT 0, aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Personel-vardiya atama geçmişi (tarihsel; transfer tarihinden itibaren personeller.vardiya_id değişir)
+      CREATE TABLE IF NOT EXISTS ik_vardiya_atamalari (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        vardiya_id TEXT NOT NULL, vardiya_adi TEXT,
+        baslangic_tarihi TEXT NOT NULL, aciklama TEXT,
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Döngüsel vardiya planı (6/1 gibi rotasyonlar)
+      CREATE TABLE IF NOT EXISTS ik_vardiya_planlari (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, baslangic_tarihi TEXT, bitis_tarihi TEXT,
+        ana_vardiya_id TEXT, adimlar_json TEXT DEFAULT '[]',   -- [{tip:'vardiya'|'off'|'haftalik_izin', vardiya_id}]
+        haftalik_izin_kac_gun_calis INTEGER DEFAULT 0, haftalik_izin_kac_gun INTEGER DEFAULT 0,
+        haftalik_izin_devret INTEGER DEFAULT 0,
+        dongu_baslangic TEXT DEFAULT 'esit',                   -- esit | birinci
+        personel_ids_json TEXT DEFAULT '[]', aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Resmî tatiller (TR takvimi + özel gün); tip: tam | yarim ; kaynak: gomulu | api | yerel
+      CREATE TABLE IF NOT EXISTS ik_resmi_tatiller (
+        id TEXT PRIMARY KEY, tarih TEXT NOT NULL, ad TEXT NOT NULL,
+        tip TEXT DEFAULT 'tam', kaynak TEXT DEFAULT 'gomulu', aktif INTEGER DEFAULT 1,
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_vardiya_atama_personel ON ik_vardiya_atamalari(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_resmi_tatil_tarih ON ik_resmi_tatiller(tarih);
+    `);
+    // TR resmî tatilleri gömülü seed (2025-2027) — bir kez, boşsa
+    const rtCount = db.prepare('SELECT COUNT(*) n FROM ik_resmi_tatiller').get().n;
+    if (rtCount === 0) {
+      const { randomUUID } = require('crypto');
+      const RT = [
+        ['2025-01-01','Yılbaşı','tam'],['2025-03-29','Ramazan Bayramı Arefe','yarim'],['2025-03-30','Ramazan Bayramı 1. Gün','tam'],['2025-03-31','Ramazan Bayramı 2. Gün','tam'],['2025-04-01','Ramazan Bayramı 3. Gün','tam'],['2025-04-23','Ulusal Egemenlik ve Çocuk Bayramı','tam'],['2025-05-01','Emek ve Dayanışma Günü','tam'],['2025-05-19','Atatürk’ü Anma Gençlik ve Spor Bayramı','tam'],['2025-06-05','Kurban Bayramı Arefe','yarim'],['2025-06-06','Kurban Bayramı 1. Gün','tam'],['2025-06-07','Kurban Bayramı 2. Gün','tam'],['2025-06-08','Kurban Bayramı 3. Gün','tam'],['2025-06-09','Kurban Bayramı 4. Gün','tam'],['2025-07-15','Demokrasi ve Millî Birlik Günü','tam'],['2025-08-30','Zafer Bayramı','tam'],['2025-10-28','Cumhuriyet Bayramı Arefe','yarim'],['2025-10-29','Cumhuriyet Bayramı','tam'],
+        ['2026-01-01','Yılbaşı','tam'],['2026-03-19','Ramazan Bayramı Arefe','yarim'],['2026-03-20','Ramazan Bayramı 1. Gün','tam'],['2026-03-21','Ramazan Bayramı 2. Gün','tam'],['2026-03-22','Ramazan Bayramı 3. Gün','tam'],['2026-04-23','Ulusal Egemenlik ve Çocuk Bayramı','tam'],['2026-05-01','Emek ve Dayanışma Günü','tam'],['2026-05-19','Atatürk’ü Anma Gençlik ve Spor Bayramı','tam'],['2026-05-26','Kurban Bayramı Arefe','yarim'],['2026-05-27','Kurban Bayramı 1. Gün','tam'],['2026-05-28','Kurban Bayramı 2. Gün','tam'],['2026-05-29','Kurban Bayramı 3. Gün','tam'],['2026-05-30','Kurban Bayramı 4. Gün','tam'],['2026-07-15','Demokrasi ve Millî Birlik Günü','tam'],['2026-08-30','Zafer Bayramı','tam'],['2026-10-28','Cumhuriyet Bayramı Arefe','yarim'],['2026-10-29','Cumhuriyet Bayramı','tam'],
+        ['2027-01-01','Yılbaşı','tam'],['2027-04-23','Ulusal Egemenlik ve Çocuk Bayramı','tam'],['2027-05-01','Emek ve Dayanışma Günü','tam'],['2027-05-19','Atatürk’ü Anma Gençlik ve Spor Bayramı','tam'],['2027-07-15','Demokrasi ve Millî Birlik Günü','tam'],['2027-08-30','Zafer Bayramı','tam'],['2027-10-29','Cumhuriyet Bayramı','tam'],
+      ];
+      const ins = db.prepare("INSERT INTO ik_resmi_tatiller (id, tarih, ad, tip, kaynak) VALUES (?,?,?,?,'gomulu')");
+      for (const [t, a, tip] of RT) ins.run(randomUUID(), t, a, tip);
+    }
+    // Varsayılan "Standart Gündüz" vardiyası — hiç vardiya yoksa
+    const vCount = db.prepare('SELECT COUNT(*) n FROM ik_vardiyalar').get().n;
+    if (vCount === 0) {
+      const { randomUUID } = require('crypto');
+      db.prepare("INSERT INTO ik_vardiyalar (id, ad, kisa_kod, baslama_saati, bitis_saati, varsayilan) VALUES (?,?,?,?,?,1)")
+        .run(randomUUID(), 'Standart Gündüz', 'G', '08:30', '18:00');
+    }
+  } catch(e) { console.error('ik faz2 tablolari:', e.message); }
 
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)

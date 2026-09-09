@@ -82,6 +82,10 @@ export const MODULES = [
   { key: "ikb_zam",             label: "Özlük & Zam Uygula",     path: "/ik/zam" },
   { key: "ikb_ozluk_evrak",     label: "Özlük Evrakları",        path: "/ik/ozluk-evrak" },
   { key: "ikb_cikis",           label: "Çıkış Ver / İşten Çıkış", path: "/ik/cikis" },
+  { key: "ikb_vardiyalar",      label: "Vardiya Tanımları",      path: "/ik/vardiyalar" },
+  { key: "ikb_vardiya_atama",   label: "Vardiya Transferi",      path: "/ik/vardiya-transfer" },
+  { key: "ikb_vardiya_planlari", label: "Vardiya Planları",      path: "/ik/vardiya-planlari" },
+  { key: "ikb_tatil_sihirbazi", label: "Tatil Sihirbazı",        path: "/ik/tatil-sihirbazi" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

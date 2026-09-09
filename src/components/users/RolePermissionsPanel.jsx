@@ -35,8 +35,9 @@ const CATEGORIES = [
   { label: "Stok — Satın Alma", keys: ["stok_satinalma", "stok_fiyat_arastir"] },
   { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
   { label: "Stok — e-Belge", keys: ["stok_qnb"] },
-  { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler"] },
-  { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_cikis"] },
+  { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler", "ikb_vardiyalar", "ikb_vardiya_planlari", "ikb_tatil_sihirbazi", "ikb_hakedis_ayar", "ikb_bordro_yemek", "ikb_sirket"] },
+  { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_cikis", "ikb_vardiya_atama", "ikb_puantaj", "ikb_mesai", "ikb_kesinti", "ikb_ic_borc", "ikb_personel_masraf", "ikb_bordro", "ikb_ay_kapanis", "ikb_toplu_yukleme", "ikb_tutanak", "ikb_ilan"] },
+  { label: "İK/Bordro — Raporlar", keys: ["ikb_puantaj_rapor", "ikb_qr_harita", "ikb_maas_ozet", "ikb_hareket_rapor", "ikb_dashboard"] },
   { label: "Diğer",            keys: ["ideas"] },
 ];
 

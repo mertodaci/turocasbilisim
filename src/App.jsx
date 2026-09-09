@@ -93,6 +93,10 @@ const IkSubeler = lazy(() => import('./pages/ik/IkSubeler'));
 const IkBolumler = lazy(() => import('./pages/ik/IkBolumler'));
 const IkPersonel = lazy(() => import('./pages/ik/IkPersonel'));
 const IkZam = lazy(() => import('./pages/ik/IkZam'));
+const IkVardiyalar = lazy(() => import('./pages/ik/IkVardiyalar'));
+const IkVardiyaTransfer = lazy(() => import('./pages/ik/IkVardiyaTransfer'));
+const IkVardiyaPlanlari = lazy(() => import('./pages/ik/IkVardiyaPlanlari'));
+const IkTatilSihirbazi = lazy(() => import('./pages/ik/IkTatilSihirbazi'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -254,6 +258,10 @@ const AuthenticatedApp = () => {
         <Route path="/ik/bolumler" element={guard("ikb_bolumler", <IkBolumler />)} />
         <Route path="/ik/personel" element={guard("ikb_personel", <IkPersonel />)} />
         <Route path="/ik/zam" element={guard("ikb_zam", <IkZam />)} />
+        <Route path="/ik/vardiyalar" element={guard("ikb_vardiyalar", <IkVardiyalar />)} />
+        <Route path="/ik/vardiya-transfer" element={guard("ikb_vardiya_atama", <IkVardiyaTransfer />)} />
+        <Route path="/ik/vardiya-planlari" element={guard("ikb_vardiya_planlari", <IkVardiyaPlanlari />)} />
+        <Route path="/ik/tatil-sihirbazi" element={guard("ikb_tatil_sihirbazi", <IkTatilSihirbazi />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -13,7 +13,7 @@ const PARTIES = ["AK PARTİ","CHP","MHP","İYİ PARTİ","DEM PARTİ","YRP","DEVA
 const empty = {
   company_name: "", customer_type: "", municipality_type: "", customer_detail: "",
   population: "", project_manager: "", deploy_responsible: "", city: "",
-  status: "aktif", notes: "", use_taskqube: false,
+  status: "aktif", notes: "", use_job_tracking: false,
   district: "", party: "", top_manager: "", contact_title: "",
   current_firm: "", assigned_sales: "", address: "", is_potential: 0,
 };
@@ -34,7 +34,7 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
 
   useEffect(() => {
     if (customer) {
-      setForm({ ...empty, ...customer, use_taskqube: customer.use_taskqube === 1 || customer.use_taskqube === true });
+      setForm({ ...empty, ...customer, use_job_tracking: customer.use_job_tracking === 1 || customer.use_job_tracking === true });
     } else {
       setForm(empty);
     }

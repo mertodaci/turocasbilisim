@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 
 
 
-import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useTQNotifications, useStokAlerts } from '@/lib/NotificationContext';
+import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useJTNotifications, useStokAlerts } from '@/lib/NotificationContext';
 
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -19,13 +19,13 @@ export const allNavItems = [
 { labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici", "satis"] },
 
 {
-  labelKey: "taskqube_v3", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
+  labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
   children: [
-    { labelKey: "taskqube_dashboard", path: "/taskqube-v3/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
-    { labelKey: "taskqube_projects", path: "/taskqube-v3", icon: Building2, roles: ["admin", "yonetici", "kullanici"] },
-    { labelKey: "taskqube_tickets", path: "/taskqube-v3/tickets", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"] },
-    { labelKey: "taskqube_kanban", path: "/taskqube-v3/kanban", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
-    { labelKey: "taskqube_settings", path: "/taskqube-v3/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] }
+    { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "is_takibi_projeler", path: "/is-takibi", icon: Building2, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "is_takibi_biletler", path: "/is-takibi/tickets", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"] },
+    { labelKey: "is_takibi_kanban", path: "/is-takibi/kanban", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "is_takibi_tanimlar", path: "/is-takibi/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] }
   ]
 },
 {
@@ -230,7 +230,7 @@ export default function Sidebar() {
   const { unreadTodoCount } = useTodos();
   const { pendingLeaveCount } = useLeave();
   const { pendingExpenseCount, pendingExpenseIKCount } = useExpense();
-  const { assignedTicketCount } = useTQNotifications();
+  const { assignedTicketCount } = useJTNotifications();
   const { pendingWorkTaskCount } = useWorkTasks();
   const { stokUyariCount } = useStokAlerts();
   const { t } = useLanguage();
@@ -298,7 +298,7 @@ export default function Sidebar() {
     const childShowLeaveBadge = (child.labelKey === "leave_requests" || child.labelKey === "my_leave_requests" || child.labelKey === "ik_leave_requests") && pendingLeaveCount > 0;
     const childShowExpenseBadge = child.labelKey === "expenses" && pendingExpenseCount > 0;
     const childShowExpenseIKBadge = child.labelKey === "ik_expense_requests" && pendingExpenseIKCount > 0;
-    const childShowTQBadge = child.labelKey === "taskqube_tickets" && assignedTicketCount > 0;
+    const childShowJTBadge = child.labelKey === "is_takibi_biletler" && assignedTicketCount > 0;
     const childShowMessageBadge = child.labelKey === "messages" && unreadMessageCount > 0;
     const childShowTodoBadge = child.labelKey === "todos" && unreadTodoCount > 0;
     const childShowWorkTaskBadge = child.labelKey === "work_tracking" && pendingWorkTaskCount > 0;
@@ -318,7 +318,7 @@ export default function Sidebar() {
         {childShowLeaveBadge && <span className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount}</span>}
             {childShowExpenseBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingExpenseCount}</span>}
             {childShowExpenseIKBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingExpenseIKCount}</span>}
-        {childShowTQBadge && <span className="flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
+        {childShowJTBadge && <span className="flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
         {childShowMessageBadge && <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadMessageCount}</span>}
         {childShowTodoBadge && <span className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">{unreadTodoCount}</span>}
         {childShowWorkTaskBadge && <span className="flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{pendingWorkTaskCount}</span>}
@@ -440,7 +440,7 @@ export default function Sidebar() {
             const showMyLeaveBadge = false;
             const supportTotal = pendingWorkTaskCount + unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount;
             const showSupportBadge = item.labelKey === "support_center" && supportTotal > 0;
-            const showTQBadge = item.labelKey === "taskqube_v3" && assignedTicketCount > 0;
+            const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
             const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
 
             return (
@@ -463,12 +463,12 @@ export default function Sidebar() {
                         {showHrBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount + pendingExpenseIKCount}</span>}
                         {showMyLeaveBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount}</span>}
                         {showSupportBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{supportTotal}</span>}
-                        {showTQBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
+                        {showJTBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
                         {showStokBadge && <span className="ml-auto flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
                         <ChevronDown className={cn("ml-auto w-4 h-4 transition-transform shrink-0", isMenuExpanded && "rotate-180")} />
                       </>
                     )}
-                    {collapsed && (showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showTQBadge || showStokBadge) && (
+                    {collapsed && (showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showJTBadge || showStokBadge) && (
                       <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
                     )}
                   </button>

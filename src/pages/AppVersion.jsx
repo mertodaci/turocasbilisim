@@ -8,12 +8,12 @@ export default function AppVersion() {
       date: "1 Eylül 2026",
       badge: "latest",
       changes: [
-        "TaskQube: müşteriler artık kendilerine ait tüm biletleri, hangi aşamada olursa olsun görebiliyor — önceden sadece belirli durumlardaki biletler gösteriliyordu.",
-        "TaskQube pano (Kanban) görünümü: bilet kartlarında ürün/modül bilgisi gösteriliyor, kolonlar sürükle-bırakla yeniden sıralanabiliyor, seçili pano sayfa yenilense bile açık kalıyor.",
-        "TaskQube Biletler ekranına çoklu durum seçimi, sorumlu kişi ve oluşturma tarihi aralığı filtreleri eklendi; arama kutusundaki baştaki/sondaki boşluk artık filtrelemeyi bozmuyor.",
-        "TaskQube: bir bileti düzenleyip kaydettikten sonra açık pencerede değişiklik anında görünüyor — önceden pencereyi kapatıp tekrar açmak gerekiyordu.",
-        "TaskQube: bilet eklerindeki görsel önizlemesine, indirmeden ekran içinde büyütme seçeneği eklendi.",
-        "TaskQube e-posta bildirimleri yeniden tasarlandı — yorum içeriği, değişen alanlar ve eklenen dosya adları artık mail içeriğinde görünüyor; sistem kaynaklı hatalı/fazladan mailler giderildi.",
+        "İş Takibi: müşteriler artık kendilerine ait tüm biletleri, hangi aşamada olursa olsun görebiliyor — önceden sadece belirli durumlardaki biletler gösteriliyordu.",
+        "İş Takibi pano (Kanban) görünümü: bilet kartlarında ürün/modül bilgisi gösteriliyor, kolonlar sürükle-bırakla yeniden sıralanabiliyor, seçili pano sayfa yenilense bile açık kalıyor.",
+        "İş Takibi Biletler ekranına çoklu durum seçimi, sorumlu kişi ve oluşturma tarihi aralığı filtreleri eklendi; arama kutusundaki baştaki/sondaki boşluk artık filtrelemeyi bozmuyor.",
+        "İş Takibi: bir bileti düzenleyip kaydettikten sonra açık pencerede değişiklik anında görünüyor — önceden pencereyi kapatıp tekrar açmak gerekiyordu.",
+        "İş Takibi: bilet eklerindeki görsel önizlemesine, indirmeden ekran içinde büyütme seçeneği eklendi.",
+        "İş Takibi e-posta bildirimleri yeniden tasarlandı — yorum içeriği, değişen alanlar ve eklenen dosya adları artık mail içeriğinde görünüyor; sistem kaynaklı hatalı/fazladan mailler giderildi.",
         "Mesajlar: grup sohbetlerinde katılımcı listesi görüntülenebiliyor ve katılımcı çıkarılabiliyor.",
         "Mesajlar: sohbet arşivleme artık kişiye özel — biri arşivlerse yalnızca kendi görünümünden kalkıyor, diğer katılımcıları etkilemiyor.",
         "Mesajlar: sohbet silme eklendi — birebir sohbetlerde herkes kendi adına, grup sohbetlerinde ise yalnızca grubu oluşturan kişi herkes için silebiliyor.",
@@ -28,7 +28,7 @@ export default function AppVersion() {
       badge: null,
       changes: [
         "Canlı ortama HTTPS (SSL) ile geçiş tamamlandı.",
-        "TaskQube için e-posta bildirim altyapısı kuruldu.",
+        "İş Takibi için e-posta bildirim altyapısı kuruldu.",
       ]
     },
     {
@@ -38,7 +38,7 @@ export default function AppVersion() {
       changes: [
         "Çalışan Detay sayfasına İzin Mutabakat Formu ve onaylı izin hareketleri tablosu eklendi.",
         "İzin talebi formu netleştirildi (\"İşe Dönüş Tarihi\" girişi), izin bakiyesi hesaplaması tüm ekranlarda tutarlı hale getirildi.",
-        "TaskQube: müşteri biletleri artık ürün üzerinden otomatik olarak doğru panoya atanıyor.",
+        "İş Takibi: müşteri biletleri artık ürün üzerinden otomatik olarak doğru panoya atanıyor.",
       ]
     },
     {
@@ -59,7 +59,7 @@ export default function AppVersion() {
         "Bildirim penceresi art\u0131k sayfa i\u00e7eri\u011finin \u00fczerinde net g\u00f6r\u00fcn\u00fcyor \u2014 \u015feffaf g\u00f6r\u00fcnme ve alttaki yaz\u0131larla \u00fcst \u00fcste binme sorunu giderildi.",
         "Kullan\u0131c\u0131lar kendi izin taleplerini olu\u015fturabiliyor ve y\u00f6netici onay\u0131ndan \u00f6nce silebiliyor; onaylanm\u0131\u015f talepler korunuyor, ba\u015fka kullan\u0131c\u0131n\u0131n talebi silinemiyor.",
         "Harcama ve Proje Planlama formlar\u0131ndaki m\u00fc\u015fteri se\u00e7im listesi kullan\u0131c\u0131lar i\u00e7in yeniden \u00e7al\u0131\u015f\u0131yor.",
-        "Aktivite ve Sat\u0131\u015f Aktivitesi ekranlar\u0131nda TaskQube bilet listesi ki\u015fiye atanm\u0131\u015f biletleri do\u011fru getiriyor; tamamlanan, iptal ve ar\u015fivlenen biletler listelenmiyor.",
+        "Aktivite ve Sat\u0131\u015f Aktivitesi ekranlar\u0131nda İş Takibi bilet listesi ki\u015fiye atanm\u0131\u015f biletleri do\u011fru getiriyor; tamamlanan, iptal ve ar\u015fivlenen biletler listelenmiyor.",
         "Operasyon Merkezi'nde 'Son 7 G\u00fcn Bilet Hareketi' grafi\u011fi ile M\u00fc\u015fteri Haritas\u0131 yan yana yerle\u015ftirildi.",
         "M\u00fc\u015fteri Haritas\u0131 aday m\u00fc\u015fterileri de g\u00f6steriyor (turuncu i\u015faret); Toplam sayac\u0131 yaln\u0131zca aktif m\u00fc\u015fterileri say\u0131yor.",
         "Y\u00f6netici Masas\u0131 'Bu Ay \u00c7\u00f6z\u00fclen' sayac\u0131 ger\u00e7ek \u00e7\u00f6z\u00fclme tarihine g\u00f6re hesaplan\u0131yor \u2014 senkron kaynakl\u0131 \u015fi\u015fme giderildi.",
@@ -75,7 +75,7 @@ export default function AppVersion() {
         "Şirket Takvimi bilet sayacı düzeltildi — bilet sayımı artık created_date bazında; güncel aydaki tüm biletler doğru görüntüleniyor (artık sıfır görünmüyor)",
         "Ayrılan personel güvenlik kontrolü — çalışan pasife alındığında kullanıcı hesabı otomatik pasife çekiliyor; işten ayrılan personelin sistem erişimi kendiliğinden kapanıyor (müşteri hesapları haricı)",
         "Mesajlaşma kişi listesi iyileştirildi — yalnızca aktif ekip listeleniyor; müşteri, pasif ve işten ayrılmış kullanıcılar gizleniyor, liste Türkçe A-Z sıralı",
-        "Koyu tema iyileştirmeleri — giriş uyarı kutusu, TaskQube bilet penceresi, hata ekranları ve 404 sayfası koyu temada düzgün görüntüleniyor",
+        "Koyu tema iyileştirmeleri — giriş uyarı kutusu, İş Takibi bilet penceresi, hata ekranları ve 404 sayfası koyu temada düzgün görüntüleniyor",
         "Satış Teklifleri sayfasındaki çift yönlendirme (route) temizlendi",
         "Kullanılmayan tablolar ve ölü kod temizliği — daha temiz ve hızlı uygulama derlemesi",
         "Müşteri harita konumlandırması doğrulandı — il bazında çevrimdışı (offline) koordinat sistemi, internet gerektirmeden çalışıyor",
@@ -86,8 +86,8 @@ export default function AppVersion() {
       date: "21 Haziran 2026",
       badge: null,
       changes: [
-        "TaskQube v3 modülü — proje, bilet, kanban pano ve durum yönetimi tek çatı altında; müşteri bazlı aktivasyon",
-        "Yönetici Masası (C-Level Dashboard) — İK, Satış, TaskQube, Aktivite ve Harcama verilerini tek ekranda sunar; tıklanabilir kartlar, 10 dakikada bir otomatik yenileme",
+        "İş Takibi modülü — proje, bilet, kanban pano ve durum yönetimi tek çatı altında; müşteri bazlı aktivasyon",
+        "Yönetici Masası (C-Level Dashboard) — İK, Satış, İş Takibi, Aktivite ve Harcama verilerini tek ekranda sunar; tıklanabilir kartlar, 10 dakikada bir otomatik yenileme",
         "Şirket Takvimi — Ay/Hafta/Liste görünümleri; aktivite, izin, bilet, teklif ve ziyaret planlarından besleniyor",
         "Aktiviteler ekranı yenilendi — istatistik kartları, gelişmiş filtreler, arama kutusu ve zengin kart tasarımı",
         "Kullanıcılar sayfası yenilendi — rol bazlı özet kartlar, sol liste sağ detay panel tasarımı",

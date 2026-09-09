@@ -56,11 +56,11 @@ const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
 const SozlesmeForm = lazy(() => import('./pages/SozlesmeForm'));
-const TaskQubeV3 = lazy(() => import('./pages/TaskQubeV3'));
-const TaskQubeDashboard = lazy(() => import('./pages/TaskQubeDashboard'));
-const TaskQubeTickets = lazy(() => import('./pages/TaskQubeTickets'));
-const TaskQubeKanban = lazy(() => import('./pages/TaskQubeKanban'));
-const TaskQubeSettings = lazy(() => import('./pages/TaskQubeSettings'));
+const JobTrackingV3 = lazy(() => import('./pages/JobTrackingV3'));
+const JobTrackingDashboard = lazy(() => import('./pages/JobTrackingDashboard'));
+const JobTrackingTickets = lazy(() => import('./pages/JobTrackingTickets'));
+const JobTrackingKanban = lazy(() => import('./pages/JobTrackingKanban'));
+const JobTrackingSettings = lazy(() => import('./pages/JobTrackingSettings'));
 // Stok / Depo Yönetimi — Faz 1: Tanımlar
 const StokUrunler = lazy(() => import('./pages/stok/StokUrunler'));
 const StokGruplar = lazy(() => import('./pages/stok/StokGruplar'));
@@ -200,11 +200,11 @@ const AuthenticatedApp = () => {
         <Route path="/musteri-kullanicilari" element={guard("musteri_kullanicilari", <CustomerUsers />)} />
         <Route path="/duyurular" element={guard("announcements", <Announcements />)} />
         <Route path="/is-takip" element={guard("work_tracking", <WorkTasks />)} />
-        <Route path="/taskqube-v3" element={guard("taskqube_projects", <TaskQubeV3 />)} />
-        <Route path="/taskqube-v3/dashboard" element={guard("taskqube_dashboard", <TaskQubeDashboard />)} />
-        <Route path="/taskqube-v3/tickets" element={guard("taskqube_tickets", <TaskQubeTickets />)} />
-        <Route path="/taskqube-v3/kanban" element={guard("taskqube_kanban", <TaskQubeKanban />)} />
-        <Route path="/taskqube-v3/tanimlar" element={guard("taskqube_settings", <TaskQubeSettings />)} />
+        <Route path="/is-takibi" element={guard("is_takibi_projeler", <JobTrackingV3 />)} />
+        <Route path="/is-takibi/dashboard" element={guard("is_takibi_dashboard", <JobTrackingDashboard />)} />
+        <Route path="/is-takibi/tickets" element={guard("is_takibi_biletler", <JobTrackingTickets />)} />
+        <Route path="/is-takibi/kanban" element={guard("is_takibi_kanban", <JobTrackingKanban />)} />
+        <Route path="/is-takibi/tanimlar" element={guard("is_takibi_tanimlar", <JobTrackingSettings />)} />
         {/* Stok / Depo Yönetimi — Faz 1: Tanımlar */}
         <Route path="/stok/urunler" element={guard("stok_urunler", <StokUrunler />)} />
         <Route path="/stok/gruplar" element={guard("stok_gruplar", <StokGruplar />)} />

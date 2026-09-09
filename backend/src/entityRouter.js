@@ -2,12 +2,12 @@ const express = require('express');
 const { db } = require('./db');
 const { v4: uuidv4 } = require('uuid');
 const authMiddleware = require('./authMiddleware');
-const { notifyTicketUpdate, notifyNewComment } = require('./taskqubeNotify');
+const { notifyTicketUpdate, notifyNewComment } = require('./jobTrackingNotify');
 const { ensureUserForEmployee } = require('./userProvision');
 const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
-const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
+const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
   'stok_personeller','stok_demirbaslar'];
 
@@ -21,11 +21,11 @@ const JSON_COLUMNS = {
   customer_contracts: ['products'],
   leave_requests: ['approval_history'],
   task_comments: ['attachments'],
-  tq_projects: ['team_member_ids'],
-  tq_tickets: ['tags', 'attachments', 'assigned_to_ids', 'assigned_to_names'],
-  tq_comments: ['attachments'],
-  tq_kanban_boards: ['columns'],
-  tq_ticket_statuses: ['board_ids'],
+  job_projects: ['team_member_ids'],
+  job_tickets: ['tags', 'attachments', 'assigned_to_ids', 'assigned_to_names'],
+  job_comments: ['attachments'],
+  job_kanban_boards: ['columns'],
+  job_ticket_statuses: ['board_ids'],
   hakedisler: ['tahsilat'],
   stok_etiket_fisleri: ['satirlar_json'],
 };
@@ -107,13 +107,13 @@ const TABLE_TO_MODULE = {
   
   task_comments: 'work_tracking',
   announcements: 'announcements',
-  tq_projects: 'taskqube_projects',
-  tq_tickets: 'taskqube_tickets',
-  tq_ticket_statuses: 'taskqube_settings',
-  tq_comments: 'taskqube_tickets',
-  tq_effort_plans: 'taskqube_tickets',
-  tq_effort_logs: 'taskqube_tickets',
-  tq_kanban_boards: 'taskqube_kanban',
+  job_projects: 'is_takibi_projeler',
+  job_tickets: 'is_takibi_biletler',
+  job_ticket_statuses: 'is_takibi_tanimlar',
+  job_comments: 'is_takibi_biletler',
+  job_effort_plans: 'is_takibi_biletler',
+  job_effort_logs: 'is_takibi_biletler',
+  job_kanban_boards: 'is_takibi_kanban',
   customer_projects: 'customer_projects',
   sales_activities: 'satis',
   hakedisler: 'hakedisler',
@@ -160,7 +160,7 @@ function checkPermission(db, role, tableName, action) {
   // admin her şeyi yapabilir
   if (role === 'admin') return true;
   // Okuma-istisnasi: form/liste icin herkese gereken referans tablolari (sadece goruntuleme)
-  if (action === 'can_view' && ['definitions','leave_types','tq_ticket_statuses','tq_kanban_boards','customer_modules','announcements'].includes(tableName)) return true;
+  if (action === 'can_view' && ['definitions','leave_types','job_ticket_statuses','job_kanban_boards','customer_modules','announcements'].includes(tableName)) return true;
   // employees: ic ekip formlar icin acik, ama musteri portali personel rehberini
   // enumere edemesin (KVKK) -- musteri normal role_permissions kontrolune duser
   if (action === 'can_view' && tableName === 'employees') return role !== 'musteri';
@@ -183,7 +183,7 @@ function checkPermission(db, role, tableName, action) {
   return perm[action] === 1;
 }
 
-// Bir tq_comments satiri istekteki kullaniciya mi ait? (kendi yorumunu
+// Bir job_comments satiri istekteki kullaniciya mi ait? (kendi yorumunu
 // duzenleme/silme yetkisi icin). created_by (POST'ta req.user.email),
 // author_email, ya da author_id (ic kullanicida employees.id, musteride users.id).
 function commentOwnedBy(c, user) {
@@ -207,8 +207,8 @@ function employeeIdForUser(user) {
   catch { return null; }
 }
 
-// Bir tq_effort_logs satiri istekteki kullaniciya mi ait? (kendi girdigi
-// efor saatini duzenleme/silme yetkisi icin — tq_comments'daki
+// Bir job_effort_logs satiri istekteki kullaniciya mi ait? (kendi girdigi
+// efor saatini duzenleme/silme yetkisi icin — job_comments'daki
 // commentOwnedBy ile ayni desen).
 function effortLogOwnedBy(row, user) {
   const empId = employeeIdForUser(user);
@@ -219,9 +219,9 @@ function effortLogOwnedBy(row, user) {
 // Tablo bazlı izin verilen kolonlar (SQL injection koruması)
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
-  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_taskqube'],
-  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_taskqube','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
-  activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','taskqube_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
+  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking'],
+  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_job_tracking','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
+  activities: ['title','description','type','status','customer_id','customer_name','employee_id','employee_name','activity_date','duration_minutes','notes','job_ticket_id','activity_type','location','date','start_time','end_time','outcome','parent_activity_id'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
   leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],
   leave_types: ['name','description','max_days','is_active'],
@@ -241,13 +241,13 @@ const ALLOWED_COLUMNS = {
   expense_reports: ['title','employee_id','employee_name','employee_email','status','total_amount','currency','period','notes','approver_id','approver_name','approval_date','project_name','trip_start_date','trip_end_date','advance_amount','department_manager','rejection_reason'],
   expense_items: ['report_id','category','description','amount','currency','date','receipt_url','notes'],
   task_comments: ['task_id','content','attachments','author_id','author_name','author_email','type','old_status','new_status'],
-  tq_projects: ['name','description','status','customer_id','customer_name','start_date','end_date','team_member_ids','notes','type','priority','budget','manager_id','manager_name','is_active'],
-  tq_tickets: ['title','description','status','priority','project_id','customer_id','customer_name','assigned_to_id','assigned_to_name','assigned_to_ids','assigned_to_names','due_date','tags','attachments','ticket_number','kanban_board_id','kanban_column_id','parent_ticket_id','board_id','board_name','pilot_customer_id','pilot_customer_name','customer_contact_id','customer_contact_name','board_sort'],
-  tq_ticket_statuses: ['name','color','sort_order','is_default','is_closed','key','is_active','is_final','board_id','board_ids','group_key'],
-  tq_comments: ['ticket_id','content','attachments','author_id','author_name','author_email','is_internal','comment_type'],
-  tq_effort_plans: ['ticket_id','team','planned_hours','planned_start','assignee_id','assignee_name','end_at','note'],
-  tq_effort_logs: ['ticket_id','team','person_id','person_name','hours','work_date','note'],
-  tq_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
+  job_projects: ['name','description','status','customer_id','customer_name','start_date','end_date','team_member_ids','notes','type','priority','budget','manager_id','manager_name','is_active'],
+  job_tickets: ['title','description','status','priority','project_id','customer_id','customer_name','assigned_to_id','assigned_to_name','assigned_to_ids','assigned_to_names','due_date','tags','attachments','ticket_number','kanban_board_id','kanban_column_id','parent_ticket_id','board_id','board_name','pilot_customer_id','pilot_customer_name','customer_contact_id','customer_contact_name','board_sort'],
+  job_ticket_statuses: ['name','color','sort_order','is_default','is_closed','key','is_active','is_final','board_id','board_ids','group_key'],
+  job_comments: ['ticket_id','content','attachments','author_id','author_name','author_email','is_internal','comment_type'],
+  job_effort_plans: ['ticket_id','team','planned_hours','planned_start','assignee_id','assignee_name','end_at','note'],
+  job_effort_logs: ['ticket_id','team','person_id','person_name','hours','work_date','note'],
+  job_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
   sales_activities: ['customer_id','customer_name','activity_type','contact_person','date','start_time','end_time','notes','outcome','next_visit_date','opportunity_id','created_by','employee_id','employee_name','duration_minutes','location','parent_activity_id','note_type','title','valid_until','deal_status','products','amount','currency','is_deleted'],
   hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
   // ── Stok / Depo Yönetimi — Faz 1 ──
@@ -309,10 +309,10 @@ const REQUIRED_FIELDS = {
   customers: ['company_name'],
   leave_requests: ['employee_id','start_date','end_date','leave_type'],
   leave_allowances: ['employee_id','year','total_days','notes'],
-  tq_tickets: ['title'],
-  tq_effort_plans: ['ticket_id','team'],
-  tq_effort_logs: ['ticket_id','team','person_id','hours'],
-  tq_projects: ['name'],
+  job_tickets: ['title'],
+  job_effort_plans: ['ticket_id','team'],
+  job_effort_logs: ['ticket_id','team','person_id','hours'],
+  job_projects: ['name'],
   announcements: ['title','content'],
   hakedisler: ['musteri'],
   // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
@@ -391,7 +391,7 @@ function createEntityRouter(tableName) {
 
         // musteri rolü: sadece kendi customer_id'sine ait verileri görsün
         if (req.user?.role === 'musteri') {
-          if (tableName === 'tq_tickets' || tableName === 'tq_projects' || tableName === 'customer_modules' || tableName === 'customer_contacts' || tableName === 'customer_contracts') {
+          if (tableName === 'job_tickets' || tableName === 'job_projects' || tableName === 'customer_modules' || tableName === 'customer_contacts' || tableName === 'customer_contracts') {
             filters.customer_id = req.user.customer_id || '__no_customer__';
           }
           // GUVENLIK: 'customers' tablosunun kendisi bu listede yoktu -- musteri
@@ -411,7 +411,7 @@ function createEntityRouter(tableName) {
       if (filterKeys.length > 0) {
         filterKeys.forEach(k => {
           if (k === 'exclude_archived') {
-            if (tableName === 'tq_tickets') conditions.push("status != 'arsivlendi'");
+            if (tableName === 'job_tickets') conditions.push("status != 'arsivlendi'");
             return;
           }
           // GUVENLIK: filtre anahtari ALLOWED_COLUMNS ile dogrulanir (SQL injection korumasi)
@@ -436,10 +436,10 @@ function createEntityRouter(tableName) {
         }
         params.push(req.user.email);
       }
-      // GUVENLIK: TaskQube ic notlari (is_internal=1) musteri rolune asla
+      // GUVENLIK: İş Takibi ic notlari (is_internal=1) musteri rolune asla
       // gitmemeli -- frontend zaten gizliyordu ama API yaniti filtresizdi
       // (F12/network sekmesinden goruntulenebiliyordu)
-      if (tableName === 'tq_comments' && req.user?.role === 'musteri') {
+      if (tableName === 'job_comments' && req.user?.role === 'musteri') {
         conditions.push('(is_internal = 0 OR is_internal IS NULL)');
       }
       if (conditions.length > 0) {
@@ -459,7 +459,7 @@ function createEntityRouter(tableName) {
       // Arsivlileri disla
       if (filters.exclude_archived === '1' || filters.exclude_archived === 1) {
         delete filters.exclude_archived;
-        if (tableName === 'tq_tickets') {
+        if (tableName === 'job_tickets') {
           conditions.push("status != 'arsivlendi'");
         }
       }
@@ -509,15 +509,15 @@ function createEntityRouter(tableName) {
       }
       // musteri rolü: sadece kendi customer_id'sine ait kayda erişebilir (IDOR koruması)
       if (req.user?.role === 'musteri') {
-        const ownCustomerTables = ['tq_tickets','tq_projects','customer_contacts','customer_contracts','customer_modules'];
+        const ownCustomerTables = ['job_tickets','job_projects','customer_contacts','customer_contracts','customer_modules'];
         if (ownCustomerTables.includes(tableName) && row.customer_id && row.customer_id !== req.user.customer_id) {
           return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
         }
         if (tableName === 'customers' && row.id !== req.user.customer_id) {
           return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
         }
-        // GUVENLIK: TaskQube ic notu tek kayit olarak da musteriye acilmasin
-        if (tableName === 'tq_comments' && row.is_internal === 1) {
+        // GUVENLIK: İş Takibi ic notu tek kayit olarak da musteriye acilmasin
+        if (tableName === 'job_comments' && row.is_internal === 1) {
           return res.status(404).json({ error: 'Bulunamadı' });
         }
       }
@@ -531,12 +531,12 @@ function createEntityRouter(tableName) {
   // CREATE - POST /api/:entity
   router.post('/', (req, res) => {
       // Efor saati girisi: atanan kisi kendi adina, sadece atandigi bilette
-      // girebilir -- modul izni (taskqube_tickets can_add) olmasa bile.
+      // girebilir -- modul izni (is_takibi_biletler can_add) olmasa bile.
       let ownEffortLogCreate = false;
-      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin') {
+      if (tableName === 'job_effort_logs' && req.user?.role !== 'admin') {
         const empId = employeeIdForUser(req.user);
         if (empId && req.body?.person_id === empId) {
-          const t = db.prepare('SELECT assigned_to_ids FROM tq_tickets WHERE id = ?').get(req.body.ticket_id);
+          const t = db.prepare('SELECT assigned_to_ids FROM job_tickets WHERE id = ?').get(req.body.ticket_id);
           let ids = []; try { ids = JSON.parse(t?.assigned_to_ids || '[]'); } catch { ids = []; }
           ownEffortLogCreate = ids.includes(empId);
         }
@@ -575,21 +575,21 @@ function createEntityRouter(tableName) {
       const id = uuidv4();
       const now = new Date().toISOString();
 
-      // tq_tickets için otomatik bilet numarası
-      if (tableName === 'tq_tickets' && !data.ticket_number) {
+      // job_tickets için otomatik bilet numarası
+      if (tableName === 'job_tickets' && !data.ticket_number) {
         // COUNT(*)+1 degil MAX+1: gecmis gocler sirasinda satir sayisi ile en
         // buyuk numara birbirini tutmuyor, COUNT tabanli uretim mevcut
         // numaralarla cakisiyordu.
-        const maxRow = db.prepare("SELECT MAX(CAST(ticket_number AS INTEGER)) as mx FROM tq_tickets WHERE ticket_number GLOB '[0-9]*'").get();
+        const maxRow = db.prepare("SELECT MAX(CAST(ticket_number AS INTEGER)) as mx FROM job_tickets WHERE ticket_number GLOB '[0-9]*'").get();
         const nextNum = (maxRow?.mx || 0) + 1;
         data.ticket_number = String(nextNum);
       }
 
-      // tq_tickets: board_sort verilmediyse yeni bilet ait oldugu kolonun
+      // job_tickets: board_sort verilmediyse yeni bilet ait oldugu kolonun
       // USTUNE gelsin (min - 1). Pano kolon ici manuel sirayi bozmadan triyaj.
-      if (tableName === 'tq_tickets' && (data.board_sort === undefined || data.board_sort === null)) {
+      if (tableName === 'job_tickets' && (data.board_sort === undefined || data.board_sort === null)) {
         try {
-          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM tq_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
+          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM job_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
             .get(data.board_id ?? null, data.status ?? null);
           data.board_sort = (r && r.mn !== null && r.mn !== undefined) ? r.mn - 1 : 0;
         } catch (e) { data.board_sort = 0; }
@@ -597,7 +597,7 @@ function createEntityRouter(tableName) {
 
       // Bileti olusturan kisi (musteri haric) otomatik olarak sorumlu
       // kisilere eklenir -- kaydeden kisi biletten haberdar/takipte kalsin.
-      if (tableName === 'tq_tickets' && req.user?.role !== 'musteri') {
+      if (tableName === 'job_tickets' && req.user?.role !== 'musteri') {
         try {
           const emp = db.prepare('SELECT id, full_name FROM employees WHERE email = ?').get(req.user.email);
           if (emp) {
@@ -637,12 +637,12 @@ function createEntityRouter(tableName) {
         loginCreated = ensureUserForEmployee(db, created, req.user?.email);
       }
 
-      // TaskQube mail bildirimi: yeni yorum eklendiginde atanan kisilere haber ver
-      if (tableName === 'tq_comments') {
+      // İş Takibi mail bildirimi: yeni yorum eklendiginde atanan kisilere haber ver
+      if (tableName === 'job_comments') {
         try {
-          const ticket = db.prepare('SELECT * FROM tq_tickets WHERE id = ?').get(created.ticket_id);
-          if (ticket) notifyNewComment(parseJsonColumns('tq_comments', created), parseJsonColumns('tq_tickets', ticket), req.user);
-        } catch (e) { console.error('[taskqubeNotify] yorum bildirimi hatasi:', e.message); }
+          const ticket = db.prepare('SELECT * FROM job_tickets WHERE id = ?').get(created.ticket_id);
+          if (ticket) notifyNewComment(parseJsonColumns('job_comments', created), parseJsonColumns('job_tickets', ticket), req.user);
+        } catch (e) { console.error('[jobTrackingNotify] yorum bildirimi hatasi:', e.message); }
       }
 
       // Stok: yeni depo olusturulunca otomatik "GENEL RAF" kaydi acilir
@@ -690,22 +690,22 @@ function createEntityRouter(tableName) {
 
       // Yorum duzenleme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
       // baskasininkini duzenleyemez; musteri rolu hicbir yorumu duzenleyemez.
-      const ownCommentEdit = tableName === 'tq_comments'
+      const ownCommentEdit = tableName === 'job_comments'
         && existing.comment_type !== 'system'
         && req.user?.role !== 'musteri'
         && commentOwnedBy(existing, req.user);
-      const ownEffortLogEdit = tableName === 'tq_effort_logs' && effortLogOwnedBy(existing, req.user);
-      if (tableName === 'tq_comments' && !ownCommentEdit) {
+      const ownEffortLogEdit = tableName === 'job_effort_logs' && effortLogOwnedBy(existing, req.user);
+      if (tableName === 'job_comments' && !ownCommentEdit) {
         if (existing.comment_type === 'system') return res.status(403).json({ error: 'Sistem kayıtları düzenlenemez' });
         return res.status(403).json({ error: 'Yalnızca kendi yorumunuzu düzenleyebilirsiniz' });
       }
       if (!ownCommentEdit && !ownEffortLogEdit && !checkPermission(db, req.user?.role, tableName, 'can_edit')) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
       }
-      if (tableName === 'tq_comments') {
+      if (tableName === 'job_comments') {
         for (const f of ['is_internal', 'comment_type', 'author_id', 'author_name', 'author_email', 'ticket_id']) delete req.body[f];
       }
-      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin') {
+      if (tableName === 'job_effort_logs' && req.user?.role !== 'admin') {
         if (!ownEffortLogEdit) return res.status(403).json({ error: 'Yalnızca kendi girdiğiniz efor kaydını düzenleyebilirsiniz' });
         for (const f of ['ticket_id', 'team', 'person_id', 'person_name']) delete req.body[f];
       }
@@ -745,7 +745,7 @@ function createEntityRouter(tableName) {
       const validationErrors = validateData(tableName, req.body, true);
       if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
       // İlişkili bilet (child) ise status değiştirilemez — musteri_onay/kurum_test hariç (müşteri onaylayabilmeli)
-      if (tableName === 'tq_tickets' && req.body.status !== undefined && existing.parent_ticket_id) {
+      if (tableName === 'job_tickets' && req.body.status !== undefined && existing.parent_ticket_id) {
         if (req.body.status !== existing.status && !CUSTOMER_APPROVAL_STATUSES.includes(existing.status)) {
           return res.status(400).json({ error: 'Bu bilet bir ana bilete bağlı, durumu bağımsız değiştirilemez.' });
         }
@@ -759,16 +759,16 @@ function createEntityRouter(tableName) {
       delete updates.created_date;
       delete updates.created_by;
 
-      // tq_tickets: durum degisti VE cagiran taraf board_sort'u kendisi
+      // job_tickets: durum degisti VE cagiran taraf board_sort'u kendisi
       // belirtmediyse (surukle-birak her zaman board_sort'u acikca gonderir,
       // o durumda buraya hic girilmez -- tam biraktigin yere yazilmaya devam
       // eder) bileti yeni kolonun EN USTUNE koy (POST'taki yeni-bilet mantigiyla
       // ayni: min(board_sort)-1). Boylece durum degisince en uste gelir, ama
       // sonradan elle suruklenirse orada kalir.
-      if (tableName === 'tq_tickets' && req.body.board_sort === undefined && updates.status !== undefined && updates.status !== existing.status) {
+      if (tableName === 'job_tickets' && req.body.board_sort === undefined && updates.status !== undefined && updates.status !== existing.status) {
         try {
           const targetBoardId = updates.board_id !== undefined ? updates.board_id : existing.board_id;
-          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM tq_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
+          const r = db.prepare("SELECT MIN(board_sort) AS mn FROM job_tickets WHERE COALESCE(board_id,'')=COALESCE(?, '') AND COALESCE(status,'')=COALESCE(?, '')")
             .get(targetBoardId ?? null, updates.status ?? null);
           updates.board_sort = (r && r.mn !== null && r.mn !== undefined) ? r.mn - 1 : 0;
         } catch (e) { /* board_sort ayarlanamazsa durum degisikligi yine de calissin */ }
@@ -810,12 +810,12 @@ function createEntityRouter(tableName) {
         if (!emailRenamed) loginCreated = ensureUserForEmployee(db, updated, req.user?.email);
       }
 
-      // TaskQube mail bildirimi: durum ozel bir asamaya cekildiyse musteriye,
+      // İş Takibi mail bildirimi: durum ozel bir asamaya cekildiyse musteriye,
       // aksi halde (yorum haric her guncelleme) atanan kisilere (aktor haric) mail
-      if (tableName === 'tq_tickets') {
+      if (tableName === 'job_tickets') {
         try {
-          notifyTicketUpdate(parseJsonColumns('tq_tickets', existing), parseJsonColumns('tq_tickets', updated), req.user);
-        } catch (e) { console.error('[taskqubeNotify] bilet bildirimi hatasi:', e.message); }
+          notifyTicketUpdate(parseJsonColumns('job_tickets', existing), parseJsonColumns('job_tickets', updated), req.user);
+        } catch (e) { console.error('[jobTrackingNotify] bilet bildirimi hatasi:', e.message); }
       }
 
       // AUDIT LOG — yetki ve rol degisikliklerini kaydet
@@ -834,20 +834,20 @@ function createEntityRouter(tableName) {
       } catch(e) {}
 
       // İlişkili bilet senkronizasyonu (durum)
-      if (tableName === 'tq_tickets' && data.status !== undefined && data.status !== existing.status) {
-        const children = db.prepare('SELECT id FROM tq_tickets WHERE parent_ticket_id = ?').all(req.params.id);
+      if (tableName === 'job_tickets' && data.status !== undefined && data.status !== existing.status) {
+        const children = db.prepare('SELECT id FROM job_tickets WHERE parent_ticket_id = ?').all(req.params.id);
         if (children.length > 0) {
-          const updateChild = db.prepare('UPDATE tq_tickets SET status = ?, updated_date = ? WHERE id = ?');
+          const updateChild = db.prepare('UPDATE job_tickets SET status = ?, updated_date = ? WHERE id = ?');
           for (const child of children) {
             updateChild.run(data.status, now, child.id);
           }
         }
       }
       // İlişkili bilet senkronizasyonu (pano) — ana bilet taşınınca child'lar da aynı panoya taşınır
-      if (tableName === 'tq_tickets' && data.board_id !== undefined && data.board_id !== existing.board_id) {
-        const childrenB = db.prepare('SELECT id FROM tq_tickets WHERE parent_ticket_id = ?').all(req.params.id);
+      if (tableName === 'job_tickets' && data.board_id !== undefined && data.board_id !== existing.board_id) {
+        const childrenB = db.prepare('SELECT id FROM job_tickets WHERE parent_ticket_id = ?').all(req.params.id);
         if (childrenB.length > 0) {
-          const updateChildBoard = db.prepare('UPDATE tq_tickets SET board_id = ?, board_name = ?, updated_date = ? WHERE id = ?');
+          const updateChildBoard = db.prepare('UPDATE job_tickets SET board_id = ?, board_name = ?, updated_date = ? WHERE id = ?');
           for (const child of childrenB) {
             updateChildBoard.run(data.board_id, data.board_name ?? existing.board_name ?? null, now, child.id);
           }
@@ -869,18 +869,18 @@ function createEntityRouter(tableName) {
 
       // Yorum silme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
       // baskasininkini silemez; musteri rolu hicbir yorumu silemez.
-      const ownCommentDelete = tableName === 'tq_comments'
+      const ownCommentDelete = tableName === 'job_comments'
         && existing.comment_type !== 'system'
         && req.user?.role !== 'musteri'
         && commentOwnedBy(existing, req.user);
-      const ownEffortLogDelete = tableName === 'tq_effort_logs' && effortLogOwnedBy(existing, req.user);
-      if (tableName === 'tq_comments' && !ownCommentDelete) {
+      const ownEffortLogDelete = tableName === 'job_effort_logs' && effortLogOwnedBy(existing, req.user);
+      if (tableName === 'job_comments' && !ownCommentDelete) {
         return res.status(403).json({ error: 'Bu yorumu silme yetkiniz yok' });
       }
       if (!ownCommentDelete && !ownEffortLogDelete && !checkPermission(db, req.user?.role, tableName, 'can_delete')) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
       }
-      if (tableName === 'tq_effort_logs' && req.user?.role !== 'admin' && !ownEffortLogDelete) {
+      if (tableName === 'job_effort_logs' && req.user?.role !== 'admin' && !ownEffortLogDelete) {
         return res.status(403).json({ error: 'Yalnızca kendi girdiğiniz efor kaydını silebilirsiniz' });
       }
 

@@ -21,7 +21,7 @@ const roleOptions = [
 const emptyForm = {
   full_name: "", tc: "", card_uid: "", birth_date: "", hire_date: "", next_leave_entitlement_date: "", gender: "",
   department: "", position: "", app_role: "",
-  phone: "", email: "", avatar_url: "", show_in_taskqube: false,
+  phone: "", email: "", avatar_url: "", show_in_job_tracking: false,
   manager_id: "", manager_name: "",
   education_level: "", highest_education: "",
   university: "", education_department: "", graduation_date: "",
@@ -70,7 +70,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
         department: employee.department || "",
         position: employee.position || "",
         app_role: employee.app_role || "",
-        show_in_taskqube: employee.show_in_taskqube === 1 || employee.show_in_taskqube === true,
+        show_in_job_tracking: employee.show_in_job_tracking === 1 || employee.show_in_job_tracking === true,
         phone: employee.phone || "",
         email: employee.email || "",
         avatar_url: employee.avatar_url || "",
@@ -144,7 +144,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   };
   const handleSubmit = (e) => {
     e.preventDefault();
-    const payload = { ...form, show_in_taskqube: form.show_in_taskqube ? 1 : 0 };
+    const payload = { ...form, show_in_job_tracking: form.show_in_job_tracking ? 1 : 0 };
     if (form.education_history && form.education_history.length > 0) {
       payload.university = form.education_history[0].university || "";
       payload.education_department = form.education_history[0].department || "";
@@ -294,10 +294,10 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
               </div>
               <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
                 <Checkbox
-                  checked={form.show_in_taskqube}
-                  onCheckedChange={(v) => setForm({ ...form, show_in_taskqube: v === true })}
+                  checked={form.show_in_job_tracking}
+                  onCheckedChange={(v) => setForm({ ...form, show_in_job_tracking: v === true })}
                 />
-                <span className="text-sm">TaskQube kullanıyor (bilet sorumlusu olarak seçilebilir)</span>
+                <span className="text-sm">İş Takibi kullanıyor (bilet sorumlusu olarak seçilebilir)</span>
               </label>
 
               {employee && (

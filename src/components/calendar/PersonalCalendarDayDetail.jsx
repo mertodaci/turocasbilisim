@@ -12,7 +12,7 @@ const activityTypeLabels = {
   email_yazisma: "E-posta Yazışma",
   egitim: "Eğitim",
   sunum: "Sunum",
-  taskqube: "Taskqube",
+  is_takibi: "İş Takibi",
   test: "Test",
   analiz: "Analiz",
   diger: "Diğer",

@@ -144,16 +144,16 @@ app.use('/api/entities/hakedisler',        createEntityRouter('hakedisler'));
 app.use('/api/entities/roles', createEntityRouter('roles'));
 app.use('/api/entities/role_permissions', createEntityRouter('role_permissions'));
 
-// TaskQube entity route'ları
+// İş Takibi entity route'ları
 app.use('/api/entities/customer_projects',  createEntityRouter('customer_projects'));
 app.use('/api/entities/offers',              createEntityRouter('offers'));
-app.use('/api/entities/tq_projects',       createEntityRouter('tq_projects'));
-app.use('/api/entities/tq_tickets',        createEntityRouter('tq_tickets'));
-app.use('/api/entities/tq_ticket_statuses', createEntityRouter('tq_ticket_statuses'));
-app.use('/api/entities/tq_comments',       createEntityRouter('tq_comments'));
-app.use('/api/entities/tq_effort_plans',   createEntityRouter('tq_effort_plans'));
-app.use('/api/entities/tq_effort_logs',    createEntityRouter('tq_effort_logs'));
-app.use('/api/entities/tq_kanban_boards',  createEntityRouter('tq_kanban_boards'));
+app.use('/api/entities/job_projects',       createEntityRouter('job_projects'));
+app.use('/api/entities/job_tickets',        createEntityRouter('job_tickets'));
+app.use('/api/entities/job_ticket_statuses', createEntityRouter('job_ticket_statuses'));
+app.use('/api/entities/job_comments',       createEntityRouter('job_comments'));
+app.use('/api/entities/job_effort_plans',   createEntityRouter('job_effort_plans'));
+app.use('/api/entities/job_effort_logs',    createEntityRouter('job_effort_logs'));
+app.use('/api/entities/job_kanban_boards',  createEntityRouter('job_kanban_boards'));
 app.use('/api/entities/card_logs',         createEntityRouter('card_logs'));
 
 // Stok / Depo Yönetimi entity route'ları — Faz 1: Tanımlar
@@ -262,10 +262,10 @@ app.get('/api/audit-log', authMiddleware, adminOnly, (req, res) => {
 // Kolon/degerler sabit haritadan gelir (kullanici girdisi degil) -> injection yok.
 const TRASH_TABLES = {
   customers:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'company_name' },
-  tq_tickets:       { col: 'is_deleted', deleted: 1, active: 0, nameField: 'title' },
-  tq_projects:      { col: 'is_deleted', deleted: 1, active: 0, nameField: 'name' },
+  job_tickets:       { col: 'is_deleted', deleted: 1, active: 0, nameField: 'title' },
+  job_projects:      { col: 'is_deleted', deleted: 1, active: 0, nameField: 'name' },
   employees:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'full_name' },
-  tq_kanban_boards: { col: 'is_active',  deleted: 0, active: 1, nameField: 'name' },
+  job_kanban_boards: { col: 'is_active',  deleted: 0, active: 1, nameField: 'name' },
 };
 app.get('/api/trash/:table', authMiddleware, adminOnly, (req, res) => {
   try {
@@ -523,7 +523,7 @@ function pollDB() {
     const counts = {
       leave_requests: db.prepare("SELECT COUNT(*) as c FROM leave_requests WHERE status IN ('beklemede','ik_onayi_bekliyor','yonetici_onayi_bekliyor')").get()?.c || 0,
       expense_reports: db.prepare("SELECT COUNT(*) as c FROM expense_reports WHERE status IN ('ik_onayi_bekliyor','yonetici_onayi_bekliyor')").get()?.c || 0,
-      tq_tickets: db.prepare("SELECT COUNT(*) as c FROM tq_tickets").get()?.c || 0,
+      job_tickets: db.prepare("SELECT COUNT(*) as c FROM job_tickets").get()?.c || 0,
       messages: db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0,
       todos: db.prepare("SELECT COUNT(*) as c FROM todos").get()?.c || 0,
       work_tasks: db.prepare("SELECT COUNT(*) as c FROM work_tasks").get()?.c || 0,
@@ -569,27 +569,27 @@ app.get('/api/events', authMiddleware, (req, res) => {
 app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
   try {
     const { db } = require('./db');
-    const openTickets = db.prepare("SELECT * FROM tq_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date DESC LIMIT 50").all();
-    const openCount = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
-    const byCustomer = db.prepare("SELECT t.customer_name, COUNT(*) as c, (SELECT cu.status FROM customers cu WHERE cu.company_name=t.customer_name LIMIT 1) as cust_status FROM tq_tickets t WHERE t.status NOT IN ('sonuclanan','iptal','arsivlendi') AND (t.is_deleted=0 OR t.is_deleted IS NULL) AND t.customer_name IS NOT NULL GROUP BY t.customer_name ORDER BY c DESC LIMIT 8").all();
+    const openTickets = db.prepare("SELECT * FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date DESC LIMIT 50").all();
+    const openCount = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
+    const byCustomer = db.prepare("SELECT t.customer_name, COUNT(*) as c, (SELECT cu.status FROM customers cu WHERE cu.company_name=t.customer_name LIMIT 1) as cust_status FROM job_tickets t WHERE t.status NOT IN ('sonuclanan','iptal','arsivlendi') AND (t.is_deleted=0 OR t.is_deleted IS NULL) AND t.customer_name IS NOT NULL GROUP BY t.customer_name ORDER BY c DESC LIMIT 8").all();
     const byStatus = db.prepare(`
       SELECT t.status,
-             COALESCE((SELECT s.name FROM tq_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
+             COALESCE((SELECT s.name FROM job_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
              COUNT(*) as c
-      FROM tq_tickets t
+      FROM job_tickets t
       WHERE t.status NOT IN ('sonuclanan','iptal','arsivlendi') AND (t.is_deleted=0 OR t.is_deleted IS NULL)
       GROUP BY t.status ORDER BY c DESC
     `).all();
     const thisMonth = new Date(Date.now() + 3*3600*1000).toISOString().substring(0,7);
-    const thisMonthOpened = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE substr(datetime(created_date,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
-    const thisMonthClosed = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE status='sonuclanan' AND substr(datetime(updated_date,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
+    const thisMonthOpened = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
+    const thisMonthClosed = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status='sonuclanan' AND substr(datetime(updated_date,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
     let projectCount = 0;
-    try { projectCount = db.prepare("SELECT COUNT(*) as c FROM tq_projects WHERE (is_deleted=0 OR is_deleted IS NULL) AND (is_active=1 OR is_active IS NULL)").get().c; } catch(e) {}
+    try { projectCount = db.prepare("SELECT COUNT(*) as c FROM job_projects WHERE (is_deleted=0 OR is_deleted IS NULL) AND (is_active=1 OR is_active IS NULL)").get().c; } catch(e) {}
 
     const today = new Date(Date.now() + 3*3600*1000).toISOString().substring(0,10);
     // Bugun ozeti
-    const todayOpened = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
-    const todayClosed = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE status='sonuclanan' AND substr(datetime(updated_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const todayOpened = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const todayClosed = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status='sonuclanan' AND substr(datetime(updated_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
     const todayActivities = db.prepare("SELECT COUNT(*) as c FROM activities WHERE substr(date,1,10)=?").get(today).c;
     const onLeaveToday = db.prepare("SELECT COUNT(*) as c FROM leave_requests WHERE status='onaylandi' AND start_date <= ? AND end_date >= ?").get(today, today).c;
 
@@ -599,10 +599,10 @@ app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yo
     try { pendingExpenses = db.prepare("SELECT COUNT(*) as c FROM expense_reports WHERE status IN ('yonetici_onayi_bekliyor','ik_onayi_bekliyor')").get().c; } catch(e) {}
 
     // Geciken biletler (SLA)
-    const overdueTickets = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE due_date IS NOT NULL AND due_date != '' AND due_date < ? AND status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const overdueTickets = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE due_date IS NOT NULL AND due_date != '' AND due_date < ? AND status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
 
     // Oncelik dagilimi (acik biletler)
-    const byPriority = db.prepare("SELECT COALESCE(priority,'belirsiz') as priority, COUNT(*) as c FROM tq_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY priority").all();
+    const byPriority = db.prepare("SELECT COALESCE(priority,'belirsiz') as priority, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY priority").all();
 
     // Son 7 gun trend (acilan/kapanan)
     const dailyTrend = db.prepare(`
@@ -611,13 +611,13 @@ app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yo
         UNION ALL SELECT date(d,'+1 day') FROM days WHERE d < date('now','+3 hours')
       )
       SELECT d,
-        (SELECT COUNT(*) FROM tq_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=d AND (is_deleted=0 OR is_deleted IS NULL)) as opened,
-        (SELECT COUNT(*) FROM tq_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,10)=d AND (is_deleted=0 OR is_deleted IS NULL)) as closed
+        (SELECT COUNT(*) FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=d AND (is_deleted=0 OR is_deleted IS NULL)) as opened,
+        (SELECT COUNT(*) FROM job_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,10)=d AND (is_deleted=0 OR is_deleted IS NULL)) as closed
       FROM days
     `).all();
 
     // Atanan kisiye gore yuk (acik biletler)
-    const byAssignee = db.prepare("SELECT COALESCE(assigned_to_name,'Atanmamış') as name, COUNT(*) as c FROM tq_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND (assigned_to_name IS NULL OR assigned_to_name NOT LIKE '%@%') GROUP BY assigned_to_name ORDER BY c DESC LIMIT 15").all();
+    const byAssignee = db.prepare("SELECT COALESCE(assigned_to_name,'Atanmamış') as name, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND (assigned_to_name IS NULL OR assigned_to_name NOT LIKE '%@%') GROUP BY assigned_to_name ORDER BY c DESC LIMIT 15").all();
 
     res.json({ openTickets, openCount, byCustomer, byStatus, thisMonthOpened, thisMonthClosed, projectCount,
       todayOpened, todayClosed, todayActivities, onLeaveToday,
@@ -628,7 +628,7 @@ app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yo
 app.get('/api/dashboard/archived-count', authMiddleware, requireRoles('admin','yonetici','kullanici','ik','satis','stajer'), (req, res) => {
   try {
     const { db } = require('./db');
-    const r = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE status='arsivlendi' AND (is_deleted=0 OR is_deleted IS NULL)").get();
+    const r = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status='arsivlendi' AND (is_deleted=0 OR is_deleted IS NULL)").get();
     res.json({ count: r.c });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -640,7 +640,7 @@ app.get('/api/auth/me/tickets', authMiddleware, (req, res) => {
     if (!emp) return res.json([]);
     // Bilet tek kisiye (assigned_to_id) veya coklu kisiye (assigned_to_ids JSON
     // dizisi) atanmis olabilir; ikisini de kapsa.
-    const tickets = db.prepare("SELECT * FROM tq_tickets WHERE (assigned_to_id=? OR assigned_to_ids LIKE ?) AND status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date DESC").all(emp.id, '%"' + emp.id + '"%');
+    const tickets = db.prepare("SELECT * FROM job_tickets WHERE (assigned_to_id=? OR assigned_to_ids LIKE ?) AND status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date DESC").all(emp.id, '%"' + emp.id + '"%');
     res.json(tickets);
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -708,37 +708,37 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
     const winRate = (wonCount + lostCount) > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : null;
     const pipeline = db.prepare("SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as s FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND (deal_status='gorusulmede' OR deal_status='taslak' OR deal_status IS NULL)").get();
 
-    // === TASKQUBE ===
-    const totalProjects = db.prepare(`SELECT COUNT(*) as c FROM tq_projects WHERE is_active=1 AND ${ND}`).get().c;
-    const taskqubeCustomers = db.prepare("SELECT COUNT(*) as c FROM customers WHERE (use_taskqube=1 OR use_taskqube='true') AND status='aktif' AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
-    const activeProjects = db.prepare(`SELECT COUNT(*) as c FROM tq_projects WHERE status='devam_ediyor' AND is_active=1 AND ${ND}`).get().c;
+    // === IS TAKIBI ===
+    const totalProjects = db.prepare(`SELECT COUNT(*) as c FROM job_projects WHERE is_active=1 AND ${ND}`).get().c;
+    const jobTrackingCustomers = db.prepare("SELECT COUNT(*) as c FROM customers WHERE (use_job_tracking=1 OR use_job_tracking='true') AND status='aktif' AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
+    const activeProjects = db.prepare(`SELECT COUNT(*) as c FROM job_projects WHERE status='devam_ediyor' AND is_active=1 AND ${ND}`).get().c;
     const ticketsByStatus = db.prepare(`
       SELECT t.status,
-             COALESCE((SELECT s.name FROM tq_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
+             COALESCE((SELECT s.name FROM job_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
              COUNT(*) as c
-      FROM tq_tickets t
+      FROM job_tickets t
       WHERE (t.is_deleted=0 OR t.is_deleted IS NULL)
       GROUP BY t.status
     `).all();
     const CLOSED_STATUSES = "('sonuclanan','arsivlendi','iptal')";
-    const overdueTickets = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE due_date IS NOT NULL AND due_date != '' AND due_date < ? AND status NOT IN ('sonuclanan','arsivlendi','iptal') AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
-    const thisMonthTickets = db.prepare(`SELECT COUNT(*) as c FROM tq_tickets WHERE substr(datetime(created_date,'+3 hours'),1,7)=? AND ${ND}`).get(thisMonth).c;
+    const overdueTickets = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE due_date IS NOT NULL AND due_date != '' AND due_date < ? AND status NOT IN ('sonuclanan','arsivlendi','iptal') AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const thisMonthTickets = db.prepare(`SELECT COUNT(*) as c FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,7)=? AND ${ND}`).get(thisMonth).c;
 
     // === DESTEK MERKEZİ ===
-    const openTickets = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE status NOT IN ('sonuclanan','arsivlendi','iptal') AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
-    const resolvedThisMonth = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
+    const openTickets = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','arsivlendi','iptal') AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
+    const resolvedThisMonth = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,7)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(thisMonth).c;
     // Genel Bakis icin: bugun acilan/kapanan + bilet durum + musteri yogunlugu
-    const execTodayOpened = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
-    const execTodayClosed = db.prepare("SELECT COUNT(*) as c FROM tq_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const execTodayOpened = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
+    const execTodayClosed = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE resolved_at IS NOT NULL AND substr(datetime(resolved_at,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
     const ticketByStatusOpen = db.prepare(`
       SELECT t.status,
-             COALESCE((SELECT s.name FROM tq_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
+             COALESCE((SELECT s.name FROM job_ticket_statuses s WHERE s.key = t.status LIMIT 1), t.status) AS status_label,
              COUNT(*) as c
-      FROM tq_tickets t
+      FROM job_tickets t
       WHERE t.status NOT IN ('sonuclanan','iptal','arsivlendi') AND (t.is_deleted=0 OR t.is_deleted IS NULL)
       GROUP BY t.status ORDER BY c DESC
     `).all();
-    const ticketByCustomer = db.prepare("SELECT customer_name, COUNT(*) as c FROM tq_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND customer_name IS NOT NULL GROUP BY customer_name ORDER BY c DESC LIMIT 8").all();
+    const ticketByCustomer = db.prepare("SELECT customer_name, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND customer_name IS NOT NULL GROUP BY customer_name ORDER BY c DESC LIMIT 8").all();
 
     // === AKTİVİTELER ===
     const thisMonthActivities = db.prepare("SELECT COUNT(*) as c FROM activities WHERE substr(date,1,7)=?").get(thisMonth).c;
@@ -860,7 +860,7 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
     res.json({
       hr: { totalEmployees, onLeaveToday, onLeaveTodayList, pendingLeaves, thisMonthExpenses, pendingExpenses },
       sales: { totalCustomers, potentialCustomers, thisMonthOffers, lastMonthOffers, acceptedOffers, offersByStatus, wonCount, lostCount, winRate, pipeline },
-      taskqube: { totalProjects, taskqubeCustomers, activeProjects, ticketsByStatus, overdueTickets, thisMonthTickets, openTickets, resolvedThisMonth, execTodayOpened, execTodayClosed, ticketByStatusOpen, ticketByCustomer },
+      is_takibi: { totalProjects, jobTrackingCustomers, activeProjects, ticketsByStatus, overdueTickets, thisMonthTickets, openTickets, resolvedThisMonth, execTodayOpened, execTodayClosed, ticketByStatusOpen, ticketByCustomer },
       activities: { thisMonthActivities, lastMonthActivities, activitiesByType, upcomingVisits },
       trends: { expenses: expenseTrend, expensesPending: expenseTrendPending, activities: activityTrend, offers: offerTrend, offersWonLost: offerWonLostTrend, expenseByCategory },
       recent: { activities: recentActivities, offers: recentOffers },

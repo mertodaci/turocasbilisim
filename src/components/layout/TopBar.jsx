@@ -18,7 +18,7 @@ import {
 
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useTQNotifications } from "@/lib/NotificationContext";
+import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useJTNotifications } from "@/lib/NotificationContext";
 import { useQuery } from "@tanstack/react-query";
 
 const themes = [
@@ -33,7 +33,7 @@ function NotificationBell() {
   const { pendingLeaveCount } = useLeave();
   const { pendingExpenseCount, pendingExpenseIKCount } = useExpense();
   const { pendingWorkTaskCount } = useWorkTasks();
-  const { assignedTicketCount } = useTQNotifications();
+  const { assignedTicketCount } = useJTNotifications();
   const { user } = useAuth();
 
   const isPrivileged = user?.role === "admin" || user?.role === "yonetici";
@@ -67,7 +67,7 @@ function NotificationBell() {
     unreadTodoCount > 0 && { label: "Bekleyen görev", count: unreadTodoCount, path: "/yapilacaklar", icon: CheckSquare, color: "text-blue-500" },
     isPrivileged && pendingLeaveCount > 0 && { label: "Bekleyen izin talebi", count: pendingLeaveCount, path: "/izin-talepleri", icon: Umbrella, color: "text-orange-500" },
     pendingWorkTaskCount > 0 && { label: "Bekleyen iş görevi", count: pendingWorkTaskCount, path: "/is-takip", icon: ClipboardList, color: "text-purple-500" },
-    assignedTicketCount > 0 && { label: "Atanan TaskQube bileti", count: assignedTicketCount, path: "/taskqube-v3/tickets", icon: ClipboardList, color: "text-teal-500" },
+    assignedTicketCount > 0 && { label: "Atanan İş Takibi bileti", count: assignedTicketCount, path: "/is-takibi/tickets", icon: ClipboardList, color: "text-teal-500" },
     isPrivileged && pendingExpenseIKCount > 0 && { label: "Bekleyen harcama onayı", count: pendingExpenseIKCount, path: "/ik-harcama-yonetimi", icon: ClipboardList, color: "text-amber-500" },
     !isPrivileged && pendingExpenseCount > 0 && { label: "Bekleyen harcamam", count: pendingExpenseCount, path: "/harcamalar", icon: ClipboardList, color: "text-amber-500" },
   ].filter(Boolean);

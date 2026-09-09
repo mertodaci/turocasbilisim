@@ -25,7 +25,7 @@ const TYPE_CFG = {
   saha_ziyareti:     { label:"Saha Ziyareti",    icon: MapPin,       bg:"bg-emerald-100", ic:"text-emerald-600" },
   email_yazisma:     { label:"E-posta",          icon: Mail,         bg:"bg-cyan-100",    ic:"text-cyan-600" },
   rapor_yazimi:      { label:"Rapor",            icon: FileText,     bg:"bg-orange-100",  ic:"text-orange-600" },
-  taskqube:          { label:"TaskQube",         icon: Monitor,      bg:"bg-slate-100",   ic:"text-slate-600" },
+  is_takibi:         { label:"İş Takibi",         icon: Monitor,      bg:"bg-slate-100",   ic:"text-slate-600" },
   egitim:            { label:"Eğitim",           icon: BookOpen,     bg:"bg-yellow-100",  ic:"text-yellow-600" },
   sunum:             { label:"Sunum",            icon: Presentation, bg:"bg-pink-100",    ic:"text-pink-600" },
   test:              { label:"Test",             icon: TestTube,     bg:"bg-teal-100",    ic:"text-teal-600" },

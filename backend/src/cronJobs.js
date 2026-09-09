@@ -18,7 +18,7 @@ function runTicketCronJobs() {
     const placeholders = AUTO_CLOSE_STATUSES.map(() => '?').join(', ');
     const musteriOnayTickets = db.prepare(`
       SELECT id, ticket_number, title, updated_date
-      FROM tq_tickets
+      FROM job_tickets
       WHERE status IN (${placeholders}) AND (is_deleted = 0 OR is_deleted IS NULL)
     `).all(...AUTO_CLOSE_STATUSES);
 
@@ -26,13 +26,13 @@ function runTicketCronJobs() {
     for (const ticket of musteriOnayTickets) {
       const updatedAt = new Date(ticket.updated_date);
       if (now - updatedAt >= FIFTEEN_DAYS_MS) {
-        db.prepare(`UPDATE tq_tickets SET status = 'sonuclanan', updated_date = ? WHERE id = ?`)
+        db.prepare(`UPDATE job_tickets SET status = 'sonuclanan', updated_date = ? WHERE id = ?`)
           .run(nowIso, ticket.id);
 
         // Sistem yorumu ekle
         const commentId = require('crypto').randomUUID();
         db.prepare(`
-          INSERT INTO tq_comments (id, ticket_id, content, author_name, is_internal, comment_type, created_date, updated_date)
+          INSERT INTO job_comments (id, ticket_id, content, author_name, is_internal, comment_type, created_date, updated_date)
           VALUES (?, ?, ?, ?, 0, 'system', ?, ?)
         `).run(
           commentId,
@@ -50,7 +50,7 @@ function runTicketCronJobs() {
     // 2. sonuclanan → arsivlendi (5 gün güncellenmemiş)
     const sonuclananTickets = db.prepare(`
       SELECT id, ticket_number, title, updated_date
-      FROM tq_tickets
+      FROM job_tickets
       WHERE status = 'sonuclanan' AND (is_deleted = 0 OR is_deleted IS NULL)
     `).all();
 
@@ -58,13 +58,13 @@ function runTicketCronJobs() {
     for (const ticket of sonuclananTickets) {
       const updatedAt = new Date(ticket.updated_date);
       if (now - updatedAt >= FIVE_DAYS_MS) {
-        db.prepare(`UPDATE tq_tickets SET status = 'arsivlendi', updated_date = ? WHERE id = ?`)
+        db.prepare(`UPDATE job_tickets SET status = 'arsivlendi', updated_date = ? WHERE id = ?`)
           .run(nowIso, ticket.id);
 
         // Sistem yorumu ekle
         const commentId = require('crypto').randomUUID();
         db.prepare(`
-          INSERT INTO tq_comments (id, ticket_id, content, author_name, is_internal, comment_type, created_date, updated_date)
+          INSERT INTO job_comments (id, ticket_id, content, author_name, is_internal, comment_type, created_date, updated_date)
           VALUES (?, ?, ?, ?, 0, 'system', ?, ?)
         `).run(
           commentId,

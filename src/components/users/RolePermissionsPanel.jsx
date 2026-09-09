@@ -21,7 +21,7 @@ const ROLE_ICONS = {
 const CATEGORIES = [
   { label: "Ana Menü",         keys: ["dashboard", "yonetici_masasi", "calendar"] },
   { label: "Destek Merkezi",   keys: ["support_center", "control_panel", "work_tracking", "activities", "messages", "todos", "project_planning", "expenses", "my_leave_requests", "personal_calendar"] },
-  { label: "TaskQube",         keys: ["taskqube_v3", "taskqube_dashboard", "taskqube_projects", "taskqube_tickets", "taskqube_kanban", "taskqube_settings"] },
+  { label: "İş Takibi",         keys: ["is_takibi", "is_takibi_dashboard", "is_takibi_projeler", "is_takibi_biletler", "is_takibi_kanban", "is_takibi_tanimlar"] },
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map"] },
   { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler"] },

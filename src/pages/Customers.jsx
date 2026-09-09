@@ -25,12 +25,12 @@ const customerTypeLabels = { belediye:"Belediye", il_ozel_idaresi:"İl Özel İd
 const municipalityTypeLabels = { buyuksehir:"Büyükşehir", il_belediyesi:"İl Belediyesi", ilce_belediyesi:"İlçe Belediyesi", il:"İl", ilce:"İlçe", belde:"Belde", koy:"Köy", diger:"Diğer" };
 const AVATAR_COLORS = ["bg-indigo-500","bg-purple-500","bg-teal-500","bg-blue-500","bg-emerald-500","bg-orange-500","bg-rose-500","bg-pink-500"];
 
-async function createTaskQubeDefaults(customerId, customerName) {
-  const existingStatuses = await flowApi.entities.TQTicketStatus.list();
+async function createJobTrackingDefaults(customerId, customerName) {
+  const existingStatuses = await flowApi.entities.JTTicketStatus.list();
   if (existingStatuses.length === 0) {
-    for (const s of DEFAULT_STATUSES) await flowApi.entities.TQTicketStatus.create(s);
+    for (const s of DEFAULT_STATUSES) await flowApi.entities.JTTicketStatus.create(s);
   }
-  await flowApi.entities.TQProject.create({
+  await flowApi.entities.JTProject.create({
     customer_id: customerId, customer_name: customerName,
     name: customerName + " - Genel", description: "Otomatik oluşturulan proje",
     status: "devam_ediyor", priority: "orta",
@@ -42,7 +42,7 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState("aktif");
   const [potentialFilter, setPotentialFilter] = useState("all"); // all | musteri | aday
   const [typeFilter, setTypeFilter] = useState("all");
-  const [specialFilter, setSpecialFilter] = useState("none"); // none | potansiyel | taskqube
+  const [specialFilter, setSpecialFilter] = useState("none"); // none | potansiyel | is_takibi
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,18 +70,18 @@ export default function Customers() {
     setIsSubmitting(true);
     try {
       if (editingCustomer) {
-        const wasTaskQube = editingCustomer.use_taskqube == 1 || editingCustomer.use_taskqube === true;
-        const isNowTaskQube = data.use_taskqube === true || data.use_taskqube === 1;
+        const wasEnabled = editingCustomer.use_job_tracking == 1 || editingCustomer.use_job_tracking === true;
+        const isNowEnabled = data.use_job_tracking === true || data.use_job_tracking === 1;
         await flowApi.entities.Customer.update(editingCustomer.id, data);
-        if (!wasTaskQube && isNowTaskQube) {
-          await createTaskQubeDefaults(editingCustomer.id, data.company_name);
-          toast.success("TaskQube aktif edildi!");
+        if (!wasEnabled && isNowEnabled) {
+          await createJobTrackingDefaults(editingCustomer.id, data.company_name);
+          toast.success("İş Takibi aktif edildi!");
         } else { toast.success("Müşteri güncellendi."); }
       } else {
         const newCustomer = await flowApi.entities.Customer.create(data);
-        if (data.use_taskqube) {
-          await createTaskQubeDefaults(newCustomer.id, data.company_name);
-          toast.success("Müşteri eklendi! TaskQube projesi oluşturuldu.");
+        if (data.use_job_tracking) {
+          await createJobTrackingDefaults(newCustomer.id, data.company_name);
+          toast.success("Müşteri eklendi! İş Takibi projesi oluşturuldu.");
         } else { toast.success("Müşteri eklendi."); }
       }
       queryClient.invalidateQueries({ queryKey: ["customers"] });
@@ -95,7 +95,7 @@ export default function Customers() {
     active: customers.filter(c=>c.status==="aktif"||!c.status).length,
     potential: customers.filter(c=>c.is_potential==1||c.is_potential===true).length,
     passive: customers.filter(c=>c.status==="pasif").length,
-    taskqube: customers.filter(c=>c.use_taskqube==1||c.use_taskqube===true).length,
+    is_takibi: customers.filter(c=>c.use_job_tracking==1||c.use_job_tracking===true).length,
   }), [customers]);
 
   const filtered = customers.filter(c => {
@@ -109,7 +109,7 @@ export default function Customers() {
       || (potentialFilter==="aday" && isAday)
       || (potentialFilter==="musteri" && !isAday);
     const matchSpecial = specialFilter==="none"
-      || (specialFilter==="taskqube" && (c.use_taskqube==1||c.use_taskqube===true));
+      || (specialFilter==="is_takibi" && (c.use_job_tracking==1||c.use_job_tracking===true));
     const matchType = typeFilter==="all" || c.customer_type===typeFilter;
     return matchSearch && matchStatus && matchPotential && matchType && matchSpecial;
   });
@@ -139,7 +139,7 @@ export default function Customers() {
           { label:"Aktif Müşteri", val:stats.active, icon:UserCheck, color:"bg-emerald-500", onClick:()=>{ setStatusFilter("aktif"); setPotentialFilter("all"); setSpecialFilter("none"); } },
           { label:"Aday Müşteri", val:stats.potential, icon:TrendingUp, color:"bg-amber-500", onClick:()=>{ setPotentialFilter("aday"); setStatusFilter("hepsi"); setSpecialFilter("none"); } },
           { label:"Pasif Müşteri", val:stats.passive, icon:Activity, color:"bg-slate-500", onClick:()=>{ setStatusFilter("pasif"); setPotentialFilter("all"); setSpecialFilter("none"); } },
-          { label:"TaskQube Aktif", val:stats.taskqube, icon:Briefcase, color:"bg-purple-500", onClick:()=>{ setSpecialFilter("taskqube"); setStatusFilter("hepsi"); setPotentialFilter("all"); } },
+          { label:"İş Takibi Aktif", val:stats.is_takibi, icon:Briefcase, color:"bg-purple-500", onClick:()=>{ setSpecialFilter("is_takibi"); setStatusFilter("hepsi"); setPotentialFilter("all"); } },
         ].map(({label,val,icon:Icon,color,onClick})=>(
           <button key={label} onClick={onClick}
             className="bg-card border border-border/50 rounded-2xl p-4 text-left hover:shadow-md transition-all hover:-translate-y-0.5 shadow-sm">
@@ -212,7 +212,7 @@ export default function Customers() {
                       <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border", typeCfg.cls)}>
                         {typeCfg.label}
                       </span>
-                      {(c.use_taskqube==1||c.use_taskqube===true) && (
+                      {(c.use_job_tracking==1||c.use_job_tracking===true) && (
                         <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-semibold dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-400">TQ</span>
                       )}
                     </div>

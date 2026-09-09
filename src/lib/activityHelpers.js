@@ -9,7 +9,7 @@ export const activityTypes = {
   email_yazisma: { label: "E-mail Yazışma", icon: Mail, color: "text-cyan-500", bg: "bg-cyan-50", border: "border-cyan-200" },
   egitim: { label: "Eğitim", icon: GraduationCap, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-200" },
   sunum: { label: "Sunum", icon: MonitorPlay, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-200" },
-  taskqube: { label: "Taskqube", icon: LayoutDashboard, color: "text-violet-500", bg: "bg-violet-50", border: "border-violet-200" },
+  is_takibi: { label: "İş Takibi", icon: LayoutDashboard, color: "text-violet-500", bg: "bg-violet-50", border: "border-violet-200" },
   test: { label: "Test", icon: FlaskConical, color: "text-teal-500", bg: "bg-teal-50", border: "border-teal-200" },
   analiz: { label: "Analiz", icon: BarChart2, color: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-200" },
   satis: { label: "Satış Görüşmesi", icon: Briefcase, color: "text-green-500", bg: "bg-green-50", border: "border-green-200" },

@@ -38,7 +38,7 @@ export const NotificationProvider = ({ children }) => {
             queryClient.invalidateQueries({ queryKey: ['notif-leave'] });
             queryClient.invalidateQueries({ queryKey: ['notif-expense'] });
             queryClient.invalidateQueries({ queryKey: ['notif-worktask'] });
-            queryClient.invalidateQueries({ queryKey: ['notif-tq'] });
+            queryClient.invalidateQueries({ queryKey: ['notif-jt'] });
             queryClient.invalidateQueries({ queryKey: ['notif-stok-uyari'] });
             queryClient.invalidateQueries({ queryKey: ['messages'] });
             queryClient.invalidateQueries({ queryKey: ['notif-conversations'] });
@@ -224,9 +224,9 @@ export const NotificationProvider = ({ children }) => {
     [workTasks]
   );
 
-  // ── TQ assigned tickets ──────────────────────────────────────────
+  // ── JT assigned tickets ──────────────────────────────────────────
   const { data: assignedTickets = [] } = useQuery({
-    queryKey: ['notif-tq-tickets', employeeRecord?.id],
+    queryKey: ['notif-jt-tickets', employeeRecord?.id],
     // /me/tickets hem tekil (assigned_to_id) hem coklu (assigned_to_ids) atamalari doner
     queryFn: () => fetch('/api/auth/me/tickets', { credentials: 'include' }).then(r => r.json()),
     enabled: !!employeeRecord?.id,
@@ -318,7 +318,7 @@ export const useMessages = () => {
   const { unreadMessageCount, activeConversationId, setActiveConversationId } = useNotifications();
   return { unreadMessageCount, activeConversationId, setActiveConversationId };
 };
-export const useTQNotifications = () => {
+export const useJTNotifications = () => {
   const { assignedTicketCount, assignedTickets } = useNotifications();
   return { assignedTicketCount, assignedTickets };
 };

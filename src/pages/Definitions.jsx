@@ -140,7 +140,7 @@ function CategoryPanel({ category, showColor = false }) {
   // "muhasebe" modülü YBS Teknik Destek'e, "185" modülü ABYS OMIS'e gider).
   const { data: boardList = [] } = useQuery({
     queryKey: ["tq-boards"],
-    queryFn: () => flowApi.entities.TQKanbanBoard.filter({ is_active: true }),
+    queryFn: () => flowApi.entities.JTKanbanBoard.filter({ is_active: true }),
     enabled: isModuleCategory,
   });
 

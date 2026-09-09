@@ -38,7 +38,7 @@ export default function AddActivity() {
     note_type: "",
     next_visit_date: "",
     parent_activity_id: parentId,
-    taskqube_id: "",
+    job_ticket_id: "",
   });
 
   const { data: employees = [] } = useQuery({
@@ -74,30 +74,30 @@ export default function AddActivity() {
   const myPrefix = user?.email ? user.email.split("@")[0] : null;
   const myFullName = user?.full_name || null;
   const myEmpName = currentEmployee?.full_name || null;
-  const { data: tqByPrefix = [] } = useQuery({
+  const { data: jtByPrefix = [] } = useQuery({
     queryKey: ["tq-tickets-mine-prefix", myPrefix],
-    queryFn: () => flowApi.entities.TQTicket.filter({ assigned_to_name: myPrefix }, "-created_date", 200),
+    queryFn: () => flowApi.entities.JTTicket.filter({ assigned_to_name: myPrefix }, "-created_date", 200),
     enabled: !!myPrefix,
   });
-  const { data: tqByName = [] } = useQuery({
+  const { data: jtByName = [] } = useQuery({
     queryKey: ["tq-tickets-mine-name", myFullName],
-    queryFn: () => flowApi.entities.TQTicket.filter({ assigned_to_name: myFullName }, "-created_date", 200),
+    queryFn: () => flowApi.entities.JTTicket.filter({ assigned_to_name: myFullName }, "-created_date", 200),
     enabled: !!myFullName && myFullName !== myPrefix,
   });
-  const { data: tqByEmpName = [] } = useQuery({
+  const { data: jtByEmpName = [] } = useQuery({
     queryKey: ["tq-tickets-mine-empname", myEmpName],
-    queryFn: () => flowApi.entities.TQTicket.filter({ assigned_to_name: myEmpName }, "-created_date", 200),
+    queryFn: () => flowApi.entities.JTTicket.filter({ assigned_to_name: myEmpName }, "-created_date", 200),
     enabled: !!myEmpName && myEmpName !== myPrefix && myEmpName !== myFullName,
   });
-  const tqTickets = (() => {
+  const jtTickets = (() => {
     const seen = new Set();
     const out = [];
-    for (const t of [...tqByPrefix, ...tqByName, ...tqByEmpName]) {
+    for (const t of [...jtByPrefix, ...jtByName, ...jtByEmpName]) {
       if (t && t.id && !seen.has(t.id)) { seen.add(t.id); out.push(t); }
     }
     return out;
   })();
-  const activeTickets = tqTickets.filter(t => !["sonuclanan", "iptal", "arsivlendi"].includes(t.status));
+  const activeTickets = jtTickets.filter(t => !["sonuclanan", "iptal", "arsivlendi"].includes(t.status));
   const selectedEmployee = employees.find((e) => e.id === form.employee_id);
 
   const createMutation = useMutation({
@@ -106,10 +106,10 @@ export default function AddActivity() {
       toast.error("Aktivite kaydedilemedi: " + (err?.message || "Bilinmeyen hata"));
     },
     onSuccess: async (savedActivity) => {
-      if (savedActivity?.taskqube_id) {
+      if (savedActivity?.job_ticket_id) {
         try {
-          await flowApi.entities.TQComment.create({
-            ticket_id: savedActivity.taskqube_id,
+          await flowApi.entities.JTComment.create({
+            ticket_id: savedActivity.job_ticket_id,
             content: `Aktivite kaydedildi: ${savedActivity.employee_name} — ${savedActivity.duration_minutes} dk (${new Date(savedActivity.date).toLocaleDateString("tr-TR")})`,
             author_name: user?.full_name || savedActivity.employee_name,
             author_email: user?.email,
@@ -138,7 +138,7 @@ export default function AddActivity() {
             notes: "",
             outcome: "",
             parent_activity_id: "",
-            taskqube_id: "",
+            job_ticket_id: "",
           });
         }
       }, 1500);
@@ -162,7 +162,7 @@ export default function AddActivity() {
     createMutation.mutate(payload);
   };
 
-  const isTaskqube = form.activity_type === "taskqube";
+  const isJobTracking = form.activity_type === "is_takibi";
 
   // Baslangic-bitis saatinden dakika farki (gece yarisini gecerse +24s)
   const calcDuration = (start, end) => {
@@ -216,7 +216,7 @@ export default function AddActivity() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setForm({ ...form, activity_type: key, taskqube_id: key !== "taskqube" ? "" : form.taskqube_id })}
+                  onClick={() => setForm({ ...form, activity_type: key, job_ticket_id: key !== "is_takibi" ? "" : form.job_ticket_id })}
                   className={cn(
                     "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs font-medium",
                     isSelected
@@ -232,10 +232,10 @@ export default function AddActivity() {
           </div>
         </div>
 
-        {isTaskqube && (
+        {isJobTracking && (
           <div className="space-y-2">
-            <Label>TaskQube Bileti</Label>
-            <Select value={form.taskqube_id} onValueChange={(v) => { const t = activeTickets.find(t => t.id === v); setForm({ ...form, taskqube_id: v, customer_id: t?.customer_id || form.customer_id, customer_name: t?.customer_name || form.customer_name }); }}>
+            <Label>İş Takibi Bileti</Label>
+            <Select value={form.job_ticket_id} onValueChange={(v) => { const t = activeTickets.find(t => t.id === v); setForm({ ...form, job_ticket_id: v, customer_id: t?.customer_id || form.customer_id, customer_name: t?.customer_name || form.customer_name }); }}>
               <SelectTrigger className="rounded-xl"><SelectValue placeholder="Bilet seçin..." /></SelectTrigger>
               <SelectContent>
                 {activeTickets.map((t) => (

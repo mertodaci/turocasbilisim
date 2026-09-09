@@ -3,9 +3,9 @@ import { Trash2, RotateCcw, Building2, Ticket, FolderKanban, Users, LayoutDashbo
 
 const TABLES = [
   { key: "customers", label: "Müşteriler", icon: Building2, nameField: "company_name" },
-  { key: "tq_tickets", label: "Biletler", icon: Ticket, nameField: "title" },
-  { key: "tq_projects", label: "Projeler", icon: FolderKanban, nameField: "name" },
-  { key: "tq_kanban_boards", label: "Panolar", icon: LayoutDashboard, nameField: "name" },
+  { key: "job_tickets", label: "Biletler", icon: Ticket, nameField: "title" },
+  { key: "job_projects", label: "Projeler", icon: FolderKanban, nameField: "name" },
+  { key: "job_kanban_boards", label: "Panolar", icon: LayoutDashboard, nameField: "name" },
   { key: "employees", label: "Çalışanlar", icon: Users, nameField: "full_name" },
 ];
 

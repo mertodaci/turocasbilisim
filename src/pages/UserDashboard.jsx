@@ -11,12 +11,12 @@ import { Link } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { activityTypes, formatDuration, outcomeLabels } from "@/lib/activityHelpers";
 import { cn } from "@/lib/utils";
-import { useTicketStatuses } from "@/lib/taskqubeLabels";
+import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 
 const COLORS = ["#6366f1","#22c55e","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
 
 const actLabel = (t) => {
-  const map = { telefon_gorusmesi:"Telefon", musteri_toplantisi:"Müşteri Toplantısı", ofis_toplantisi:"Ofis Toplantısı", saha_ziyareti:"Saha Ziyareti", email_yazisma:"E-posta", rapor_yazimi:"Rapor", taskqube:"TaskQube", egitim:"Eğitim", sunum:"Sunum", test:"Test", satis:"Satış", satis_gorusmesi:"Satış Görüşmesi" };
+  const map = { telefon_gorusmesi:"Telefon", musteri_toplantisi:"Müşteri Toplantısı", ofis_toplantisi:"Ofis Toplantısı", saha_ziyareti:"Saha Ziyareti", email_yazisma:"E-posta", rapor_yazimi:"Rapor", is_takibi:"İş Takibi", egitim:"Eğitim", sunum:"Sunum", test:"Test", satis:"Satış", satis_gorusmesi:"Satış Görüşmesi" };
   return map[t] || (t||"").replace(/_/g," ");
 };
 
@@ -123,7 +123,7 @@ export default function UserDashboard() {
           { to:"/aktiviteler", val:todayActs.length, label:"Bugünkü Aktivite", sub:`${Math.floor(todayMin/60)}sa ${todayMin%60}dk`, grad:"from-blue-500 to-indigo-600", icon:Activity },
           { to:"/yapilacaklar", val:pendingTodos.length, label:"Bekleyen Görev", sub:`${myTodos.length} toplam`, grad:"from-amber-500 to-orange-500", icon:CheckSquare },
           { to:"/izinlerim", val:pendingLeaves.length, label:"Bekleyen İzin", sub:`${approvedLeaves.length} onaylı`, grad:"from-orange-500 to-red-500", icon:Umbrella },
-          { to:"/taskqube-v3/tickets", val:myTickets.length, label:"Açık Bilet", sub:"atanan", grad:"from-teal-500 to-emerald-600", icon:ClipboardList },
+          { to:"/is-takibi/tickets", val:myTickets.length, label:"Açık Bilet", sub:"atanan", grad:"from-teal-500 to-emerald-600", icon:ClipboardList },
         ].map(({to,val,label,sub,grad,icon:Icon})=>(
           <Link key={to} to={to} className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 group overflow-hidden">
             <div className={cn("p-4 bg-gradient-to-br",grad)}>
@@ -270,7 +270,7 @@ export default function UserDashboard() {
               <h3 className="text-xs font-semibold flex items-center gap-1.5">
                 <ClipboardList className="w-3.5 h-3.5 text-teal-500"/>Bana Atanan Biletler
               </h3>
-              <Link to="/taskqube-v3/tickets" className="text-[10px] text-indigo-500 flex items-center gap-0.5">Tümü<ArrowUpRight className="w-3 h-3"/></Link>
+              <Link to="/is-takibi/tickets" className="text-[10px] text-indigo-500 flex items-center gap-0.5">Tümü<ArrowUpRight className="w-3 h-3"/></Link>
             </div>
             {myTickets.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">Atanmış bilet yok</p>
@@ -279,7 +279,7 @@ export default function UserDashboard() {
                 {myTickets.slice(0,3).map(t=>{
                   const pc = {kritik:"bg-red-500",yuksek:"bg-orange-500",orta:"bg-amber-400",dusuk:"bg-green-500"}[t.priority]||"bg-gray-400";
                   return (
-                    <Link key={t.id} to="/taskqube-v3/tickets" className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className={cn("w-1.5 h-1.5 rounded-full shrink-0",pc)}/>
                       <p className="text-xs font-medium truncate flex-1">{t.title}</p>
                       <span className="text-[9px] px-1.5 py-0.5 bg-muted rounded-full shrink-0 text-muted-foreground">{statusName(t.status)}</span>

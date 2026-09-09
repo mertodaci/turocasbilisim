@@ -493,7 +493,7 @@ function ContactFormDialogInline({ open, onClose, onSubmit, isLoading, contact }
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const TABS = ["Kişiler", "Satış Faaliyetleri", "Sözleşmeler", "Hakediş", "Modüller", "TaskQube"];
+const TABS = ["Kişiler", "Satış Faaliyetleri", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
 
 export default function CustomerDetail() {
   const customerId = window.location.pathname.split("/").pop();
@@ -572,14 +572,14 @@ export default function CustomerDetail() {
     queryFn: () => flowApi.entities.SalesActivity.filter({ customer_id: customerId }),
   });
 
-  const { data: tqProjects = [] } = useQuery({
+  const { data: jtProjects = [] } = useQuery({
     queryKey: ["tq-projects-customer", customerId],
-    queryFn: () => flowApi.entities.TQProject.filter({ customer_id: customerId }),
+    queryFn: () => flowApi.entities.JTProject.filter({ customer_id: customerId }),
   });
 
-  const { data: tqTickets = [] } = useQuery({
+  const { data: jtTickets = [] } = useQuery({
     queryKey: ["tq-tickets-customer", customerId],
-    queryFn: () => flowApi.entities.TQTicket.filter({ customer_id: customerId }),
+    queryFn: () => flowApi.entities.JTTicket.filter({ customer_id: customerId }),
   });
 
   const { data: municipalityOptions = [] } = useQuery({
@@ -1023,22 +1023,22 @@ export default function CustomerDetail() {
             </>
           )}
 
-          {/* TaskQube */}
-          {activeTab === "TaskQube" && (
+          {/* İş Takibi */}
+          {activeTab === "İş Takibi" && (
             <>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-primary" /> TaskQube
+                  <HardDrive className="w-4 h-4 text-primary" /> İş Takibi
                 </h2>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">TaskQube Kullanımı</span>
+                  <span className="text-xs text-muted-foreground">İş Takibi Kullanımı</span>
                   <Switch
-                    checked={customer?.use_taskqube == 1 || customer?.use_taskqube === true}
+                    checked={customer?.use_job_tracking == 1 || customer?.use_job_tracking === true}
                     onCheckedChange={async (checked) => {
-                      const wasEnabled = customer?.use_taskqube == 1 || customer?.use_taskqube === true;
-                      await flowApi.entities.Customer.update(customerId, { use_taskqube: checked ? 1 : 0 });
+                      const wasEnabled = customer?.use_job_tracking == 1 || customer?.use_job_tracking === true;
+                      await flowApi.entities.Customer.update(customerId, { use_job_tracking: checked ? 1 : 0 });
                       if (!wasEnabled && checked) {
-                        const statuses = await flowApi.entities.TQTicketStatus.list();
+                        const statuses = await flowApi.entities.JTTicketStatus.list();
                         if (statuses.length === 0) {
                           const defaults = [
                             { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
@@ -1047,9 +1047,9 @@ export default function CustomerDetail() {
                             { name: "Test", key: "test", color: "orange", sort_order: 4, is_active: 1, is_final: 0 },
                             { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 5, is_active: 1, is_final: 1 },
                           ];
-                          for (const s of defaults) await flowApi.entities.TQTicketStatus.create(s);
+                          for (const s of defaults) await flowApi.entities.JTTicketStatus.create(s);
                         }
-                        await flowApi.entities.TQProject.create({
+                        await flowApi.entities.JTProject.create({
                           customer_id: customerId,
                           customer_name: customer.company_name,
                           name: customer.company_name + " - Genel",
@@ -1063,12 +1063,12 @@ export default function CustomerDetail() {
                   />
                 </div>
               </div>
-              {tqProjects.length === 0 ? (
+              {jtProjects.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground text-sm">Bu müşteriye ait proje bulunmuyor.</div>
               ) : (
                 <div className="space-y-4">
-                  {tqProjects.map((proj) => {
-                    const projTickets = tqTickets.filter((t) => t.project_id === proj.id);
+                  {jtProjects.map((proj) => {
+                    const projTickets = jtTickets.filter((t) => t.project_id === proj.id);
                     const openTickets = projTickets.filter((t) => t.status !== "kapali" && t.status !== "tamamlandi");
                     return (
                       <div key={proj.id} className="rounded-xl border border-border/60 bg-background p-4">
@@ -1211,11 +1211,11 @@ export default function CustomerDetail() {
         onClose={() => setEditOpen(false)}
         customer={customer}
         onSubmit={async (data) => {
-          const wasEnabled = customer?.use_taskqube == 1 || customer?.use_taskqube === true;
-          const willEnable = data.use_taskqube === true || data.use_taskqube === 1;
+          const wasEnabled = customer?.use_job_tracking == 1 || customer?.use_job_tracking === true;
+          const willEnable = data.use_job_tracking === true || data.use_job_tracking === 1;
           await flowApi.entities.Customer.update(customerId, data);
           if (!wasEnabled && willEnable) {
-            const statuses = await flowApi.entities.TQTicketStatus.list();
+            const statuses = await flowApi.entities.JTTicketStatus.list();
             if (statuses.length === 0) {
               const defaults = [
                 { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
@@ -1224,9 +1224,9 @@ export default function CustomerDetail() {
                 { name: "Test", key: "test", color: "orange", sort_order: 4, is_active: 1, is_final: 0 },
                 { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 5, is_active: 1, is_final: 1 },
               ];
-              for (const s of defaults) await flowApi.entities.TQTicketStatus.create(s);
+              for (const s of defaults) await flowApi.entities.JTTicketStatus.create(s);
             }
-            await flowApi.entities.TQProject.create({
+            await flowApi.entities.JTProject.create({
               customer_id: customerId,
               customer_name: data.company_name,
               name: data.company_name + " - Genel",

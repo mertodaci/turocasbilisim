@@ -13,7 +13,55 @@ db.pragma('cache_size = -16000');      // ~16MB sayfa cache (önceki ~2MB idi)
 db.pragma('temp_store = MEMORY');      // geçici tablo/sıralama RAM'de
 db.pragma('wal_autocheckpoint = 1000');// WAL dosyası şişmesin (periyodik checkpoint)
 
+// Tek seferlik migration: eski "TaskQube" adlandırması (tq_* tablolar,
+// use_taskqube/show_in_taskqube/taskqube_id kolonları, activity_type='taskqube')
+// -> "İş Takibi" (job_* tablolar, use_job_tracking/show_in_job_tracking/job_ticket_id,
+// activity_type='is_takibi'). CREATE TABLE IF NOT EXISTS'lerden ÖNCE çalışmalı,
+// yoksa boş job_* tablolar oluşur ve eski veri tq_* içinde erişilemez kalır.
+function migrateLegacyJobTrackingRename() {
+  const tableExists = (name) =>
+    !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);
+  const columnExists = (table, col) => {
+    if (!tableExists(table)) return false;
+    return db.prepare(`PRAGMA table_info(${table})`).all().some(c => c.name === col);
+  };
+
+  const tableRenames = [
+    ['tq_projects', 'job_projects'],
+    ['tq_tickets', 'job_tickets'],
+    ['tq_ticket_statuses', 'job_ticket_statuses'],
+    ['tq_comments', 'job_comments'],
+    ['tq_kanban_boards', 'job_kanban_boards'],
+    ['tq_effort_plans', 'job_effort_plans'],
+    ['tq_effort_logs', 'job_effort_logs'],
+  ];
+  for (const [oldName, newName] of tableRenames) {
+    if (tableExists(oldName) && !tableExists(newName)) {
+      db.exec(`ALTER TABLE ${oldName} RENAME TO ${newName}`);
+      console.log(`[migrate] ${oldName} -> ${newName}`);
+    }
+  }
+
+  const columnRenames = [
+    ['customers', 'use_taskqube', 'use_job_tracking'],
+    ['employees', 'show_in_taskqube', 'show_in_job_tracking'],
+    ['activities', 'taskqube_id', 'job_ticket_id'],
+  ];
+  for (const [table, oldCol, newCol] of columnRenames) {
+    if (columnExists(table, oldCol) && !columnExists(table, newCol)) {
+      db.exec(`ALTER TABLE ${table} RENAME COLUMN ${oldCol} TO ${newCol}`);
+      console.log(`[migrate] ${table}.${oldCol} -> ${table}.${newCol}`);
+    }
+  }
+
+  if (columnExists('activities', 'activity_type')) {
+    const r = db.prepare("UPDATE activities SET activity_type='is_takibi' WHERE activity_type='taskqube'").run();
+    if (r.changes > 0) console.log(`[migrate] activities.activity_type 'taskqube' -> 'is_takibi' (${r.changes} satır)`);
+  }
+}
+
 function initDb() {
+  migrateLegacyJobTrackingRename();
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
@@ -40,7 +88,7 @@ function initDb() {
       id TEXT PRIMARY KEY, employee_id TEXT, employee_name TEXT, activity_type TEXT,
       location TEXT DEFAULT 'ofis', duration_minutes REAL, date TEXT, start_time TEXT,
       end_time TEXT, customer_id TEXT, customer_name TEXT, notes TEXT, outcome TEXT,
-      parent_activity_id TEXT, taskqube_id TEXT, created_by TEXT,
+      parent_activity_id TEXT, job_ticket_id TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS leave_requests (
@@ -146,14 +194,14 @@ function initDb() {
       author_name TEXT, author_email TEXT, attachments TEXT DEFAULT '[]',
       created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_projects (
+    CREATE TABLE IF NOT EXISTS job_projects (
       id TEXT PRIMARY KEY, customer_id TEXT, customer_name TEXT, name TEXT NOT NULL,
       description TEXT, status TEXT DEFAULT 'planlama', start_date TEXT, end_date TEXT,
       budget REAL, manager_id TEXT, manager_name TEXT, team_member_ids TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'orta', created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_tickets (
+    CREATE TABLE IF NOT EXISTS job_tickets (
       id TEXT PRIMARY KEY, project_id TEXT, project_name TEXT, customer_id TEXT, customer_name TEXT,
       board_id TEXT, board_name TEXT, title TEXT NOT NULL, description TEXT, product_name TEXT,
       type TEXT, status TEXT, priority TEXT DEFAULT 'orta', assigned_to_ids TEXT DEFAULT '[]',
@@ -163,28 +211,28 @@ function initDb() {
       parent_ticket_id TEXT, yonlendirme_notu TEXT, resolved_at TEXT, sla_hours REAL,
       created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_ticket_statuses (
+    CREATE TABLE IF NOT EXISTS job_ticket_statuses (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, label TEXT, color TEXT, sort_order REAL DEFAULT 0,
       created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_comments (
+    CREATE TABLE IF NOT EXISTS job_comments (
       id TEXT PRIMARY KEY, ticket_id TEXT, content TEXT, author_id TEXT, author_name TEXT,
       author_email TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_kanban_boards (
+    CREATE TABLE IF NOT EXISTS job_kanban_boards (
       id TEXT PRIMARY KEY, project_id TEXT, project_name TEXT, name TEXT, description TEXT,
       columns TEXT DEFAULT '[]', created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_effort_plans (
+    CREATE TABLE IF NOT EXISTS job_effort_plans (
       id TEXT PRIMARY KEY, ticket_id TEXT, team TEXT,
       planned_hours REAL, planned_start TEXT,
       assignee_id TEXT, assignee_name TEXT,
       end_at TEXT, note TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS tq_effort_logs (
+    CREATE TABLE IF NOT EXISTS job_effort_logs (
       id TEXT PRIMARY KEY, ticket_id TEXT, team TEXT,
       person_id TEXT, person_name TEXT,
       hours REAL, work_date TEXT, note TEXT, created_by TEXT,
@@ -265,21 +313,21 @@ function initDb() {
     "ALTER TABLE leave_requests ADD COLUMN manager_approval_note TEXT",
     "ALTER TABLE leave_requests ADD COLUMN manager_approval_date TEXT",
     "ALTER TABLE leave_requests ADD COLUMN approval_history TEXT DEFAULT '[]'",
-    "ALTER TABLE customers ADD COLUMN use_taskqube INTEGER DEFAULT 0",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN key TEXT",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN is_active INTEGER DEFAULT 1",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN is_final INTEGER DEFAULT 0",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN board_id TEXT",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN board_ids TEXT DEFAULT '[]'",
-    "ALTER TABLE tq_ticket_statuses ADD COLUMN group_key TEXT DEFAULT 'diger'",
-    "ALTER TABLE tq_projects ADD COLUMN type TEXT DEFAULT 'kurulum'",
-    "ALTER TABLE tq_kanban_boards ADD COLUMN is_active INTEGER DEFAULT 1",
-    "ALTER TABLE tq_kanban_boards ADD COLUMN color TEXT DEFAULT 'blue'",
-    "ALTER TABLE tq_kanban_boards ADD COLUMN icon TEXT",
-    "ALTER TABLE tq_comments ADD COLUMN is_internal INTEGER DEFAULT 0",
-    "ALTER TABLE tq_comments ADD COLUMN comment_type TEXT DEFAULT 'comment'",
-    "ALTER TABLE tq_comments ADD COLUMN attachments TEXT DEFAULT '[]'",
-    "ALTER TABLE tq_projects ADD COLUMN is_active INTEGER DEFAULT 1",
+    "ALTER TABLE customers ADD COLUMN use_job_tracking INTEGER DEFAULT 0",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN key TEXT",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN is_active INTEGER DEFAULT 1",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN is_final INTEGER DEFAULT 0",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN board_id TEXT",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN board_ids TEXT DEFAULT '[]'",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN group_key TEXT DEFAULT 'diger'",
+    "ALTER TABLE job_projects ADD COLUMN type TEXT DEFAULT 'kurulum'",
+    "ALTER TABLE job_kanban_boards ADD COLUMN is_active INTEGER DEFAULT 1",
+    "ALTER TABLE job_kanban_boards ADD COLUMN color TEXT DEFAULT 'blue'",
+    "ALTER TABLE job_kanban_boards ADD COLUMN icon TEXT",
+    "ALTER TABLE job_comments ADD COLUMN is_internal INTEGER DEFAULT 0",
+    "ALTER TABLE job_comments ADD COLUMN comment_type TEXT DEFAULT 'comment'",
+    "ALTER TABLE job_comments ADD COLUMN attachments TEXT DEFAULT '[]'",
+    "ALTER TABLE job_projects ADD COLUMN is_active INTEGER DEFAULT 1",
     "ALTER TABLE expense_items ADD COLUMN accommodation REAL DEFAULT 0",
     "ALTER TABLE expense_items ADD COLUMN transport REAL DEFAULT 0",
     "ALTER TABLE expense_items ADD COLUMN fuel REAL DEFAULT 0",
@@ -317,12 +365,12 @@ function initDb() {
     "ALTER TABLE definitions ADD COLUMN color TEXT DEFAULT 'blue'",
     "ALTER TABLE definitions ADD COLUMN icon TEXT",
     "ALTER TABLE customers ADD COLUMN is_deleted INTEGER DEFAULT 0",
-    "ALTER TABLE tq_tickets ADD COLUMN is_deleted INTEGER DEFAULT 0",
-    "ALTER TABLE tq_projects ADD COLUMN is_deleted INTEGER DEFAULT 0",
-    "ALTER TABLE tq_tickets ADD COLUMN pilot_customer_id TEXT",
-    "ALTER TABLE tq_tickets ADD COLUMN pilot_customer_name TEXT",
-    "ALTER TABLE tq_tickets ADD COLUMN customer_contact_id TEXT",
-    "ALTER TABLE tq_tickets ADD COLUMN customer_contact_name TEXT",
+    "ALTER TABLE job_tickets ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    "ALTER TABLE job_projects ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    "ALTER TABLE job_tickets ADD COLUMN pilot_customer_id TEXT",
+    "ALTER TABLE job_tickets ADD COLUMN pilot_customer_name TEXT",
+    "ALTER TABLE job_tickets ADD COLUMN customer_contact_id TEXT",
+    "ALTER TABLE job_tickets ADD COLUMN customer_contact_name TEXT",
     "ALTER TABLE definitions ADD COLUMN parent_key TEXT",
     "ALTER TABLE customer_contracts ADD COLUMN product_id TEXT",
     "ALTER TABLE customer_contracts ADD COLUMN product_name TEXT",
@@ -356,8 +404,8 @@ function initDb() {
     "ALTER TABLE conversations ADD COLUMN archived_by TEXT DEFAULT '[]'",
     "ALTER TABLE conversations ADD COLUMN deleted_by TEXT DEFAULT '{}'",
     "ALTER TABLE messages ADD COLUMN reply_to_id TEXT",
-    "ALTER TABLE employees ADD COLUMN show_in_taskqube INTEGER DEFAULT 0",
-    "ALTER TABLE tq_tickets ADD COLUMN board_sort REAL",
+    "ALTER TABLE employees ADD COLUMN show_in_job_tracking INTEGER DEFAULT 0",
+    "ALTER TABLE job_tickets ADD COLUMN board_sort REAL",
     "ALTER TABLE hakedisler ADD COLUMN customer_id TEXT",
     "ALTER TABLE hakedisler ADD COLUMN contract_id TEXT",
     "ALTER TABLE customer_contracts ADD COLUMN contract_value REAL",
@@ -396,8 +444,8 @@ function initDb() {
       'dashboard','employees','customers','calendar','activities','add_activity','work_tracking',
       'ideas','messages','todos','leave_requests','my_leave_requests','ik_leave_requests',
       'personal_calendar','reports','employee_report','users','app_version','definitions',
-      'customer_map','expenses','leave_allowances','leave_types','taskqube_v3','taskqube_dashboard',
-      'taskqube_projects','taskqube_tickets','taskqube_kanban','taskqube_settings','control_panel',
+      'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
+      'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar','control_panel',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
       'project_planning','satis','satis_firsatlari','satis_teklifleri','satis_raporlari',
       'satis_masasi','satis_aktivite_ekle','hakedisler','sozlesmeler','oturum_yonetimi',
@@ -819,37 +867,37 @@ function initDb() {
     db.exec("CREATE INDEX IF NOT EXISTS idx_sessions_revoked ON sessions(revoked)");
   } catch(e) {}
 
-  try { db.exec("ALTER TABLE tq_tickets ADD COLUMN ticket_number TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE job_tickets ADD COLUMN ticket_number TEXT"); } catch(e) {}
 
   for (const migration of migrations) {
     try { db.exec(migration); } catch(e) {}
   }
 
-  // show_in_taskqube: ilk kurulumda, aktif bir bilete atanmis calisanlari
+  // show_in_job_tracking: ilk kurulumda, aktif bir bilete atanmis calisanlari
   // otomatik isaretle ki mevcut sorumlular listelerden bir anda kaybolmasin.
   // Bir kez calisir (isaretli calisan olunca tekrar dokunmaz).
   try {
-    const anyFlagged = db.prepare("SELECT 1 FROM employees WHERE show_in_taskqube=1 LIMIT 1").get();
+    const anyFlagged = db.prepare("SELECT 1 FROM employees WHERE show_in_job_tracking=1 LIMIT 1").get();
     if (!anyFlagged) {
       db.exec(`
-        UPDATE employees SET show_in_taskqube=1 WHERE id IN (
-          SELECT assigned_to_id FROM tq_tickets
+        UPDATE employees SET show_in_job_tracking=1 WHERE id IN (
+          SELECT assigned_to_id FROM job_tickets
             WHERE assigned_to_id IS NOT NULL AND assigned_to_id != ''
               AND (is_deleted=0 OR is_deleted IS NULL)
           UNION
-          SELECT je.value FROM tq_tickets t,
+          SELECT je.value FROM job_tickets t,
             json_each(CASE WHEN json_valid(t.assigned_to_ids) THEN t.assigned_to_ids ELSE '[]' END) je
             WHERE (t.is_deleted=0 OR t.is_deleted IS NULL)
         )
       `);
     }
-  } catch(e) { console.error('show_in_taskqube backfill:', e.message); }
+  } catch(e) { console.error('show_in_job_tracking backfill:', e.message); }
 
   // board_sort: pano (kanban) kolon ici manuel bilet sirasi. Ilk kurulumda
   // hicbir bilette yoksa, pano+durum bazinda created_date/ticket_number sirasina
   // gore 1..n doldur. Bir kez calisir.
   try {
-    const anySort = db.prepare("SELECT 1 FROM tq_tickets WHERE board_sort IS NOT NULL LIMIT 1").get();
+    const anySort = db.prepare("SELECT 1 FROM job_tickets WHERE board_sort IS NOT NULL LIMIT 1").get();
     if (!anySort) {
       db.exec(`
         WITH o AS (
@@ -857,9 +905,9 @@ function initDb() {
             PARTITION BY COALESCE(board_id,''), COALESCE(status,'')
             ORDER BY created_date, CAST(ticket_number AS INTEGER)
           ) * 1.0 AS rn
-          FROM tq_tickets
+          FROM job_tickets
         )
-        UPDATE tq_tickets SET board_sort = (SELECT rn FROM o WHERE o.id = tq_tickets.id)
+        UPDATE job_tickets SET board_sort = (SELECT rn FROM o WHERE o.id = job_tickets.id)
       `);
     }
   } catch(e) { console.error('board_sort backfill:', e.message); }
@@ -872,14 +920,14 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(activity_type)",
     "CREATE INDEX IF NOT EXISTS idx_activities_realdate ON activities(date)",
     "CREATE INDEX IF NOT EXISTS idx_activities_parent ON activities(parent_activity_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_customer ON tq_tickets(customer_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_project ON tq_tickets(project_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_status ON tq_tickets(status)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_assigned ON tq_tickets(assigned_to_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_parent ON tq_tickets(parent_ticket_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_board ON tq_tickets(board_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tickets_number ON tq_tickets(ticket_number)",
-    "CREATE INDEX IF NOT EXISTS idx_tqcomments_ticket ON tq_comments(ticket_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_customer ON job_tickets(customer_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_project ON job_tickets(project_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_status ON job_tickets(status)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_assigned ON job_tickets(assigned_to_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_parent ON job_tickets(parent_ticket_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_board ON job_tickets(board_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tickets_number ON job_tickets(ticket_number)",
+    "CREATE INDEX IF NOT EXISTS idx_tqcomments_ticket ON job_comments(ticket_id)",
     "CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)",
     "CREATE INDEX IF NOT EXISTS idx_messages_date ON messages(created_date)",
     "CREATE INDEX IF NOT EXISTS idx_worktasks_assigned ON work_tasks(assigned_to_id)",
@@ -889,8 +937,8 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status)",
     "CREATE INDEX IF NOT EXISTS idx_leaveallow_employee ON leave_allowances(employee_id)",
     "CREATE INDEX IF NOT EXISTS idx_hakedis_year ON hakedisler(year)",
-    "CREATE INDEX IF NOT EXISTS idx_tq_effort_plans_ticket ON tq_effort_plans(ticket_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tq_effort_logs_ticket ON tq_effort_logs(ticket_id)",
+    "CREATE INDEX IF NOT EXISTS idx_job_effort_plans_ticket ON job_effort_plans(ticket_id)",
+    "CREATE INDEX IF NOT EXISTS idx_job_effort_logs_ticket ON job_effort_logs(ticket_id)",
     "CREATE INDEX IF NOT EXISTS idx_expreports_employee ON expense_reports(employee_id)",
     "CREATE INDEX IF NOT EXISTS idx_expreports_status ON expense_reports(status)",
     "CREATE INDEX IF NOT EXISTS idx_expitems_report ON expense_items(report_id)",
@@ -904,7 +952,7 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_roleperms_lookup ON role_permissions(role_name, module)",
     "CREATE INDEX IF NOT EXISTS idx_todos_employee ON todos(employee_id)",
     "CREATE INDEX IF NOT EXISTS idx_ideas_employee ON ideas(employee_id)",
-    "CREATE INDEX IF NOT EXISTS idx_tqprojects_customer ON tq_projects(customer_id)",
+    "CREATE INDEX IF NOT EXISTS idx_tqprojects_customer ON job_projects(customer_id)",
   ];
   for (const idx of performanceIndexes) {
     try { db.exec(idx); } catch(e) {}
@@ -920,7 +968,7 @@ function initDb() {
       insertRole.run('ik', 'IK', 'İnsan kaynakları');
       insertRole.run('kullanici', 'Kullanıcı', 'Standart çalışan');
       insertRole.run('stajer', 'Stajer', 'Kısıtlı erişim');
-      insertRole.run('musteri', 'Müşteri', 'Sadece TaskQube');
+      insertRole.run('musteri', 'Müşteri', 'Sadece İş Takibi');
       console.log('✅ Varsayılan roller eklendi');
     }
   } catch(e) {

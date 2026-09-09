@@ -165,12 +165,12 @@ const MODULES = [
     ],
   },
   {
-    key: "tq_tickets",
-    label: "TaskQube Biletleri",
+    key: "job_tickets",
+    label: "İş Takibi Biletleri",
     icon: "🎫",
     color: "bg-teal-50 border-teal-200 text-teal-700",
     activeColor: "bg-teal-600 text-white border-teal-600",
-    queryFn: () => flowApi.entities.TQTicket.filter({ exclude_archived: 1 }),
+    queryFn: () => flowApi.entities.JTTicket.filter({ exclude_archived: 1 }),
     groups: [
       {
         label: "Bilet Bilgileri",

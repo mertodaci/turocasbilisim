@@ -10,7 +10,7 @@ import { Users, Briefcase, Activity, Trophy, ClipboardList, CheckSquare, ArrowUp
 import { activityTypes } from "@/lib/activityHelpers";
 import CustomerMapSummary from "@/components/dashboard/CustomerMapSummary";
 import { cn } from "@/lib/utils";
-import { useTicketStatuses } from "@/lib/taskqubeLabels";
+import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 
 export default function AdminDashboard() {
   const { statusName } = useTicketStatuses();
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             </Link>
           )}
           {(summary.overdueTickets || 0) > 0 && (
-            <Link to="/taskqube-v3/tickets" className="flex items-center gap-1.5 text-xs font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-full px-2.5 py-1 hover:shadow-sm transition-all">
+            <Link to="/is-takibi/tickets" className="flex items-center gap-1.5 text-xs font-medium bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-full px-2.5 py-1 hover:shadow-sm transition-all">
               <AlertTriangle className="w-3.5 h-3.5"/> {summary.overdueTickets} geciken bilet
             </Link>
           )}
@@ -135,9 +135,9 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Aktif Personel", value: employees.length, sub: `${summary.onLeaveToday || 0} izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
-          { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/taskqube-v3/tickets" },
-          { label: "Bu Ay Açılan", value: summary.thisMonthOpened || 0, sub: `${weekActivities.length} bu hafta aktivite`, color: "from-amber-400 to-orange-500", icon: TrendingUp, path: "/taskqube-v3/tickets" },
-          { label: "Aktif Proje", value: summary.projectCount || 0, sub: `${activities.length} aktivite kaydı`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/taskqube-v3" },
+          { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/is-takibi/tickets" },
+          { label: "Bu Ay Açılan", value: summary.thisMonthOpened || 0, sub: `${weekActivities.length} bu hafta aktivite`, color: "from-amber-400 to-orange-500", icon: TrendingUp, path: "/is-takibi/tickets" },
+          { label: "Aktif Proje", value: summary.projectCount || 0, sub: `${activities.length} aktivite kaydı`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
         ].map((item, i) => (
           <Link key={i} to={item.path}
             className="rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-teal-500"/> Son Açık Biletler
             </h3>
-            <Link to="/taskqube-v3/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3"/></Link>
+            <Link to="/is-takibi/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3"/></Link>
           </div>
           {openTickets.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20"/><p className="text-sm">Açık bilet yok</p></div>
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
               {openTickets.slice(0,8).map(t=>{
                 const pc = {kritik:"bg-red-500",yuksek:"bg-orange-500",orta:"bg-amber-400",dusuk:"bg-green-500"}[t.priority]||"bg-gray-400";
                 return (
-                  <Link key={t.id} to="/taskqube-v3/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className={cn("w-2 h-2 rounded-full shrink-0",pc)}/>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{t.title}</p>

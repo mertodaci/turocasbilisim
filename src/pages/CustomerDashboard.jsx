@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ClipboardList, Building2, CheckCircle2, AlertCircle, Clock, Activity, ArrowRight } from "lucide-react";
-import TQDashboardChart from "@/components/taskqube/TQDashboardChart";
-import { CUSTOMER_APPROVAL_STATUSES } from "@/lib/taskqubeStatus";
+import JTDashboardChart from "@/components/jobtracking/JTDashboardChart";
+import { CUSTOMER_APPROVAL_STATUSES } from "@/lib/jobTrackingStatus";
 
 const STATUS_LABELS = {
   musteri_talep: "Müşteri Talebi",
@@ -44,13 +44,13 @@ export default function CustomerDashboard() {
 
   const { data: allTickets = [] } = useQuery({
     queryKey: ["tq-tickets-customer", user?.customer_id],
-    queryFn: () => flowApi.entities.TQTicket.filter({ customer_id: user.customer_id }),
+    queryFn: () => flowApi.entities.JTTicket.filter({ customer_id: user.customer_id }),
     enabled: !!user?.customer_id,
   });
 
   const { data: statuses = [] } = useQuery({
     queryKey: ["tq-statuses"],
-    queryFn: () => flowApi.entities.TQTicketStatus.filter({ is_active: true }, "sort_order", 500),
+    queryFn: () => flowApi.entities.JTTicketStatus.filter({ is_active: true }, "sort_order", 500),
   });
 
   const { data: announcements = [] } = useQuery({
@@ -111,7 +111,7 @@ export default function CustomerDashboard() {
 
       {/* Sizden Bekleyen */}
       {awaitingCustomer.length > 0 && (
-        <Link to="/taskqube-v3/tickets" className="block">
+        <Link to="/is-takibi/tickets" className="block">
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-center gap-3 hover:bg-amber-100 transition-colors">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="flex-1">
@@ -125,7 +125,7 @@ export default function CustomerDashboard() {
 
       {/* İstatistik Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Link to="/taskqube-v3/tickets" className="block">
+        <Link to="/is-takibi/tickets" className="block">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-blue-200 hover:border-blue-400">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Aktif Biletler</CardTitle>
@@ -137,7 +137,7 @@ export default function CustomerDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/taskqube-v3/tickets?group=acil_isler" className="block">
+        <Link to="/is-takibi/tickets?group=acil_isler" className="block">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-red-200 hover:border-red-400">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Acil İşler</CardTitle>
@@ -149,7 +149,7 @@ export default function CustomerDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/taskqube-v3/tickets?group=sonuclanan" className="block">
+        <Link to="/is-takibi/tickets?group=sonuclanan" className="block">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-green-200 hover:border-green-400">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Tamamlanan</CardTitle>
@@ -163,7 +163,7 @@ export default function CustomerDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/taskqube-v3/tickets?group=guncelleme_bekleniyor" className="block">
+        <Link to="/is-takibi/tickets?group=guncelleme_bekleniyor" className="block">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-orange-200 hover:border-orange-400">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Yaklaşan Teslim</CardTitle>
@@ -187,7 +187,7 @@ export default function CustomerDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <TQDashboardChart tickets={allTickets} />
+            <JTDashboardChart tickets={allTickets} />
           </CardContent>
         </Card>
 
@@ -228,7 +228,7 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2"><Activity className="w-5 h-5" /> Açık Biletler</span>
-              <Link to="/taskqube-v3/tickets" className="text-xs text-primary hover:underline font-normal">Tümünü Gör</Link>
+              <Link to="/is-takibi/tickets" className="text-xs text-primary hover:underline font-normal">Tümünü Gör</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -240,7 +240,7 @@ export default function CustomerDashboard() {
             ) : (
               <div className="space-y-2">
                 {openTickets.slice(0, 8).map(t => (
-                  <Link key={t.id} to="/taskqube-v3/tickets" className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground font-mono">#{t.ticket_number || "-"}</span>
@@ -263,7 +263,7 @@ export default function CustomerDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2"><ClipboardList className="w-5 h-5" /> Son Biletler</span>
-              <Link to="/taskqube-v3/tickets" className="text-xs text-primary hover:underline font-normal">Tümünü Gör</Link>
+              <Link to="/is-takibi/tickets" className="text-xs text-primary hover:underline font-normal">Tümünü Gör</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>

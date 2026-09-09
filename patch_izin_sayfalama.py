@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_izin_sayfalama.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_izin_sayfalama.py
 # IK Izin Yonetimi listesine sayfalama ekler (varsayilan 10 kayit/sayfa).
 # Aktiviteler ekranindaki desenin aynisi.
 

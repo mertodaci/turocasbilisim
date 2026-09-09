@@ -31,7 +31,7 @@ export default function Employees() {
 
   const loginToast = (res) => toast.success(
     res?._login_created
-      ? "Çalışan kaydedildi. Giriş hesabı oluşturuldu — şifre: Ind2026x (ilk girişte değiştirilecek)."
+      ? "Çalışan kaydedildi. Giriş hesabı oluşturuldu — şifre: Turocas2026x (ilk girişte değiştirilecek)."
       : "Çalışan kaydedildi."
   );
   const createMutation = useMutation({ mutationFn: (data) => flowApi.entities.Employee.create(data), onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ["employees"] }); setShowForm(false); loginToast(res); } });

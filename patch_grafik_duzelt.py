@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_grafik_duzelt.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_grafik_duzelt.py
 #
 # Onceki patch yanlis karti degistirmisti:
 #  - Bilet Durum Dagilimi karti icine musteri verisi girmisti -> geri alinir

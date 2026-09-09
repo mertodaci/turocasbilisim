@@ -540,7 +540,7 @@ function createEntityRouter(tableName) {
       const created = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(id);
 
       // Yeni calisan olusturulunca giris (users) hesabi da otomatik acilir
-      // (varsayilan sifre Ind2026x, ilk giriste degistirilir). Calisan kaydini
+      // (varsayilan sifre Turocas2026x, ilk giriste degistirilir). Calisan kaydini
       // asla bozmaz. _login_created yanita eklenir ki UI kullaniciyi bilgilendirsin.
       let loginCreated = false;
       if (tableName === 'employees') {

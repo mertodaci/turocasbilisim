@@ -4,16 +4,16 @@
 PDKS (RFID Kapi Giris-Cikis) SENKRON DAEMONU
 ========================================================
 ESP32 GIRIS/CIKIS cihazlarindan loglari periyodik ceker ve DOGRUDAN
-FlowMetric'in kendi database.sqlite icindeki `card_logs` tablosuna yazar.
-Boylece FlowMetric'teki "Personel Hareketleri" sayfasi PDKS verisini
+Turocas'in kendi database.sqlite icindeki `card_logs` tablosuna yazar.
+Boylece Turocas'teki "Personel Hareketleri" sayfasi PDKS verisini
 otomatik, canli olarak gosterir -- ayri bir ekrana gerek kalmaz.
 
 Kart tanimlama / silme / anlik durum icin localhost-only bir HTTP API
-sunar (varsayilan 127.0.0.1:8091); bu API'ye FlowMetric'in Node backend'i
+sunar (varsayilan 127.0.0.1:8091); bu API'ye Turocas'in Node backend'i
 proxy yapar (bkz. patch_pdks_integration.py), boylece "Personel
 Hareketleri" ekranindan kart eklenip silinebilir.
 
-FlowMetric backend (Node/better-sqlite3) ile ayni SQLite dosyasina
+Turocas backend (Node/better-sqlite3) ile ayni SQLite dosyasina
 ESZAMANLI erisir. Ikisi de WAL modunda ve kisa omurlu baglanti/islem
 kullanir -- guvenlidir. Ancak: pdks-daemon calisirken elle
 `node -e '...initDb()...'` gibi seyler CALISTIRMAYIN (WAL kilit
@@ -46,13 +46,13 @@ HTTP_TIMEOUT = 3  # ESP32 istekleri icin saniye
 
 DEFAULT_CONFIG = {
     "devices": [
-        {"id": "GIRIS", "ip": "10.0.1.211", "name": "Giris Kapisi"},
-        {"id": "CIKIS", "ip": "10.0.1.212", "name": "Cikis Kapisi"},
+        {"id": "GIRIS", "ip": "192.168.1.101", "name": "Giris Kapisi"},
+        {"id": "CIKIS", "ip": "192.168.1.102", "name": "Cikis Kapisi"},
     ],
     "sync_interval": 5,
     "web_port": 8091,
     "web_host": "127.0.0.1",  # sadece sunucu icinden erisim (Node backend proxy'ler)
-    "flowmetric_db_path": "/home/rootori/flowmetric/backend/database.sqlite",
+    "turocas_db_path": "/home/rootori/turocas/backend/database.sqlite",
 }
 
 
@@ -71,7 +71,7 @@ def load_config():
     return DEFAULT_CONFIG.copy()
 
 
-# ==================== VERITABANI (FlowMetric database.sqlite / card_logs) ====================
+# ==================== VERITABANI (Turocas database.sqlite / card_logs) ====================
 
 _db_lock = threading.Lock()
 DB_FILE = None  # main() basinda config'ten set edilir
@@ -86,7 +86,7 @@ def get_conn():
 
 def verify_db():
     """card_logs ve pdks_cards tablolarinin zaten var oldugunu dogrular.
-    OLUSTURMAZ -- semayi FlowMetric'in kendi db.js'i yonetir (bkz.
+    OLUSTURMAZ -- semayi Turocas'in kendi db.js'i yonetir (bkz.
     patch_pdks_cards_table.py), biz sadece satir okur/yazariz."""
     with _db_lock:
         conn = get_conn()
@@ -96,7 +96,7 @@ def verify_db():
             conn.close()
             raise RuntimeError(
                 f"card_logs tablosu bulunamadi ya da erisilemedi ({e}). "
-                f"flowmetric_db_path dogru mu? ({DB_FILE})"
+                f"turocas_db_path dogru mu? ({DB_FILE})"
             )
         try:
             conn.execute("SELECT uid, name, employee_id, status FROM pdks_cards LIMIT 1")
@@ -104,10 +104,10 @@ def verify_db():
             conn.close()
             raise RuntimeError(
                 f"pdks_cards tablosu bulunamadi ({e}). Once patch_pdks_cards_table.py "
-                f"calistirip backend'i (flowmetric-backend) yeniden baslattiniz mi?"
+                f"calistirip backend'i (turocas-backend) yeniden baslattiniz mi?"
             )
         conn.close()
-    log(f"FlowMetric veritabani baglantisi dogrulandi: {DB_FILE}")
+    log(f"Turocas veritabani baglantisi dogrulandi: {DB_FILE}")
 
 
 def ts_to_str(ts):
@@ -189,7 +189,7 @@ def log_count():
     return n
 
 
-# ==================== KART KAYITLARI (FlowMetric database.sqlite / pdks_cards) ====================
+# ==================== KART KAYITLARI (Turocas database.sqlite / pdks_cards) ====================
 # Kartlar artik ESP32'lerin kendi bellegi degil, bu tablo "gercek kaynak" (source
 # of truth). ESP32'lere sadece AKTIF kartlar yazilir (fiziksel kapi erisimi icin);
 # pasif yapilan bir kart ESP32'lerden silinir ama burada (ismi/gecmisiyle) durmaya
@@ -622,9 +622,9 @@ def api_capture_clear():
 def index():
     return Response(
         "<h3>PDKS daemon calisiyor.</h3>"
-        "<p>Kart tanimlama ve gecis kayitlari artik FlowMetric &rarr; "
+        "<p>Kart tanimlama ve gecis kayitlari artik Turocas &rarr; "
         "<b>Personel Hareketleri</b> sayfasindan yonetiliyor.</p>"
-        "<p>Bu adres (127.0.0.1:8091) sadece FlowMetric backend'inin dahili "
+        "<p>Bu adres (127.0.0.1:8091) sadece Turocas backend'inin dahili "
         "kullanimi icindir.</p>"
         "<p>Debug: <a href='/api/status'>/api/status</a> &middot; "
         "<a href='/api/logs'>/api/logs</a> &middot; "
@@ -638,7 +638,7 @@ def index():
 if __name__ == "__main__":
     cfg = load_config()
     DEVICES = cfg["devices"]
-    DB_FILE = cfg["flowmetric_db_path"]
+    DB_FILE = cfg["turocas_db_path"]
 
     verify_db()
 
@@ -647,5 +647,5 @@ if __name__ == "__main__":
 
     port = cfg.get("web_port", 8091)
     host = cfg.get("web_host", "127.0.0.1")
-    log(f"Dahili API: http://{host}:{port} (sadece FlowMetric backend'i icin)")
+    log(f"Dahili API: http://{host}:{port} (sadece Turocas backend'i icin)")
     app.run(host=host, port=port, debug=False, use_reloader=False)

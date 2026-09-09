@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_harcama_iptal.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_harcama_iptal.py
 # IK Harcama Yonetimi: admin ve ik rolleri harcama taleplerini
 # "Iptal Edildi" durumuna alabilsin (kayit silinmez, izlenebilir kalir).
 # Izin ekranindaki desenin aynisi.

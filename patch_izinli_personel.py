@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_izinli_personel.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_izinli_personel.py
 # Yonetici Masasi > Insan Kaynaklari kartinin altina "Bugun Izinli Personel"
 # bolumu ekler (isim + izin turu + bitis tarihi, yarim gun ibaresi dahil).
 
@@ -87,4 +87,4 @@ patch("src/pages/ExecutiveDashboard.jsx",
     "frontend izinli personel bolumu")
 
 print("")
-print("BITTI. Simdi: pm2 restart flowmetric-backend && npm run build && sudo systemctl restart nginx")
+print("BITTI. Simdi: pm2 restart turocas-backend && npm run build && sudo systemctl restart nginx")

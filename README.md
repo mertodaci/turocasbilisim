@@ -1,6 +1,6 @@
-# FlowMetric
+# Turocas
 
-İND Bilişim iç kurumsal yönetim uygulaması. Personel/İK süreçleri, PDKS (RFID kart ile
+Turocas Bilişim iç kurumsal yönetim uygulaması. Personel/İK süreçleri, PDKS (RFID kart ile
 kapı erişim takibi), TaskQube (proje/ticket yönetimi), mesajlaşma, izin/masraf talepleri,
 müşteri yönetimi ve daha fazlasını tek bir yerde toplar.
 
@@ -25,7 +25,7 @@ müşteri yönetimi ve daha fazlasını tek bir yerde toplar.
 
 ```bash
 git clone <repo-url>
-cd flowmetric
+cd turocas
 
 # Frontend bağımlılıkları
 npm install
@@ -72,7 +72,7 @@ olmadığını kontrol eder; varsa değişen dosyalara göre otomatik olarak:
 
 - `npm install` (kök ve/veya `backend/`, `package.json` değiştiyse)
 - `npm run build` (`src/` veya ilgili dosyalar değiştiyse)
-- `pm2 restart flowmetric-backend` (`backend/` değiştiyse)
+- `pm2 restart turocas-backend` (`backend/` değiştiyse)
 - `pm2 restart pdks-daemon` (`pdks/` değiştiyse)
 
 çalıştırır. Yani sunucuya elle dosya yüklemeye veya SSH üzerinden komut çalıştırmaya

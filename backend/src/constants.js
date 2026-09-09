@@ -4,7 +4,7 @@
 // Hem "Yeni Kullanici" ekranindan sifresiz olusturmada, hem de yeni calisan
 // kaydiyla otomatik acilan hesapta kullanilir. Bu hesaplar must_change_password=1
 // ile isaretlenir; kullanici ilk giriste kendi sifresini belirler.
-const DEFAULT_USER_PASSWORD = 'Ind2026x';
+const DEFAULT_USER_PASSWORD = 'Turocas2026x';
 
 // Farkli panolarin ayni "musteri/kurum onayi bekleniyor" adimini farkli
 // key'lerle modellemesi: YBS Teknik Destek panosunda "musteri_onay", ABYS

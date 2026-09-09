@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
-    name: 'flowmetric-backend',
+    name: 'turocas-backend',
     script: './src/index.js',
-    cwd: '/home/rootori/flowmetric/backend',
+    cwd: '/home/rootori/turocas/backend',
     exec_mode: 'fork',
     instances: 1,
     max_memory_restart: '500M',
@@ -18,7 +18,7 @@ module.exports = {
     name: 'pdks-daemon',
     script: 'pdks_daemon.py',
     interpreter: 'python3',
-    cwd: '/home/rootori/flowmetric/pdks',
+    cwd: '/home/rootori/turocas/pdks',
     exec_mode: 'fork',
     instances: 1,
     max_memory_restart: '200M',

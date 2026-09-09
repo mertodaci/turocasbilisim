@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_takvim_gunu_izin.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_takvim_gunu_izin.py
 # Dogum Izni ve Babalik Izni takvim gunu uzerinden hesaplansin.
 # Sebep: bu turlerin min/max degerleri (56 ve 10) takvim gunu olarak
 # tanimlanmis; countBusinessDays hafta sonlarini eledigi icin kural

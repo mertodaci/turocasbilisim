@@ -48,7 +48,7 @@ export default function LeaveReconciliationForm({ employee, leaveMovements, dept
         {/* YAZDIRILAN ALAN */}
         <div id="leave-reconciliation-print" style={{ padding: 32, fontFamily: "Arial, sans-serif", color: "#0f172a" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#4f46e5" }}>IND Bilişim</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#4f46e5" }}>Turocas Bilişim</div>
             <div style={{ fontSize: 12, color: "#64748b" }}>{fmtDate(new Date())}</div>
           </div>
 
@@ -57,7 +57,7 @@ export default function LeaveReconciliationForm({ employee, leaveMovements, dept
           <Row label="Adı Soyadı" value={employee?.full_name} />
           <Row label="Kimlik Numarası" value={employee?.tc} />
           <Row label="İşe Giriş Tarihi" value={fmtDate(employee?.hire_date)} />
-          <Row label="Birimler" value={`IND Bilişim > ${deptLabel || "—"} > ${posLabel || "—"}`} />
+          <Row label="Birimler" value={`Turocas Bilişim > ${deptLabel || "—"} > ${posLabel || "—"}`} />
 
           <div style={{ fontWeight: 700, fontSize: 14, margin: "24px 0 10px", color: "#1e293b" }}>
             {fmtDate(new Date())} itibariyle İzin Hakkı Detayları - Yıllık İzin

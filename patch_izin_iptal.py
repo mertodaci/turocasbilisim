@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_izin_iptal.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_izin_iptal.py
 # IK Izin Yonetimi: onaylanmis/reddedilmis izinleri admin ve ik rolleri
 # "Iptal Edildi" durumuna alabilsin (kayit silinmez, izlenebilir kalir).
 # Bakiye hesabi sadece status='onaylandi' saydigi icin iptal otomatik duser.

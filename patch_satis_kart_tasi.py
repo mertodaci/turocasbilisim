@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_satis_kart_tasi.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_satis_kart_tasi.py
 # Satis Aktiviteleri blogunu "Satis & Teklifler" kartinin icinden cikarip
 # sag kolona, "Teklif Durum Dagilimi" kartinin altina BAGIMSIZ kart olarak koyar.
 

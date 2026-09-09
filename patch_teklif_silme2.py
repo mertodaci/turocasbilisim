@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_teklif_silme2.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_teklif_silme2.py
 # v2: duplicate kontrolu ayri bir "isaret" dizesine bakar (v1'de yanlis atlama vardi)
 
 import os, sqlite3
@@ -154,4 +154,4 @@ con.commit()
 con.close()
 
 print("")
-print("BITTI. Simdi: npm run build && sudo systemctl restart nginx && pm2 restart flowmetric-backend")
+print("BITTI. Simdi: npm run build && sudo systemctl restart nginx && pm2 restart turocas-backend")

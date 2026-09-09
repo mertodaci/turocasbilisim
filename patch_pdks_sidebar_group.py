@@ -4,7 +4,7 @@
 # altinda ayri bir "PDKS" alt-basligi altinda toplar. Ayrica Sidebar bilesenine
 # coklu-seviye (nested) alt-menu render destegi ekler.
 #
-# /home/rootori/flowmetric icinden:
+# /home/rootori/turocas icinden:
 #   python3 patch_pdks_sidebar_group.py
 import io
 

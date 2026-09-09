@@ -40,13 +40,13 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{backgroundImage: "url(/flowmetric.png)", backgroundSize: "cover", backgroundPosition: "center"}}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: "linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)"}}>
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-blue-900/50 to-slate-900/70" />
       <div className="relative z-20 w-full max-w-sm mx-4">
         <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/25 ring-1 ring-white/10">
           <div className="px-8 pt-10 pb-7 text-center border-b border-white/15">
-            <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm">FlowMetrics</h1>
-            <p className="text-blue-100/90 text-sm mt-2">IND Bilişim — Sektöre Özel Yazılım Çözümleri</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm">Turocas</h1>
+            <p className="text-blue-100/90 text-sm mt-2">Turocas Bilişim — Sektöre Özel Yazılım Çözümleri</p>
           </div>
           <div className="px-8 py-6">
             {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-300/40 rounded-xl text-red-100 text-sm text-center backdrop-blur-sm">{error}</div>}

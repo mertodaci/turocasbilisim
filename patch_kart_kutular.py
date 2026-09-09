@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_kart_kutular.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_kart_kutular.py
 # Satis Aktiviteleri kartindaki tip rozetlerini, Sozlesmeler kartindaki gibi
 # renkli kutulara cevirir.
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_harcama_sayfalama.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_harcama_sayfalama.py
 # IK Harcama Yonetimi listesine sayfalama ekler (varsayilan 10 kayit/sayfa).
 # Izin Yonetimi ekranindaki desenin aynisi.
 

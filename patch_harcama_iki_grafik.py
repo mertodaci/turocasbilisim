@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_harcama_iki_grafik.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_harcama_iki_grafik.py
 #
 # "Harcama Dagilimi" karti (pasta + tek trend) yerine yan yana iki aylik
 # trend grafigi:
@@ -123,4 +123,4 @@ patch("src/pages/ExecutiveDashboard.jsx", ESKI, YENI,
     "frontend iki trend grafigi")
 
 print("")
-print("BITTI. Simdi: pm2 restart flowmetric-backend && npm run build && sudo systemctl restart nginx")
+print("BITTI. Simdi: pm2 restart turocas-backend && npm run build && sudo systemctl restart nginx")

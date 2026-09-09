@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_yarim_gun_izin.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_yarim_gun_izin.py
 #
 # Yarim gun izin destegi:
 # 1) leave_requests.half_day_period kolonu (ogleden_once / ogleden_sonra)
@@ -158,4 +158,4 @@ patch("src/components/leave/LeaveFormPrint.jsx",
 print("")
 print("NOT: form state'inde half_day_period yoksa asagidaki ile kontrol et:")
 print("     grep -n 'useState({' -A 12 src/components/leave/LeaveRequestForm.jsx")
-print("BITTI. Simdi: pm2 restart flowmetric-backend && npm run build && sudo systemctl restart nginx")
+print("BITTI. Simdi: pm2 restart turocas-backend && npm run build && sudo systemctl restart nginx")

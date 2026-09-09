@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_saglik_ve_yorum.py
-# 1) saglik.py: silinmis flowmetric-sync surecini kontrol listesinden cikar
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_saglik_ve_yorum.py
+# 1) saglik.py: silinmis turocas-sync surecini kontrol listesinden cikar
 #    (saatte 2 sahte UYARI uretiyordu)
 # 2) WorkTaskCard.jsx + WorkTaskDetailDialog.jsx: task_comments tablosunda
 #    sender_id/sender_name YOK -> author_id/author_name olmali.
@@ -25,9 +25,9 @@ def patch(path, old, new, isaret, etiket):
 
 # ---------- 1) saglik.py ----------
 patch("backend/saglik.py",
-    'PM2_PROCS = ["flowmetric-backend", "flowmetric-sync"]',
-    'PM2_PROCS = ["flowmetric-backend"]',
-    'PM2_PROCS = ["flowmetric-backend"]',
+    'PM2_PROCS = ["turocas-backend", "turocas-sync"]',
+    'PM2_PROCS = ["turocas-backend"]',
+    'PM2_PROCS = ["turocas-backend"]',
     "saglik.py PM2_PROCS (sync cikarildi)")
 
 # ---------- 2) WorkTaskCard.jsx: yorum yazma ----------

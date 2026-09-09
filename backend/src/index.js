@@ -10,7 +10,7 @@ const app = express();
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-// GUVENLIK: taskqube.com uzerinden gelen trafik artik Nginx'in ekledigi
+// GUVENLIK: canli sunucuda trafik Nginx uzerinden gelir; Nginx'in ekledigi
 // X-Forwarded-For basligina gore gercek istemci IP'sini gosterecek (Nginx'e
 // loopback'ten -- 127.0.0.1 -- guveniliyor). Bu olmadan req.ip her zaman
 // Nginx'in kendisini (127.0.0.1) donduruyordu, bu da asagidaki IP engelleme
@@ -27,8 +27,6 @@ app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false 
 function isWhitelistedIp(ip) {
   if (!ip) return true;
   if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
-  // ic ag araligi (10.0.1.x) — Nginx ayni sunucuda, localhost gorunur ama yine de koruma
-  if (ip.includes('10.0.1.')) return true;
   return false;
 }
 // IP engel kontrolü
@@ -163,7 +161,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = '/home/rootori/flowmetric/uploads';
+const uploadDir = '/home/rootori/turocas/uploads';
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({

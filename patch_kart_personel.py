@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_kart_personel.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_kart_personel.py
 # Yonetici Masasi > Satis > "Satis Aktiviteleri" kartindaki son aktivite
 # satirlarina ziyareti yapan personelin adini ekler.
 

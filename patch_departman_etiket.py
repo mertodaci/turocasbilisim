@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_departman_etiket.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_departman_etiket.py
 #
 # Departman alanlari ekranlarda ham slug olarak gorunuyordu
 # (abys_yazilim_ekibi). definitions tablosunda category='departman'

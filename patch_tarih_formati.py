@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_tarih_formati.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_tarih_formati.py
 # ISO tarihleri (2026-08-14) gg/aa/yyyy formatina cevirir:
 #   1) Yonetici Masasi > IK karti > Bugun Izinli Personel (donus tarihi)
 #   2) Yonetici Masasi > Satis Aktiviteleri karti (son aktivite tarihi)

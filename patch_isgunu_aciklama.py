@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_isgunu_aciklama.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_isgunu_aciklama.py
 # Izin formunda takvim gunu ile is gunu farkliysa aciklama gosterir:
 #   "3 takvim gunu - 1 is gunu (hafta sonu ve resmi tatiller haric)"
 # Boylece kullanici neden 2 degil de 1 gun dustugunu anlar.

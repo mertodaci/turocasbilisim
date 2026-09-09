@@ -4,10 +4,10 @@
 # ONEMLI: SIRAYLA calistirin (her biri oncekini gerektirir):
 #   1) patch_pdks_integration.py
 #   2) patch_pdks_permissions.py
-#   3) patch_pdks_cards_table.py  (+ pm2 restart flowmetric-backend)
+#   3) patch_pdks_cards_table.py  (+ pm2 restart turocas-backend)
 #   4) patch_pdks_capture.py      (bu script)
 #
-# /home/rootori/flowmetric icinden:
+# /home/rootori/turocas icinden:
 #   python3 patch_pdks_capture.py
 import io
 

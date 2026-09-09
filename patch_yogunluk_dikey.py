@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_yogunluk_dikey.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_yogunluk_dikey.py
 # "Musteri Bazinda Yogunluk" grafigini yatay/tek renkten
 # dikey/renkli (her musteriye ayri renk) hale getirir.
 

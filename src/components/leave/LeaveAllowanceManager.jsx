@@ -56,7 +56,7 @@ export default function LeaveAllowanceManager() {
     },
     onError: (err) => toast.error(err?.message || "Güncellenemedi"),
   });
-  // Bir çalışanın kullandığı toplam onaylı izin günü (FlowMetrics içi)
+  // Bir çalışanın kullandığı toplam onaylı izin günü (Turocas içi)
   const usedDaysFor = (empId, empEmail) => {
     return approvedLeaves
       .filter((l) => l.employee_id === empId || (empEmail && l.employee_email === empEmail))

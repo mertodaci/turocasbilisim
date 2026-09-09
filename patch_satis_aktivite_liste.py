@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_satis_aktivite_liste.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_satis_aktivite_liste.py
 #
 # 1) entityRouter: sales_activities -> 'satis' modul eslemesi
 #    (su an eslemesiz oldugu icin admin disinda HERKES 403 aliyor)
@@ -281,4 +281,4 @@ patch("src/pages/AddSalesActivity.jsx",
     "AddSalesActivity liste JSX")
 
 print("")
-print("BITTI. Simdi: pm2 restart flowmetric-backend && npm run build && sudo systemctl restart nginx")
+print("BITTI. Simdi: pm2 restart turocas-backend && npm run build && sudo systemctl restart nginx")

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_teklif_silme.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_teklif_silme.py
 # 1) sales_activities.is_deleted kolonu (migration + db.js alterations)
 # 2) entityRouter: SOFT_DELETE_TABLES + ALLOWED_COLUMNS
 # 3) OffersPage: admin icin silme butonu (onay dialogu ile)
@@ -159,4 +159,4 @@ else:
     print("ATLANDI: OffersPage onay dialogu")
 
 print("")
-print("BITTI. Simdi: npm run build && sudo systemctl restart nginx && pm2 restart flowmetric-backend")
+print("BITTI. Simdi: npm run build && sudo systemctl restart nginx && pm2 restart turocas-backend")

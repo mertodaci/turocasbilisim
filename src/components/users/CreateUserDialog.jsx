@@ -98,12 +98,12 @@ export default function CreateUserDialog({ onClose, customers = [], currentUserR
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Şifre (boş bırakılırsa Ind2026x)</label>
+            <label className="text-xs font-medium text-muted-foreground">Şifre (boş bırakılırsa Turocas2026x)</label>
             <input
               type="text"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Boş bırak → Ind2026x"
+              placeholder="Boş bırak → Turocas2026x"
               className="w-full mt-1 px-3 py-2 text-sm border border-border/50 rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             />
             <p className="text-[11px] text-muted-foreground mt-1">Kullanıcı ilk girişte kendi şifresini belirler. Elle girilirse en az 8 karakter.</p>

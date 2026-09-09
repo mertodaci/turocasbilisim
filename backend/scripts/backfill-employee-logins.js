@@ -3,7 +3,7 @@
  * backfill-employee-logins.js
  *
  * E-postasi olan ama giris (users) hesabi olmayan tum aktif calisanlara
- * otomatik giris hesabi acar (varsayilan sifre Ind2026x, must_change_password=1).
+ * otomatik giris hesabi acar (varsayilan sifre Turocas2026x, must_change_password=1).
  * Idempotent -- var olanlari atlar. Sunucuda bir kez calistirilir:
  *
  *   node backend/scripts/backfill-employee-logins.js

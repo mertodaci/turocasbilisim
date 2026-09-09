@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_grafik_etiket.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_grafik_etiket.py
 # Recharts Bar'larinda name= eksik oldugu icin tooltip'te ham dataKey
 # (count / c / total / value) gorunuyor. Turkce etiket ekler.
 

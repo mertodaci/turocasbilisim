@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 BIR KERELIK MIGRASYON: ESP32'lerin kendi bellegindeki (daha once pdks_cards
-tablosu YOKKEN eklenmis) kartlari, FlowMetric'in database.sqlite -> pdks_cards
+tablosu YOKKEN eklenmis) kartlari, Turocas'in database.sqlite -> pdks_cards
 tablosuna aktarir. Boylece "Kart Yonetimi" sayfasindaki "Kayitli Kartlar"
 listesinde artik gorunurler (aktif, employee_id bos -- istenirse sonra
 sayfadan calisana baglanabilir).
@@ -11,14 +11,14 @@ Guvenli: zaten pdks_cards'ta olan bir uid'e DOKUNMAZ (mevcut kayit
 korunur), sadece EKSIK olanlari ekler.
 
 Calistirma (pdks/ klasoru icinden, pdks-daemon calisirken de calistirilabilir):
-    cd /home/rootori/flowmetric/pdks
+    cd /home/rootori/turocas/pdks
     python3 migrate_existing_cards.py
 """
 import sys
 import pdks_daemon as p
 
 cfg = p.load_config()
-p.DB_FILE = cfg["flowmetric_db_path"]
+p.DB_FILE = cfg["turocas_db_path"]
 p.DEVICES = cfg["devices"]
 
 p.verify_db()

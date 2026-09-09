@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-# FlowMetrics saglik kontrolu - saatte bir cron ile calisir.
+# Turocas saglik kontrolu - saatte bir cron ile calisir.
 # PM2 + API dususse otomatik restart eder; sync/disk/DB icin uyari loglar.
 # Tum ciktilar zaman damgali saglik.log'a yazilir. UYARI/DUZELTILDI etiketli satirlar aranabilir.
 
 import subprocess, json, os, sys, sqlite3, urllib.request, shutil
 from datetime import datetime, timedelta
 
-BASE = "/home/rootori/flowmetric"
+BASE = "/home/rootori/turocas"
 DB = BASE + "/backend/database.sqlite"
 LOG = BASE + "/backend/saglik.log"
 HEALTH_URL = "http://localhost:3001/api/health"
-PM2_PROCS = ["flowmetric-backend"]
+PM2_PROCS = ["turocas-backend"]
 
 def log(level, msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -59,7 +59,7 @@ try:
             raise Exception(f"status {resp.status}")
 except Exception as e:
     log("UYARI", f"API health BASARISIZ ({e}) - backend restart deneniyor")
-    code, _, err = run("pm2 restart flowmetric-backend")
+    code, _, err = run("pm2 restart turocas-backend")
     if code == 0:
         log("DUZELTILDI", "backend API icin yeniden baslatildi")
     else:

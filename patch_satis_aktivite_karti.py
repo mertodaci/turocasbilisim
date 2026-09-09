@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Kullanim: /home/rootori/flowmetric dizininde -> python3 patch_satis_aktivite_karti.py
+# Kullanim: /home/rootori/turocas dizininde -> python3 patch_satis_aktivite_karti.py
 # 1) backend/src/index.js: dashboard'a salesActivities blogu ekler
 #    (sales_activities tablosu, teklif_sunumu HARIC, is_deleted filtreli)
 # 2) src/pages/ExecutiveDashboard.jsx: Satis tabina "Satis Aktiviteleri" karti
@@ -128,4 +128,4 @@ patch("src/pages/ExecutiveDashboard.jsx",
     "ExecutiveDashboard salesAct degiskeni")
 
 print("")
-print("BITTI. Simdi: pm2 restart flowmetric-backend && npm run build && sudo systemctl restart nginx")
+print("BITTI. Simdi: pm2 restart turocas-backend && npm run build && sudo systemctl restart nginx")

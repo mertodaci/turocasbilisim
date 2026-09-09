@@ -1,11 +1,11 @@
 #!/bin/bash
-# FlowMetric otomatik deploy scripti.
+# Turocas otomatik deploy scripti.
 # GitHub'daki main branch'te yeni commit varsa: ceker, degisen dosyalara
 # gore npm install / npm run build / pm2 restart yapar. Cron ile
 # birkac dakikada bir calistirilir (bkz. README/kurulum notlari).
 set -e
-cd /home/rootori/flowmetric
-LOG=/home/rootori/flowmetric/deploy.log
+cd /home/rootori/turocas
+LOG=/home/rootori/turocas/deploy.log
 
 git fetch origin main --quiet
 
@@ -46,8 +46,8 @@ if echo "$CHANGED" | grep -qE '^(src/|index\.html|vite\.config\.js|package\.json
 fi
 
 if echo "$CHANGED" | grep -qE '^backend/'; then
-  echo "-> pm2 restart flowmetric-backend" >> "$LOG"
-  pm2 restart flowmetric-backend >> "$LOG" 2>&1
+  echo "-> pm2 restart turocas-backend" >> "$LOG"
+  pm2 restart turocas-backend >> "$LOG" 2>&1
 fi
 
 if echo "$CHANGED" | grep -qE '^pdks/'; then

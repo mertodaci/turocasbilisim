@@ -290,7 +290,7 @@ export default function Sidebar() {
             </Link>
             {!collapsed && (
               <div>
-                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">FlowMetrics</Link>
+                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">Turocas</Link>
               </div>
             )}
           </div>
@@ -412,7 +412,7 @@ export default function Sidebar() {
 
         {!collapsed && (
           <div className="px-6 py-4 border-t border-sidebar-border/30">
-            <p className="text-[10px] text-sidebar-foreground/30 text-center">FlowMetrics v3.0</p>
+            <p className="text-[10px] text-sidebar-foreground/30 text-center">Turocas v3.0</p>
           </div>
         )}
       </aside>

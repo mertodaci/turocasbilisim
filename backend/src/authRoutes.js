@@ -8,7 +8,7 @@ const { DEFAULT_USER_PASSWORD } = require('./constants');
 
 const router = express.Router();
 
-// GUVENLIK: taskqube.com artik HTTPS uzerinden calisiyor (certbot, 2026-08-31) --
+// GUVENLIK: canli sunucu artik HTTPS uzerinden calisiyor (certbot) --
 // cookie'de Secure bayragi acildi. Ortam degiskeniyle kontrol ediliyor ki local
 // gelistirme ortami (http://localhost) bundan etkilenmesin -- sadece sunucuda
 // COOKIE_SECURE=true .env'e eklenince aktif olur, eklenmezse (local) false kalir.

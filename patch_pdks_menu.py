@@ -5,7 +5,7 @@
 # kopyalanmis olmasi gerekir (bu script sadece App.jsx/Sidebar.jsx/
 # LanguageContext.jsx icini duzenler, dosya kopyalamaz).
 #
-# /home/rootori/flowmetric icinden:
+# /home/rootori/turocas icinden:
 #   python3 patch_pdks_menu.py
 import io
 

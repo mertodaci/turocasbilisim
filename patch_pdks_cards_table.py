@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # pdks_cards tablosunu ekler: PDKS kartlarinin (uid, isim, calisan baglantisi,
-# aktif/pasif durumu) FlowMetric'in kendi database.sqlite'inda KALICI olarak
+# aktif/pasif durumu) Turocas'in kendi database.sqlite'inda KALICI olarak
 # tutulmasini saglar. Simdiye kadar kartlar sadece ESP32'lerin kendi
 # hafizasindan okunuyordu -- "pasif" diye bir durum konsepti yoktu (ya
 # yetkiliydi ya hic yoktu). Bu tablo sayesinde bir karti pasif yapinca
 # (ESP32'lerden silinir, kapi acmaz) kaydi ve ismi kaybolmuyor, istenirse
 # tekrar aktif edilebiliyor.
 #
-# /home/rootori/flowmetric icinden:
+# /home/rootori/turocas icinden:
 #   python3 patch_pdks_cards_table.py
 import io
 
@@ -43,4 +43,4 @@ with io.open(dpath, "w", encoding="utf-8") as f:
 
 print("OK db.js: pdks_cards tablosu eklendi")
 print("ONEMLI: bu degisiklik yalnizca backend YENIDEN BASLATILDIGINDA calisir (initDb ilk acilista tetiklenir).")
-print("        pm2 restart flowmetric-backend calistirmayi unutmayin.")
+print("        pm2 restart turocas-backend calistirmayi unutmayin.")

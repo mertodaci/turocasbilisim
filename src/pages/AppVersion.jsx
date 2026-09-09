@@ -27,7 +27,7 @@ export default function AppVersion() {
       date: "31 Ağustos 2026",
       badge: null,
       changes: [
-        "taskqube.com adresine geçiş tamamlandı (SSL dahil).",
+        "Canlı ortama HTTPS (SSL) ile geçiş tamamlandı.",
         "TaskQube için e-posta bildirim altyapısı kuruldu.",
       ]
     },
@@ -74,7 +74,7 @@ export default function AppVersion() {
         "Giriş ekranı yenilendi — modern cam efektli (glassmorphism) tasarım, net okunabilir alanlar ve Türkçe metin düzeltmeleri",
         "Şirket Takvimi bilet sayacı düzeltildi — bilet sayımı artık created_date bazında; güncel aydaki tüm biletler doğru görüntüleniyor (artık sıfır görünmüyor)",
         "Ayrılan personel güvenlik kontrolü — çalışan pasife alındığında kullanıcı hesabı otomatik pasife çekiliyor; işten ayrılan personelin sistem erişimi kendiliğinden kapanıyor (müşteri hesapları haricı)",
-        "Mesajlaşma kişi listesi iyileştirildi — yalnızca aktif IND ekibi listeleniyor; müşteri, pasif ve işten ayrılmış kullanıcılar gizleniyor, liste Türkçe A-Z sıralı",
+        "Mesajlaşma kişi listesi iyileştirildi — yalnızca aktif ekip listeleniyor; müşteri, pasif ve işten ayrılmış kullanıcılar gizleniyor, liste Türkçe A-Z sıralı",
         "Koyu tema iyileştirmeleri — giriş uyarı kutusu, TaskQube bilet penceresi, hata ekranları ve 404 sayfası koyu temada düzgün görüntüleniyor",
         "Satış Teklifleri sayfasındaki çift yönlendirme (route) temizlendi",
         "Kullanılmayan tablolar ve ölü kod temizliği — daha temiz ve hızlı uygulama derlemesi",
@@ -151,7 +151,7 @@ export default function AppVersion() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">Uygulama Versiyonu</h1>
-        <p className="text-sm text-muted-foreground mt-1">FlowMetrics sürüm geçmişi ve değişiklik notları</p>
+        <p className="text-sm text-muted-foreground mt-1">Turocas sürüm geçmişi ve değişiklik notları</p>
       </div>
 
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 flex items-center gap-5">

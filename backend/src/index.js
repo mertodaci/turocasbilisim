@@ -1153,10 +1153,22 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
   if (fis.tip === 'cikis' || fis.tip === 'transfer') {
-    const yetersiz = [];
+    // Aynı ürün + kaynak raf için birden çok satır varsa toplam ihtiyacı birlikte
+    // kontrol et; satır bazlı ayrı ayrı kontrol (60 + 60, stok 100) negatif stoğa yol açardı.
+    const ihtiyac = new Map();
     for (const s of satirlar) {
-      const mevcut = stokMevcut(s.urun_id, fis.kaynak_depo_id, s.kaynak_raf_id || null);
-      if (s.miktar_ana_birim > mevcut + 1e-9) yetersiz.push(`${s.urun_adi || s.urun_id}: gerekli ${s.miktar_ana_birim}, mevcut ${mevcut}`);
+      const key = `${s.urun_id}|${s.kaynak_raf_id || ''}`;
+      const cur = ihtiyac.get(key) || {
+        urun_id: s.urun_id, raf_id: s.kaynak_raf_id || null,
+        urun_adi: s.urun_adi || s.urun_id, miktar: 0,
+      };
+      cur.miktar += Number(s.miktar_ana_birim) || 0;
+      ihtiyac.set(key, cur);
+    }
+    const yetersiz = [];
+    for (const g of ihtiyac.values()) {
+      const mevcut = stokMevcut(g.urun_id, fis.kaynak_depo_id, g.raf_id);
+      if (g.miktar > mevcut + 1e-9) yetersiz.push(`${g.urun_adi}: gerekli ${g.miktar}, mevcut ${mevcut}`);
     }
     if (yetersiz.length) return res.status(400).json({ error: 'Yetersiz stok — onaylanamadı:\n' + yetersiz.join('\n') });
   }

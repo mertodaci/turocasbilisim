@@ -417,6 +417,8 @@ function initDb() {
       'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
       // Faz 13: QNB e-Belge
       'stok_qnb',
+      // Faz 14: Fiyat Araştır
+      'stok_fiyat_arastir',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();

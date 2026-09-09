@@ -2117,6 +2117,31 @@ app.post('/api/stok/qnb/taslak', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 14: Fiyat Araştır — araştırılan fiyatı ürün Satış alanına + fiyat geçmişine yaz
+// (Referanstaki Cimri web-scraping otomasyonu, canlı sunucu izni ve kırılganlığı
+//  nedeniyle bilinçli olarak dahil edilmedi; workflow manuel/yarı-otomatik.)
+// ═══════════════════════════════════════════════════════════════════
+app.post('/api/stok/fiyat-arastir/uygula', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_fiyat_arastir', 'can_edit') || checkPermission(db, req.user?.role, 'stok_urunler', 'can_edit')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { urun_id, fiyat, hedef = 'satis', not: notu } = req.body || {};
+  const f = Number(fiyat);
+  if (!urun_id || !(f > 0)) return res.status(400).json({ error: 'Ürün ve geçerli fiyat gerekli' });
+  const u = db.prepare('SELECT * FROM stok_urunler WHERE id=?').get(urun_id);
+  if (!u) return res.status(404).json({ error: 'Ürün bulunamadı' });
+  try {
+    const now = new Date().toISOString();
+    const kolon = hedef === 'alis' ? 'alis_fiyati' : 'satis_fiyati';
+    db.prepare(`UPDATE stok_urunler SET ${kolon}=?, updated_date=? WHERE id=?`).run(f, now, urun_id);
+    if (hedef === 'alis') {
+      db.prepare(`INSERT INTO stok_fiyat_gecmisi (id, urun_id, urun_adi, alis_fiyati, para_birimi, tarih, kaynak, not_, created_by, created_date, updated_date)
+        VALUES (?,?,?,?, 'TRY', ?, 'manuel', ?, ?, ?, ?)`).run(_stokUUID(), urun_id, u.ad, f, now.slice(0, 10), notu || 'Fiyat araştırma', req.user.email, now, now);
+    }
+    res.json({ ok: true, urun: db.prepare('SELECT id, kod, ad, alis_fiyati, satis_fiyati FROM stok_urunler WHERE id=?').get(urun_id) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 const { startCronJobs } = require('./cronJobs');

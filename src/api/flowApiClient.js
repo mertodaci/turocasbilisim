@@ -317,6 +317,7 @@ export const stok = {
   async qnbPanel() { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/panel`, { credentials: 'include' })); },
   async qnbGelenAktar(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/gelen-aktar`, _sjson('POST', body))); },
   async qnbTaslak(fis_id, tur) { return handleResponse(await fetch(`${BASE_URL}/api/stok/qnb/taslak`, _sjson('POST', { fis_id, tur }))); },
+  async fiyatArastirUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fiyat-arastir/uygula`, _sjson('POST', body))); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

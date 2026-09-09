@@ -76,6 +76,7 @@ export const MODULES = [
   { key: "stok_etiket",         label: "Etiket Bas",             path: "/stok/etiket" },
   { key: "stok_excel",          label: "Excel Stok Yükleme",     path: "/stok/excel" },
   { key: "stok_qnb",            label: "QNB e-Belge",            path: "/stok/qnb" },
+  { key: "stok_fiyat_arastir",  label: "Fiyat Araştır",          path: "/stok/fiyat-arastir" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

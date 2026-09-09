@@ -1032,6 +1032,26 @@ function initDb() {
     `);
   } catch(e) { console.error('ik faz3 tablolari:', e.message); }
 
+  // ── İK / Özlük / Bordro — Faz 5: fazla mesai ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_mesai_kayitlari (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        tarih TEXT NOT NULL, tur TEXT DEFAULT 'fazla',      -- fazla | tatil
+        katsayi REAL DEFAULT 1.5, rt_tipi TEXT DEFAULT 'tam',  -- tam | yarim (tatil mesaisi)
+        sure_dk INTEGER DEFAULT 0, saatlik_ucret REAL DEFAULT 0, tutar REAL DEFAULT 0,
+        onay TEXT DEFAULT 'taslak',                          -- taslak | onayli | red
+        kaynak TEXT DEFAULT 'elle',                          -- elle | puantaj
+        aciklama TEXT, onaylayan TEXT, onay_tarihi TEXT,
+        donem_yil INTEGER, donem_ay INTEGER,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_mesai_donem ON ik_mesai_kayitlari(donem_yil, donem_ay);
+      CREATE INDEX IF NOT EXISTS idx_ik_mesai_personel ON ik_mesai_kayitlari(personel_id);
+    `);
+  } catch(e) { console.error('ik faz5 tablolari:', e.message); }
+
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
   try {

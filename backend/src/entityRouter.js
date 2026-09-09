@@ -10,7 +10,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
-  'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari'];
+  'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -169,6 +169,7 @@ const TABLE_TO_MODULE = {
   ik_resmi_tatiller: 'ikb_tatil_sihirbazi',
   ik_puantaj: 'ikb_puantaj',
   ik_puantaj_duzeltme_log: 'ikb_puantaj',
+  ik_mesai_kayitlari: 'ikb_mesai',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -307,6 +308,7 @@ const ALLOWED_COLUMNS = {
   ik_resmi_tatiller: ['tarih','ad','tip','kaynak','aktif'],
   ik_puantaj: ['personel_id','personel_adi','tarih','sube_id','vardiya_id','giris_saat','cikis_saat','mesai_dk','gec_dk','erken_dk','eksik_dk','fazla_mesai_dk','durum_kodu','kayit_tipi','ozet','duzeltme_notu','kaynak'],
   ik_puantaj_duzeltme_log: ['puantaj_id','personel_id','tarih','alan','eski','yeni','aciklama','actor_email'],
+  ik_mesai_kayitlari: ['personel_id','personel_adi','tarih','tur','katsayi','rt_tipi','sure_dk','saatlik_ucret','tutar','onay','kaynak','aciklama','onaylayan','onay_tarihi','donem_yil','donem_ay','is_deleted'],
 };
 
 // Zorunlu alanlar
@@ -368,6 +370,7 @@ const REQUIRED_FIELDS = {
   ik_vardiya_planlari: ['ad'],
   ik_resmi_tatiller: ['tarih','ad'],
   ik_puantaj: ['personel_id','tarih'],
+  ik_mesai_kayitlari: ['personel_id','tarih'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

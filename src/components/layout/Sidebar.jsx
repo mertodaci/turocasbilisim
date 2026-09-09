@@ -91,6 +91,7 @@ export const allNavItems = [
         { labelKey: "ikb_personel", path: "/ik/personel", icon: Users, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_zam", path: "/ik/zam", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_puantaj", path: "/ik/puantaj", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_mesai", path: "/ik/mesai", icon: Clock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_vardiya_atama", path: "/ik/vardiya-transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ozluk_evrak", path: "/ik/ozluk-evrak", icon: FileText, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_cikis", path: "/ik/cikis", icon: LogOut, roles: ["admin", "yonetici", "ik"] },

@@ -206,6 +206,7 @@ app.use('/api/entities/ik_vardiya_planlari',   createEntityRouter('ik_vardiya_pl
 app.use('/api/entities/ik_resmi_tatiller',     createEntityRouter('ik_resmi_tatiller'));
 app.use('/api/entities/ik_puantaj',            createEntityRouter('ik_puantaj'));
 app.use('/api/entities/ik_puantaj_duzeltme_log', createEntityRouter('ik_puantaj_duzeltme_log'));
+app.use('/api/entities/ik_mesai_kayitlari',    createEntityRouter('ik_mesai_kayitlari'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2807,6 +2808,59 @@ app.get('/api/ik/puantaj/rapor', authMiddleware, (req, res) => {
     FROM ik_puantaj p LEFT JOIN ik_subeler s ON s.id=p.sube_id
     WHERE ${cond.join(' AND ')} ORDER BY p.tarih DESC, p.personel_adi LIMIT 5000`).all(...params);
   res.json({ rows, ozet: { kayit: rows.length, gec_toplam_dk: rows.reduce((a, r) => a + (r.gec_dk || 0), 0) } });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 5: Fazla mesai (Mesai Onayları)
+// ═══════════════════════════════════════════════════════════════════
+// Puantajdan otomatik fazla mesai adayları (henüz kaydı olmayan, fazla_mesai_dk > 0)
+app.get('/api/ik/mesai/adaylar', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_mesai')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { t1, t2, esik = 15 } = req.query;
+  if (!t1 || !t2) return res.status(400).json({ error: 'Tarih aralığı gerekli' });
+  const rows = db.prepare(`SELECT p.personel_id, p.personel_adi, p.tarih, p.fazla_mesai_dk, e.saatlik_ucret
+    FROM ik_puantaj p LEFT JOIN employees e ON e.id=p.personel_id
+    WHERE p.tarih>=? AND p.tarih<=? AND p.fazla_mesai_dk >= ?
+      AND NOT EXISTS (SELECT 1 FROM ik_mesai_kayitlari m WHERE m.personel_id=p.personel_id AND m.tarih=p.tarih AND m.is_deleted!=1)
+    ORDER BY p.tarih DESC`).all(t1, t2, Number(esik) || 15);
+  res.json({ rows });
+});
+
+// Mesai kaydı oluştur (elle veya adaydan)
+app.post('/api/ik/mesai', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_add', 'ikb_mesai')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const b = req.body || {};
+  if (!b.personel_id || !b.tarih || !(Number(b.sure_dk) > 0)) return res.status(400).json({ error: 'Personel, tarih ve süre gerekli' });
+  const emp = db.prepare('SELECT id, full_name, saatlik_ucret FROM employees WHERE id=?').get(b.personel_id);
+  if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
+  const tur = b.tur === 'tatil' ? 'tatil' : 'fazla';
+  let katsayi = Number(b.katsayi) || 1.5;
+  if (tur === 'tatil') katsayi = b.rt_tipi === 'yarim' ? 0.5 : 1;
+  const saatlik = Number(emp.saatlik_ucret) || 0;
+  const sure = Number(b.sure_dk);
+  const tutar = +(saatlik * (sure / 60) * katsayi).toFixed(2);
+  const d = new Date(b.tarih + 'T00:00:00');
+  try {
+    const id = _stokUUID(), now = new Date().toISOString();
+    db.prepare(`INSERT INTO ik_mesai_kayitlari
+      (id, personel_id, personel_adi, tarih, tur, katsayi, rt_tipi, sure_dk, saatlik_ucret, tutar, onay, kaynak, aciklama, donem_yil, donem_ay, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?, 'taslak', ?, ?, ?, ?, ?, ?, ?)`).run(
+      id, emp.id, emp.full_name, b.tarih, tur, katsayi, b.rt_tipi || 'tam', sure, saatlik, tutar,
+      b.kaynak === 'puantaj' ? 'puantaj' : 'elle', b.aciklama || null, d.getFullYear(), d.getMonth() + 1, req.user.email, now, now);
+    res.status(201).json(db.prepare('SELECT * FROM ik_mesai_kayitlari WHERE id=?').get(id));
+  } catch (err) { console.error('[ik] mesai kayit:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Toplu onay / red / onay kaldır
+app.post('/api/ik/mesai/toplu-onay', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_mesai')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { ids = [], islem = 'onayla' } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Kayıt seçin' });
+  const durum = islem === 'reddet' ? 'red' : islem === 'kaldir' ? 'taslak' : 'onayli';
+  const now = new Date().toISOString();
+  const upd = db.prepare("UPDATE ik_mesai_kayitlari SET onay=?, onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?");
+  db.transaction(() => { for (const id of ids) upd.run(durum, durum === 'onayli' ? req.user.email : null, durum === 'onayli' ? now : null, now, id); })();
+  res.json({ ok: true, guncellenen: ids.length, durum });
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

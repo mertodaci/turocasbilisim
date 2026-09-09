@@ -99,6 +99,7 @@ const IkVardiyaPlanlari = lazy(() => import('./pages/ik/IkVardiyaPlanlari'));
 const IkTatilSihirbazi = lazy(() => import('./pages/ik/IkTatilSihirbazi'));
 const IkPuantaj = lazy(() => import('./pages/ik/IkPuantaj'));
 const IkPuantajRapor = lazy(() => import('./pages/ik/IkPuantajRapor'));
+const IkMesai = lazy(() => import('./pages/ik/IkMesai'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -266,6 +267,7 @@ const AuthenticatedApp = () => {
         <Route path="/ik/tatil-sihirbazi" element={guard("ikb_tatil_sihirbazi", <IkTatilSihirbazi />)} />
         <Route path="/ik/puantaj" element={guard("ikb_puantaj", <IkPuantaj />)} />
         <Route path="/ik/puantaj-rapor" element={guard("ikb_puantaj_rapor", <IkPuantajRapor />)} />
+        <Route path="/ik/mesai" element={guard("ikb_mesai", <IkMesai />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -116,6 +116,7 @@ const ENTITY_MAP = {
   IkResmiTatil:      'ik_resmi_tatiller',
   IkPuantaj:         'ik_puantaj',
   IkPuantajLog:      'ik_puantaj_duzeltme_log',
+  IkMesai:           'ik_mesai_kayitlari',
 };
 
 function createEntityClient(entityName) {
@@ -349,6 +350,9 @@ export const ik = {
   async puantajDuzelt(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/${id}`, _sjson('PUT', body))); },
   async puantajToplu(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/toplu`, _sjson('POST', body))); },
   async puantajRapor(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/rapor?${qs}`, { credentials: 'include' })); },
+  async mesaiAdaylar(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/mesai/adaylar?${qs}`, { credentials: 'include' })); },
+  async mesaiEkle(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/mesai`, _sjson('POST', body))); },
+  async mesaiTopluOnay(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/mesai/toplu-onay`, _sjson('POST', body))); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

@@ -129,6 +129,10 @@ const ENTITY_MAP = {
   IkBordroSatir:     'ik_bordro_satirlari',
   IkSirket:          'ik_sirket_bilgileri',
   IkTopluYukleme:    'ik_toplu_yukleme',
+  IkOzlukEvrak:      'ik_ozluk_evraklari',
+  IkTutanak:         'ik_tutanaklar',
+  IkIlan:            'ik_ilanlar',
+  IkIzinEvrak:       'ik_izin_evraklari',
 };
 
 function createEntityClient(entityName) {
@@ -376,6 +380,9 @@ export const ik = {
   async bordroOnayla(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/bordro/onayla`, _sjson('POST', body))); },
   async bordroKapat(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/bordro/kapat`, _sjson('POST', body))); },
   sgkCsvUrl(yil, ay, sube_id) { const qs = new URLSearchParams({ yil, ay, ...(sube_id ? { sube_id } : {}) }).toString(); return `${BASE_URL}/api/ik/bordro/sgk-csv?${qs}`; },
+  async ozlukEvrakOnizle(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/ozluk-evrak/eslesme-onizle`, _sjson('POST', body))); },
+  async ozlukEvrakTopluUygula(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/ozluk-evrak/toplu-uygula`, _sjson('POST', body))); },
+  async hareketRapor(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/hareket-rapor?${qs}`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

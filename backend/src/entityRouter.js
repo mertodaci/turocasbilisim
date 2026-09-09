@@ -11,7 +11,8 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
-  'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf'];
+  'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
+  'ik_ozluk_evraklari','ik_tutanaklar','ik_ilanlar','ik_izin_evraklari'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -184,6 +185,10 @@ const TABLE_TO_MODULE = {
   ik_bordro_satirlari: 'ikb_bordro',
   ik_sirket_bilgileri: 'ikb_sirket',
   ik_toplu_yukleme: 'ikb_toplu_yukleme',
+  ik_ozluk_evraklari: 'ikb_ozluk_evrak',
+  ik_tutanaklar: 'ikb_tutanak',
+  ik_ilanlar: 'ikb_ilan',
+  ik_izin_evraklari: 'ikb_izin_evrak',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -335,6 +340,10 @@ const ALLOWED_COLUMNS = {
   ik_bordro_satirlari: ['donem_id','personel_id','personel_adi','sube_id','sube_adi','tc','gorev','aylik_ucret','saatlik_ucret','dakikalik_ucret','calisilan_gun','eksik_gun','resmi_maas','bayram','fazla_mesai','prim','yol','yemek','ticket','yol_hak_gun','yemek_hak_gun','ticket_hak_gun','resmi_toplam','resmi_net','avans','icra','bes','diger_kesinti','maas_puantaj_kes','yol_kes','yemek_kes','ticket_kes','personel_masrafi','borc_maas','borc_yyt','borc_toplam','sahsi_hesap_net','fesih_tazminati','ihbar_tazminati','kasa_tazminati','ozel_sigorta','ozel_sigorta_es_cocuk','genel_net','manuel_override','hesap_notu'],
   ik_sirket_bilgileri: ['kapsam','bolum_adi','unvan','vergi_dairesi','vergi_no','sgk_sicil','mersis','adres','merkez_adres','web'],
   ik_toplu_yukleme: ['tur','dosya_adi','donem_yil','donem_ay','toplam','eslesen','uygulanan','hatali','onizleme_json','durum','geri_alma_json'],
+  ik_ozluk_evraklari: ['personel_id','personel_adi','evrak_tipi','dosya_url','dosya_adi','tarih','aciklama','yukleyen','is_deleted'],
+  ik_tutanaklar: ['personel_id','personel_adi','tur','tarih','konu','aciklama','dosya_url','olusturan','is_deleted'],
+  ik_ilanlar: ['baslik','bolum_id','bolum_adi','sube_id','sube_adi','durum','baslangic','bitis','detay','yetkili_notu','olusturan','is_deleted'],
+  ik_izin_evraklari: ['leave_id','personel_id','personel_adi','evrak_adi','dosya_url','durum','aciklama','is_deleted'],
 };
 
 // Zorunlu alanlar
@@ -400,6 +409,10 @@ const REQUIRED_FIELDS = {
   ik_hakedis_tanim: ['personel_id','tur'],
   ik_bordro_yemek_kural: ['personel_id'],
   ik_bordro_donemleri: ['yil','ay'],
+  ik_ozluk_evraklari: ['personel_id'],
+  ik_tutanaklar: ['personel_id'],
+  ik_ilanlar: ['baslik'],
+  ik_izin_evraklari: ['leave_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

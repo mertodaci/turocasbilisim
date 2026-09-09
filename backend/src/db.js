@@ -512,8 +512,8 @@ function initDb() {
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf',
       // Faz 9-10: bordro + ay kapanışı
       'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_toplu_yukleme','ikb_sirket',
-      // Faz 11: evrak + tutanak + ilan + raporlar
-      'ikb_tutanak','ikb_ilan','ikb_hareket_rapor',
+      // Faz 11: evrak + tutanak + ilan + raporlar + VIP + izin evrak
+      'ikb_tutanak','ikb_ilan','ikb_hareket_rapor','ikb_vip','ikb_izin_evrak',
       // Faz 12: dashboard
       'ikb_dashboard',
     ];
@@ -1191,6 +1191,49 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_ik_bordro_satir_donem ON ik_bordro_satirlari(donem_id);
     `);
   } catch(e) { console.error('ik faz9 tablolari:', e.message); }
+
+  // ── İK / Özlük / Bordro — Faz 11: özlük evrak + tutanak/ihtar + ilanlar + izin evrak ──
+  try {
+    db.exec(`
+      -- Özlük evrak arşivi (tekli/toplu yükleme; dosya adından otomatik eşleştirme)
+      CREATE TABLE IF NOT EXISTS ik_ozluk_evraklari (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        evrak_tipi TEXT,                        -- kimlik | diploma | sozlesme | saglik_raporu | ehliyet | ...
+        dosya_url TEXT, dosya_adi TEXT, tarih TEXT, aciklama TEXT, yukleyen TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Tutanak & İhtarlar
+      CREATE TABLE IF NOT EXISTS ik_tutanaklar (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        tur TEXT DEFAULT 'tutanak',             -- tutanak | ihtar | savunma_talebi
+        tarih TEXT, konu TEXT, aciklama TEXT, dosya_url TEXT, olusturan TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- İç/dış personel ilanları
+      CREATE TABLE IF NOT EXISTS ik_ilanlar (
+        id TEXT PRIMARY KEY, baslik TEXT NOT NULL,
+        bolum_id TEXT, bolum_adi TEXT, sube_id TEXT, sube_adi TEXT,
+        durum TEXT DEFAULT 'taslak',            -- taslak | yayinda | kapali
+        baslangic TEXT, bitis TEXT, detay TEXT, yetkili_notu TEXT, olusturan TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- İzin/rapor evrak takibi (leave_requests'e kolon eklemeden bağımsız tablo)
+      CREATE TABLE IF NOT EXISTS ik_izin_evraklari (
+        id TEXT PRIMARY KEY, leave_id TEXT NOT NULL, personel_id TEXT, personel_adi TEXT,
+        evrak_adi TEXT, dosya_url TEXT,
+        durum TEXT DEFAULT 'eksik',             -- eksik | fiziki | dijital
+        aciklama TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_ozluk_evrak_personel ON ik_ozluk_evraklari(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_tutanak_personel ON ik_tutanaklar(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_izin_evrak_leave ON ik_izin_evraklari(leave_id);
+    `);
+  } catch(e) { console.error('ik faz11 tablolari:', e.message); }
 
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)

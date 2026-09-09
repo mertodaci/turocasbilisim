@@ -219,6 +219,10 @@ app.use('/api/entities/ik_bordro_donemleri',   createEntityRouter('ik_bordro_don
 app.use('/api/entities/ik_bordro_satirlari',   createEntityRouter('ik_bordro_satirlari'));
 app.use('/api/entities/ik_sirket_bilgileri',   createEntityRouter('ik_sirket_bilgileri'));
 app.use('/api/entities/ik_toplu_yukleme',      createEntityRouter('ik_toplu_yukleme'));
+app.use('/api/entities/ik_ozluk_evraklari',    createEntityRouter('ik_ozluk_evraklari'));
+app.use('/api/entities/ik_tutanaklar',         createEntityRouter('ik_tutanaklar'));
+app.use('/api/entities/ik_ilanlar',            createEntityRouter('ik_ilanlar'));
+app.use('/api/entities/ik_izin_evraklari',     createEntityRouter('ik_izin_evraklari'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -3248,6 +3252,132 @@ app.get('/api/ik/bordro/sgk-csv', authMiddleware, (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="sgk-puantaj-${yil}-${ay}.csv"`);
   res.send('﻿' + lines.join('\r\n'));
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 11: Özlük evrak toplu eşleştirme + Personel Hareket Raporları
+// ═══════════════════════════════════════════════════════════════════
+
+// Dosya adından evrak tipi tahmini (anahtar kelime → tip)
+const IK_EVRAK_ANAHTAR = [
+  ['kimlik', 'kimlik'], ['nufus', 'kimlik'], ['tc', 'kimlik'],
+  ['diploma', 'diploma'], ['mezuniyet', 'diploma'], ['ogrenim', 'diploma'],
+  ['sozlesme', 'sozlesme'], ['is_sozlesme', 'sozlesme'], ['kontrat', 'sozlesme'],
+  ['saglik', 'saglik_raporu'], ['rapor', 'saglik_raporu'], ['istirahat', 'saglik_raporu'],
+  ['ehliyet', 'ehliyet'], ['src', 'ehliyet'], ['psikoteknik', 'ehliyet'],
+  ['adli', 'adli_sicil'], ['sabika', 'adli_sicil'],
+  ['ikametgah', 'ikametgah'], ['yerlesim', 'ikametgah'],
+  ['sgk', 'sgk_ise_giris'], ['ise_giris', 'sgk_ise_giris'],
+  ['fotograf', 'fotograf'], ['vesikalik', 'fotograf'],
+  ['iban', 'banka'], ['banka', 'banka'], ['hesap', 'banka'],
+];
+function ikEvrakTipiTahmin(dosyaAdi) {
+  const s = String(dosyaAdi || '').toLowerCase().replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
+  for (const [k, t] of IK_EVRAK_ANAHTAR) if (s.includes(k)) return t;
+  return 'diger';
+}
+
+// Toplu özlük evrak: dosya listesini personele + evrak tipine eşle (önizleme)
+app.post('/api/ik/ozluk-evrak/eslesme-onizle', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_ozluk_evrak')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const dosyalar = Array.isArray(req.body?.dosyalar) ? req.body.dosyalar : [];
+  const emps = db.prepare("SELECT id, full_name, tc FROM employees WHERE (is_deleted IS NULL OR is_deleted=0)").all();
+  const byTc = new Map(emps.filter(e => e.tc).map(e => [String(e.tc).trim(), e]));
+  const norm = (x) => String(x || '').toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');
+  const satirlar = dosyalar.map((d) => {
+    const ad = d.dosya_adi || '';
+    const tcMatch = String(ad).match(/(\d{11})/);
+    let emp = tcMatch ? byTc.get(tcMatch[1]) : null;
+    if (!emp) {
+      const nad = norm(ad);
+      emp = emps.find(e => e.full_name && nad.includes(norm(e.full_name))) || null;
+    }
+    return {
+      dosya_url: d.dosya_url || '', dosya_adi: ad,
+      personel_id: emp?.id || null, personel_adi: emp?.full_name || null,
+      evrak_tipi: ikEvrakTipiTahmin(ad),
+      eslesme: emp ? (tcMatch ? 'tc' : 'ad') : 'yok',
+    };
+  });
+  res.json({ satirlar, eslesen: satirlar.filter(s => s.personel_id).length, toplam: satirlar.length });
+});
+
+// Onaylanan satırları uygula
+app.post('/api/ik/ozluk-evrak/toplu-uygula', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_add', 'ikb_ozluk_evrak')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const satirlar = Array.isArray(req.body?.satirlar) ? req.body.satirlar : [];
+  const email = req.user?.email || '';
+  const bugun = new Date().toISOString().slice(0, 10);
+  const ins = db.prepare(`INSERT INTO ik_ozluk_evraklari (id, personel_id, personel_adi, evrak_tipi, dosya_url, dosya_adi, tarih, aciklama, yukleyen, created_date, updated_date)
+    VALUES (?,?,?,?,?,?,?,?,?, datetime('now'), datetime('now'))`);
+  let n = 0;
+  const tx = db.transaction(() => {
+    for (const s of satirlar) {
+      if (!s.personel_id || !s.dosya_url) continue;
+      ins.run(_stokUUID(), s.personel_id, s.personel_adi || null, s.evrak_tipi || 'diger', s.dosya_url, s.dosya_adi || null, s.tarih || bugun, s.aciklama || 'Toplu yükleme', email);
+      n++;
+    }
+  });
+  tx();
+  res.json({ uygulanan: n });
+});
+
+// Personel Hareket Raporları — tek merkez (giriş-çıkış + avans + YYT + kesinti + masraf + izin + mesai + bordro)
+app.get('/api/ik/hareket-rapor', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_hareket_rapor', 'ikb_maas_ozet')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { personel_id, sube_id, bas, bit } = req.query;
+  const b1 = bas || '2000-01-01', b2 = bit || '2999-12-31';
+  const empCond = ['(e.is_deleted IS NULL OR e.is_deleted=0)'], empParams = [];
+  if (personel_id) { empCond.push('e.id=?'); empParams.push(personel_id); }
+  if (sube_id) { empCond.push('e.sube_id=?'); empParams.push(sube_id); }
+  const emps = db.prepare(`SELECT e.id, e.full_name, e.sube_id, e.hire_date, e.exit_date, e.status
+    FROM employees e WHERE ${empCond.join(' AND ')} ORDER BY e.full_name`).all(...empParams);
+
+  const kesQ = db.prepare(`SELECT tur, SUM(tutar) t FROM ik_kesintiler
+    WHERE personel_id=? AND is_deleted!=1
+      AND (printf('%04d-%02d', donem_yil, donem_ay) BETWEEN substr(?,1,7) AND substr(?,1,7)) GROUP BY tur`);
+  const masrafQ = db.prepare(`SELECT SUM(tutar) t FROM ik_personel_masraf
+    WHERE personel_id=? AND is_deleted!=1
+      AND (printf('%04d-%02d', donem_yil, donem_ay) BETWEEN substr(?,1,7) AND substr(?,1,7))`);
+  const mesaiQ = db.prepare(`SELECT tur, SUM(tutar) t, SUM(sure_dk) dk FROM ik_mesai_kayitlari
+    WHERE personel_id=? AND onay='onayli' AND is_deleted!=1 AND tarih BETWEEN ? AND ? GROUP BY tur`);
+  const izinQ = db.prepare(`SELECT COUNT(*) adet, SUM(COALESCE(day_count, 0)) gun FROM leave_requests
+    WHERE employee_id=? AND start_date BETWEEN ? AND ?`);
+  const bordroQ = db.prepare(`SELECT SUM(s.resmi_toplam) brut, SUM(s.genel_net) net,
+      SUM(s.yol) yol, SUM(s.yemek) yemek, SUM(s.ticket) ticket, SUM(s.prim) prim
+    FROM ik_bordro_satirlari s JOIN ik_bordro_donemleri d ON d.id=s.donem_id
+    WHERE s.personel_id=? AND (printf('%04d-%02d', d.yil, d.ay) BETWEEN substr(?,1,7) AND substr(?,1,7))`);
+
+  const personeller = emps.map((e) => {
+    const kes = {}; for (const r of kesQ.all(e.id, b1, b2)) kes[r.tur] = Number(r.t) || 0;
+    const mes = { fazla: 0, tatil: 0, dk: 0 }; for (const r of mesaiQ.all(e.id, b1, b2)) { mes[r.tur] = Number(r.t) || 0; mes.dk += Number(r.dk) || 0; }
+    const masraf = Number(masrafQ.get(e.id, b1, b2)?.t) || 0;
+    const izin = izinQ.get(e.id, b1, b2) || {};
+    const bordro = bordroQ.get(e.id, b1, b2) || {};
+    return {
+      personel_id: e.id, personel_adi: e.full_name, sube_id: e.sube_id,
+      hire_date: e.hire_date, exit_date: e.exit_date, status: e.status,
+      avans: kes.avans || 0, icra: kes.icra || 0, bes: kes.bes || 0,
+      diger_kesinti: kes.diger || 0, gun_kes: kes.gun_kes || 0,
+      personel_masrafi: masraf,
+      izin_adet: Number(izin.adet) || 0, izin_gun: Number(izin.gun) || 0,
+      mesai_fazla: mes.fazla || 0, mesai_tatil: mes.tatil || 0, mesai_dk: mes.dk || 0,
+      bordro_brut: Number(bordro.brut) || 0, bordro_net: Number(bordro.net) || 0,
+      yol: Number(bordro.yol) || 0, yemek: Number(bordro.yemek) || 0,
+      ticket: Number(bordro.ticket) || 0, prim: Number(bordro.prim) || 0,
+    };
+  });
+  const sum = (k) => personeller.reduce((a, p) => a + (p[k] || 0), 0);
+  res.json({
+    personeller,
+    ozet: {
+      personel_sayisi: personeller.length,
+      toplam_avans: sum('avans'), toplam_icra: sum('icra'), toplam_bes: sum('bes'),
+      toplam_diger: sum('diger_kesinti'), toplam_masraf: sum('personel_masrafi'),
+      toplam_izin_gun: sum('izin_gun'), toplam_mesai: sum('mesai_fazla') + sum('mesai_tatil'),
+      toplam_bordro_net: sum('bordro_net'),
+    },
+  });
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

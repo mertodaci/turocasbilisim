@@ -102,6 +102,8 @@ export const MODULES = [
   { key: "ikb_sirket",          label: "Şirket Bilgileri",       path: "/ik/sirket" },
   { key: "ikb_tutanak",         label: "Tutanak & İhtarlar",     path: "/ik/tutanak" },
   { key: "ikb_ilan",            label: "İlanlar",                path: "/ik/ilan" },
+  { key: "ikb_vip",             label: "VIP Personeller",        path: "/ik/vip" },
+  { key: "ikb_izin_evrak",      label: "İzin & Rapor Evrak Takibi", path: "/ik/izin-evrak" },
   { key: "ikb_hareket_rapor",   label: "Personel Hareket Raporları", path: "/ik/hareket-rapor" },
   { key: "ikb_dashboard",       label: "İK / PDKS Kontrol Paneli", path: "/ik/dashboard" },
 ];

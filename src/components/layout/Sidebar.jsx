@@ -102,7 +102,10 @@ export const allNavItems = [
         { labelKey: "ikb_ay_kapanis", path: "/ik/ay-kapanis", icon: Lock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_vardiya_atama", path: "/ik/vardiya-transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ozluk_evrak", path: "/ik/ozluk-evrak", icon: FileText, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_cikis", path: "/ik/cikis", icon: LogOut, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_izin_evrak", path: "/ik/izin-evrak", icon: ClipboardCheck, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_vip", path: "/ik/vip", icon: Star, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_tutanak", path: "/ik/tutanak", icon: ScrollText, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_ilan", path: "/ik/ilan", icon: Megaphone, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
@@ -110,6 +113,7 @@ export const allNavItems = [
       children: [
         { labelKey: "ikb_puantaj_rapor", path: "/ik/puantaj-rapor", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_maas_ozet", path: "/ik/maas-ozet", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_hareket_rapor", path: "/ik/hareket-rapor", icon: Activity, roles: ["admin", "yonetici", "ik"] },
       ]
     },
   ]

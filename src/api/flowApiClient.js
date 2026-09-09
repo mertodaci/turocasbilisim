@@ -114,6 +114,8 @@ const ENTITY_MAP = {
   IkVardiyaAtama:    'ik_vardiya_atamalari',
   IkVardiyaPlan:     'ik_vardiya_planlari',
   IkResmiTatil:      'ik_resmi_tatiller',
+  IkPuantaj:         'ik_puantaj',
+  IkPuantajLog:      'ik_puantaj_duzeltme_log',
 };
 
 function createEntityClient(entityName) {
@@ -342,6 +344,11 @@ export const ik = {
   async ucretSenkron(id) { return handleResponse(await fetch(`${BASE_URL}/api/ik/personel/${id}/ucret-senkron`, _sjson('POST'))); },
   async vardiyaTransfer(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/vardiya-transfer`, _sjson('POST', body))); },
   async tatilTakvimi(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/tatil-takvimi?${qs}`, { credentials: 'include' })); },
+  async puantajHesapla(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/hesapla`, _sjson('POST', body))); },
+  async puantajCetvel(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/cetvel?${qs}`, { credentials: 'include' })); },
+  async puantajDuzelt(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/${id}`, _sjson('PUT', body))); },
+  async puantajToplu(body) { return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/toplu`, _sjson('POST', body))); },
+  async puantajRapor(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/ik/puantaj/rapor?${qs}`, { credentials: 'include' })); },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

@@ -167,6 +167,8 @@ const TABLE_TO_MODULE = {
   ik_vardiya_atamalari: 'ikb_vardiya_atama',
   ik_vardiya_planlari: 'ikb_vardiya_planlari',
   ik_resmi_tatiller: 'ikb_tatil_sihirbazi',
+  ik_puantaj: 'ikb_puantaj',
+  ik_puantaj_duzeltme_log: 'ikb_puantaj',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -303,6 +305,8 @@ const ALLOWED_COLUMNS = {
   ik_vardiya_atamalari: ['personel_id','personel_adi','vardiya_id','vardiya_adi','baslangic_tarihi','aciklama'],
   ik_vardiya_planlari: ['ad','baslangic_tarihi','bitis_tarihi','ana_vardiya_id','adimlar_json','haftalik_izin_kac_gun_calis','haftalik_izin_kac_gun','haftalik_izin_devret','dongu_baslangic','personel_ids_json','aktif','is_deleted'],
   ik_resmi_tatiller: ['tarih','ad','tip','kaynak','aktif'],
+  ik_puantaj: ['personel_id','personel_adi','tarih','sube_id','vardiya_id','giris_saat','cikis_saat','mesai_dk','gec_dk','erken_dk','eksik_dk','fazla_mesai_dk','durum_kodu','kayit_tipi','ozet','duzeltme_notu','kaynak'],
+  ik_puantaj_duzeltme_log: ['puantaj_id','personel_id','tarih','alan','eski','yeni','aciklama','actor_email'],
 };
 
 // Zorunlu alanlar
@@ -363,6 +367,7 @@ const REQUIRED_FIELDS = {
   ik_vardiya_atamalari: ['personel_id','vardiya_id','baslangic_tarihi'],
   ik_vardiya_planlari: ['ad'],
   ik_resmi_tatiller: ['tarih','ad'],
+  ik_puantaj: ['personel_id','tarih'],
 };
 
 function validateData(tableName, data, isUpdate = false) {

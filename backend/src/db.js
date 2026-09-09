@@ -1006,6 +1006,32 @@ function initDb() {
     }
   } catch(e) { console.error('ik faz2 tablolari:', e.message); }
 
+  // ── İK / Özlük / Bordro — Faz 3-4: puantaj motoru ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ik_puantaj (
+        id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
+        tarih TEXT NOT NULL, sube_id TEXT, vardiya_id TEXT,
+        giris_saat TEXT, cikis_saat TEXT, mesai_dk INTEGER DEFAULT 0,
+        gec_dk INTEGER DEFAULT 0, erken_dk INTEGER DEFAULT 0, eksik_dk INTEGER DEFAULT 0,
+        fazla_mesai_dk INTEGER DEFAULT 0,
+        durum_kodu TEXT DEFAULT 'E',       -- N | H | T | RT | E | R | I | U | M | CT
+        kayit_tipi TEXT DEFAULT 'yok',     -- rfid | qr | yonetici | manuel | toplu | izin | tatil | yok
+        ozet TEXT, duzeltme_notu TEXT, kaynak TEXT DEFAULT 'motor',
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
+        UNIQUE(personel_id, tarih)
+      );
+      CREATE TABLE IF NOT EXISTS ik_puantaj_duzeltme_log (
+        id TEXT PRIMARY KEY, puantaj_id TEXT NOT NULL, personel_id TEXT, tarih TEXT,
+        alan TEXT, eski TEXT, yeni TEXT, aciklama TEXT,
+        actor_email TEXT, created_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_ik_puantaj_tarih ON ik_puantaj(tarih);
+      CREATE INDEX IF NOT EXISTS idx_ik_puantaj_personel ON ik_puantaj(personel_id);
+      CREATE INDEX IF NOT EXISTS idx_ik_puantaj_log_puantaj ON ik_puantaj_duzeltme_log(puantaj_id);
+    `);
+  } catch(e) { console.error('ik faz3 tablolari:', e.message); }
+
   // İK/Bordro modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Modül anahtarları 'ikb_' önekli — mevcut ik_leave_requests/ik_tanimlar ile karışmaz.)
   try {

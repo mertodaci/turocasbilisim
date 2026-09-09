@@ -204,6 +204,8 @@ app.use('/api/entities/ik_vardiyalar',         createEntityRouter('ik_vardiyalar
 app.use('/api/entities/ik_vardiya_atamalari',  createEntityRouter('ik_vardiya_atamalari'));
 app.use('/api/entities/ik_vardiya_planlari',   createEntityRouter('ik_vardiya_planlari'));
 app.use('/api/entities/ik_resmi_tatiller',     createEntityRouter('ik_resmi_tatiller'));
+app.use('/api/entities/ik_puantaj',            createEntityRouter('ik_puantaj'));
+app.use('/api/entities/ik_puantaj_duzeltme_log', createEntityRouter('ik_puantaj_duzeltme_log'));
 
 // Dosya yükleme
 const multer = require('multer');
@@ -2595,6 +2597,216 @@ app.get('/api/ik/tatil-takvimi', authMiddleware, (req, res) => {
   if (t2) { cond.push('tarih<=?'); params.push(t2); }
   const rows = db.prepare(`SELECT * FROM ik_resmi_tatiller WHERE ${cond.join(' AND ')} ORDER BY tarih`).all(...params);
   res.json({ rows });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// İK Faz 3: Puantaj motoru — card_logs + izin + tatil → günlük puantaj
+// ═══════════════════════════════════════════════════════════════════
+function _hhmmToMin(s) {
+  if (!s) return null;
+  const m = String(s).match(/(\d{1,2}):(\d{2})/);
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
+}
+// leave_type → puantaj durum kodu
+function _izinKodu(lt) {
+  const t = String(lt || '').toLowerCase();
+  if (t.includes('ucretsiz') || t.includes('ücretsiz')) return 'U';
+  if (t.includes('rapor') || t.includes('hastalik') || t.includes('hastalık') || t.includes('istirahat')) return 'R';
+  if (t.includes('mazeret')) return 'M';
+  return 'I';
+}
+
+// Bir personelin bir gündeki puantaj satırını üret (card_logs + izin + tatil + vardiya).
+function ikGunPuantajHesapla(emp, tarih, ctx) {
+  const { vardiyaMap, tatilMap, defVardiyaId } = ctx;
+  const vardiyaId = emp.vardiya_id || defVardiyaId || null;
+  const vardiya = vardiyaId ? vardiyaMap[vardiyaId] : null;
+  const d = new Date(tarih + 'T00:00:00');
+  const haftaGunu = d.getDay(); // 0 pazar, 6 cumartesi
+
+  // 1) İzin/rapor var mı?
+  const izin = db.prepare(`SELECT leave_type FROM leave_requests
+    WHERE employee_id=? AND status NOT IN ('reddedildi','iptal','beklemede')
+      AND date(start_date) <= date(?) AND date(end_date) >= date(?) LIMIT 1`).get(emp.id, tarih, tarih);
+
+  // 2) Card log hareketleri (o güne ait)
+  const logs = db.prepare(`SELECT direction, event_time FROM card_logs
+    WHERE employee_id=? AND substr(COALESCE(event_time,''),1,10)=? ORDER BY event_time`).all(emp.id, tarih);
+  const girisLog = logs.find((l) => /gir/i.test(l.direction || '')) || logs[0];
+  const cikisLog = [...logs].reverse().find((l) => /cik|çık/i.test(l.direction || '')) || (logs.length > 1 ? logs[logs.length - 1] : null);
+  const gSaat = girisLog ? String(girisLog.event_time).slice(11, 16) : null;
+  const cSaat = cikisLog && cikisLog !== girisLog ? String(cikisLog.event_time).slice(11, 16) : null;
+
+  let durum = 'E', kayitTipi = 'yok', gec = 0, erken = 0, eksik = 0, mesaiDk = 0, ozet = null;
+  const tatil = tatilMap[tarih];
+
+  if (gSaat || cSaat) {
+    durum = 'N'; kayitTipi = 'rfid';
+    const gMin = _hhmmToMin(gSaat), cMin = _hhmmToMin(cSaat);
+    if (gMin != null && cMin != null) mesaiDk = Math.max(0, cMin - gMin);
+    if (vardiya) {
+      const vg = _hhmmToMin(vardiya.baslama_saati), vc = _hhmmToMin(vardiya.bitis_saati);
+      if (vg != null && gMin != null) { const g = gMin - vg - (vardiya.gec_tolerans_dk || 0); if (g > 0) { gec = g; ozet = `${g} dk geç`; } }
+      if (vc != null && cMin != null) { const e = vc - cMin - (vardiya.erken_tolerans_dk || 0); if (e > 0) { erken = e; ozet = (ozet ? ozet + ' · ' : '') + `${e} dk erken`; } }
+      const beklenen = (vg != null && vc != null) ? Math.max(0, vc - vg) : 0;
+      if (beklenen > 0 && mesaiDk > 0 && mesaiDk < beklenen) eksik = beklenen - mesaiDk;
+    }
+  } else if (izin) {
+    durum = _izinKodu(izin.leave_type); kayitTipi = 'izin'; ozet = 'İzin/rapor';
+  } else if (tatil) {
+    durum = tatil.tip === 'yarim' ? 'RT' : 'T'; kayitTipi = 'tatil'; ozet = tatil.ad;
+  } else if (haftaGunu === 0) {
+    durum = 'H'; kayitTipi = 'tatil'; ozet = 'Hafta tatili';
+  } else {
+    durum = 'E'; ozet = 'Gelmedi';
+  }
+  // Vardiya dışı fazla dk (Faz 5 mesai adayı için ham veri)
+  let fazla = 0;
+  if (durum === 'N' && vardiya) {
+    const vc = _hhmmToMin(vardiya.bitis_saati), cMin = _hhmmToMin(cSaat);
+    if (vc != null && cMin != null && cMin > vc + (vardiya.erken_tolerans_dk || 0)) fazla = cMin - vc;
+  }
+  return {
+    personel_id: emp.id, personel_adi: emp.full_name, tarih, sube_id: emp.sube_id || null, vardiya_id: vardiyaId,
+    giris_saat: gSaat, cikis_saat: cSaat, mesai_dk: mesaiDk, gec_dk: gec, erken_dk: erken, eksik_dk: eksik,
+    fazla_mesai_dk: fazla, durum_kodu: durum, kayit_tipi: kayitTipi, ozet,
+  };
+}
+
+// Dönem/gün için tüm aktif personelin puantajını üret/yenile.
+// Manuel düzeltilmiş (kaynak='manuel') satırlara dokunmaz.
+app.post('/api/ik/puantaj/hesapla', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { tarih, t1, t2, sube_id, force } = req.body || {};
+  const bas = t1 || tarih, bit = t2 || tarih;
+  if (!bas || !bit) return res.status(400).json({ error: 'Tarih veya tarih aralığı gerekli' });
+
+  const vardiyaMap = {};
+  for (const v of db.prepare('SELECT * FROM ik_vardiyalar').all()) vardiyaMap[v.id] = v;
+  const defV = db.prepare('SELECT id FROM ik_vardiyalar WHERE varsayilan=1 LIMIT 1').get();
+  const tatilMap = {};
+  for (const t of db.prepare("SELECT tarih, ad, tip FROM ik_resmi_tatiller WHERE aktif=1").all()) tatilMap[t.tarih] = t;
+
+  const empCond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'", "(status IS NULL OR status != 'pasif')"];
+  const empParams = [];
+  if (sube_id) { empCond.push('sube_id=?'); empParams.push(sube_id); }
+  const emps = db.prepare(`SELECT id, full_name, sube_id, vardiya_id, hire_date, exit_date FROM employees WHERE ${empCond.join(' AND ')}`).all(...empParams);
+
+  const ctx = { vardiyaMap, tatilMap, defVardiyaId: defV?.id || null };
+  const ins = db.prepare(`INSERT INTO ik_puantaj
+    (id, personel_id, personel_adi, tarih, sube_id, vardiya_id, giris_saat, cikis_saat, mesai_dk, gec_dk, erken_dk, eksik_dk, fazla_mesai_dk, durum_kodu, kayit_tipi, ozet, kaynak, created_by, created_date, updated_date)
+    VALUES (@id,@personel_id,@personel_adi,@tarih,@sube_id,@vardiya_id,@giris_saat,@cikis_saat,@mesai_dk,@gec_dk,@erken_dk,@eksik_dk,@fazla_mesai_dk,@durum_kodu,@kayit_tipi,@ozet,'motor',@by,@now,@now)
+    ON CONFLICT(personel_id, tarih) DO UPDATE SET
+      sube_id=excluded.sube_id, vardiya_id=excluded.vardiya_id, giris_saat=excluded.giris_saat, cikis_saat=excluded.cikis_saat,
+      mesai_dk=excluded.mesai_dk, gec_dk=excluded.gec_dk, erken_dk=excluded.erken_dk, eksik_dk=excluded.eksik_dk,
+      fazla_mesai_dk=excluded.fazla_mesai_dk, durum_kodu=excluded.durum_kodu, kayit_tipi=excluded.kayit_tipi, ozet=excluded.ozet, updated_date=excluded.updated_date
+    WHERE ik_puantaj.kaynak='motor' ${force ? "OR 1=1" : ""}`);
+
+  try {
+    const now = new Date().toISOString();
+    let n = 0;
+    const gunler = [];
+    for (let d = new Date(bas + 'T00:00:00'); d <= new Date(bit + 'T00:00:00'); d.setDate(d.getDate() + 1)) gunler.push(d.toISOString().slice(0, 10));
+    db.transaction(() => {
+      for (const g of gunler) {
+        for (const emp of emps) {
+          if (emp.hire_date && g < emp.hire_date) continue;
+          if (emp.exit_date && g > emp.exit_date) continue;
+          const row = ikGunPuantajHesapla(emp, g, ctx);
+          ins.run({ ...row, id: _stokUUID(), by: req.user.email, now });
+          n++;
+        }
+      }
+    })();
+    res.json({ ok: true, gun: gunler.length, personel: emps.length, satir: n });
+  } catch (err) { console.error('[ik] puantaj hesapla:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Günlük puantaj cetveli
+app.get('/api/ik/puantaj/cetvel', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_puantaj', 'ikb_puantaj_rapor')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { tarih, sube_id } = req.query;
+  if (!tarih) return res.status(400).json({ error: 'tarih gerekli' });
+  const cond = ['p.tarih=?'], params = [tarih];
+  if (sube_id) { cond.push('p.sube_id=?'); params.push(sube_id); }
+  const rows = db.prepare(`SELECT p.*, e.meslek_kodu, s.ad sube_adi, v.ad vardiya_adi
+    FROM ik_puantaj p
+    LEFT JOIN employees e ON e.id=p.personel_id
+    LEFT JOIN ik_subeler s ON s.id=p.sube_id
+    LEFT JOIN ik_vardiyalar v ON v.id=p.vardiya_id
+    WHERE ${cond.join(' AND ')} ORDER BY personel_adi`).all(...params);
+  res.json({ rows });
+});
+
+// Satır düzenleme (manuel giriş/çıkış/durum) + audit log
+app.put('/api/ik/puantaj/:id', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const row = db.prepare('SELECT * FROM ik_puantaj WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Kayıt bulunamadı' });
+  const b = req.body || {};
+  const alanlar = ['giris_saat', 'cikis_saat', 'durum_kodu', 'mesai_dk', 'duzeltme_notu'];
+  const now = new Date().toISOString();
+  try {
+    const upd = {}; const logs = [];
+    for (const a of alanlar) if (a in b && String(b[a] ?? '') !== String(row[a] ?? '')) { upd[a] = b[a]; logs.push({ alan: a, eski: row[a], yeni: b[a] }); }
+    if (!Object.keys(upd).length) return res.json({ ok: true, degisiklik: 0 });
+    // giriş/çıkış elle değişti → mesai_dk yeniden
+    if (('giris_saat' in upd || 'cikis_saat' in upd)) {
+      const g = _hhmmToMin(upd.giris_saat ?? row.giris_saat), c = _hhmmToMin(upd.cikis_saat ?? row.cikis_saat);
+      if (g != null && c != null) upd.mesai_dk = Math.max(0, c - g);
+    }
+    const setSql = Object.keys(upd).map((k) => `${k}=@${k}`).join(', ');
+    db.prepare(`UPDATE ik_puantaj SET ${setSql}, kaynak='manuel', kayit_tipi='yonetici', updated_date=@now WHERE id=@id`).run({ ...upd, now, id: row.id });
+    const insLog = db.prepare(`INSERT INTO ik_puantaj_duzeltme_log (id, puantaj_id, personel_id, tarih, alan, eski, yeni, aciklama, actor_email, created_date) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+    for (const l of logs) insLog.run(_stokUUID(), row.id, row.personel_id, row.tarih, l.alan, String(l.eski ?? ''), String(l.yeni ?? ''), b.duzeltme_notu || null, req.user.email, now);
+    res.json({ ok: true, degisiklik: logs.length, satir: db.prepare('SELECT * FROM ik_puantaj WHERE id=?').get(row.id) });
+  } catch (err) { console.error('[ik] puantaj duzelt:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Toplu giriş/çıkış/mesai (seçili personel + tarih aralığı)
+app.post('/api/ik/puantaj/toplu', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_edit', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { personel_ids = [], t1, t2, durum_kodu, giris_saat, cikis_saat, aciklama } = req.body || {};
+  if (!Array.isArray(personel_ids) || !personel_ids.length || !t1 || !t2) return res.status(400).json({ error: 'Personel ve tarih aralığı gerekli' });
+  try {
+    const now = new Date().toISOString();
+    const gunler = [];
+    for (let d = new Date(t1 + 'T00:00:00'); d <= new Date(t2 + 'T00:00:00'); d.setDate(d.getDate() + 1)) gunler.push(d.toISOString().slice(0, 10));
+    let n = 0;
+    const up = db.prepare(`INSERT INTO ik_puantaj (id, personel_id, personel_adi, tarih, sube_id, vardiya_id, giris_saat, cikis_saat, mesai_dk, durum_kodu, kayit_tipi, ozet, duzeltme_notu, kaynak, created_by, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,?, 'toplu', ?, ?, 'manuel', ?, ?, ?)
+      ON CONFLICT(personel_id, tarih) DO UPDATE SET giris_saat=excluded.giris_saat, cikis_saat=excluded.cikis_saat, mesai_dk=excluded.mesai_dk, durum_kodu=excluded.durum_kodu, kayit_tipi='toplu', duzeltme_notu=excluded.duzeltme_notu, kaynak='manuel', updated_date=excluded.updated_date`);
+    db.transaction(() => {
+      for (const pid of personel_ids) {
+        const emp = db.prepare('SELECT id, full_name, sube_id, vardiya_id FROM employees WHERE id=?').get(pid);
+        if (!emp) continue;
+        const g = _hhmmToMin(giris_saat), c = _hhmmToMin(cikis_saat);
+        const mesai = (g != null && c != null) ? Math.max(0, c - g) : 0;
+        for (const gun of gunler) {
+          up.run(_stokUUID(), emp.id, emp.full_name, gun, emp.sube_id || null, emp.vardiya_id || null, giris_saat || null, cikis_saat || null, mesai, durum_kodu || 'N', aciklama || 'Toplu işlem', aciklama || null, req.user.email, now, now);
+          n++;
+        }
+      }
+    })();
+    res.json({ ok: true, satir: n });
+  } catch (err) { console.error('[ik] puantaj toplu:', err); res.status(500).json({ error: err.message }); }
+});
+
+// Puantaj raporu (geç gelen / gelmeyen / izinli / gece / tümü)
+app.get('/api/ik/puantaj/rapor', authMiddleware, (req, res) => {
+  if (!ikPerm(req, 'can_view', 'ikb_puantaj_rapor', 'ikb_puantaj')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { t1, t2, sube_id, tur = 'tumu' } = req.query;
+  if (!t1 || !t2) return res.status(400).json({ error: 'Tarih aralığı gerekli' });
+  const cond = ['p.tarih>=?', 'p.tarih<=?'], params = [t1, t2];
+  if (sube_id) { cond.push('p.sube_id=?'); params.push(sube_id); }
+  if (tur === 'gec') cond.push('p.gec_dk > 0');
+  else if (tur === 'gelmeyen') cond.push("p.durum_kodu='E'");
+  else if (tur === 'izinli') cond.push("p.durum_kodu IN ('I','R','U','M')");
+  else if (tur === 'gece') cond.push("p.durum_kodu='N' AND (p.giris_saat >= '20:00' OR p.giris_saat < '06:00')");
+  const rows = db.prepare(`SELECT p.tarih, p.personel_adi, p.durum_kodu, p.giris_saat, p.cikis_saat, p.gec_dk, p.erken_dk, p.mesai_dk, p.ozet, s.ad sube_adi
+    FROM ik_puantaj p LEFT JOIN ik_subeler s ON s.id=p.sube_id
+    WHERE ${cond.join(' AND ')} ORDER BY p.tarih DESC, p.personel_adi LIMIT 5000`).all(...params);
+  res.json({ rows, ozet: { kayit: rows.length, gec_toplam_dk: rows.reduce((a, r) => a + (r.gec_dk || 0), 0) } });
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

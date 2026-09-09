@@ -938,8 +938,9 @@ function initDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_ik_bolumler_sube ON ik_bolumler(sube_id);
       CREATE INDEX IF NOT EXISTS idx_ik_ucret_gecmisi_personel ON ik_ucret_gecmisi(personel_id);
-      CREATE INDEX IF NOT EXISTS idx_employees_sube ON employees(sube_id);
     `);
+    // idx_employees_sube: employees.sube_id migration'ı bu bloktan SONRA çalışıyor →
+    // index'i migration döngüsünden sonra (performanceIndexes) oluştur.
   } catch(e) { console.error('ik faz1 tablolari:', e.message); }
 
   // ── İK / Özlük / Bordro — Faz 2: vardiya + resmî tatil ──
@@ -1351,6 +1352,7 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_modules_customer ON customer_modules(customer_id)",
     "CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email)",
     "CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status)",
+    "CREATE INDEX IF NOT EXISTS idx_employees_sube ON employees(sube_id)",
     "CREATE INDEX IF NOT EXISTS idx_employees_customer ON employees(customer_id)",
     "CREATE INDEX IF NOT EXISTS idx_roleperms_lookup ON role_permissions(role_name, module)",
     "CREATE INDEX IF NOT EXISTS idx_todos_employee ON todos(employee_id)",

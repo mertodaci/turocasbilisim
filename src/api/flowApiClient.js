@@ -277,6 +277,10 @@ export const stok = {
   async talepIptal(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}/iptal`, _sjson('POST'))); },
   async talepSevk(id, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep/${id}/sevk`, _sjson('POST', satirlar ? { satirlar } : undefined))); },
   async talepOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/talep-ozet`, { credentials: 'include' })); },
+  async rapor(ad, filtre = {}) {
+    const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/rapor/${ad}?${p}`, { credentials: 'include' }));
+  },
 };
 
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde

@@ -407,6 +407,8 @@ function initDb() {
       'stok_sayim',
       // Faz 5: Malzeme Talep
       'stok_talep',
+      // Faz 6: Raporlar
+      'stok_raporlar',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();

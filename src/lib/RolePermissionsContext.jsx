@@ -68,6 +68,7 @@ export const MODULES = [
   { key: "stok_talep",          label: "Malzeme Talebi",         path: "/stok/talep" },
   { key: "stok_sayim",          label: "Sayım / Envanter",       path: "/stok/sayim" },
   { key: "stok_parti_takibi",   label: "Parti & Raf Ömrü",       path: "/stok/partiler" },
+  { key: "stok_raporlar",       label: "Stok Raporları",         path: "/stok/raporlar" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

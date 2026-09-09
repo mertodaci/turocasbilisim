@@ -1561,6 +1561,140 @@ app.get('/api/stok/talep-ozet', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// STOK Faz 6: Raporlar (salt okuma; stok_hareketler + stok_partiler üzerinden)
+// ═══════════════════════════════════════════════════════════════════
+function stokRaporPerm(req) {
+  return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_raporlar', 'can_view') || stokFisPerm(req, 'can_view');
+}
+
+app.get('/api/stok/rapor/durum', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { depo_id, urun_id, raf_id, mode, q } = req.query;
+    const cond = [], params = [];
+    if (depo_id) { cond.push('h.depo_id=?'); params.push(depo_id); }
+    if (urun_id) { cond.push('h.urun_id=?'); params.push(urun_id); }
+    if (raf_id) { cond.push('h.raf_id=?'); params.push(raf_id); }
+    const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+    let rows = db.prepare(`SELECT h.depo_id, MAX(h.depo_adi) depo_adi, h.raf_id, MAX(h.raf_adi) raf_adi,
+        h.urun_id, MAX(h.urun_adi) urun_adi,
+        COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE 0 END),0) giren,
+        COALESCE(SUM(CASE WHEN h.tip='cikis' THEN h.miktar ELSE 0 END),0) cikan,
+        COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) mevcut
+      FROM stok_hareketler h ${where}
+      GROUP BY h.depo_id, h.raf_id, h.urun_id
+      ORDER BY MAX(h.depo_adi), MAX(h.urun_adi)`).all(...params);
+    // ürün grup + birim + min seviye zenginleştir
+    const urunMap = {};
+    for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim FROM stok_urunler').all()) urunMap[u.id] = u;
+    const minMap = {};
+    for (const m of db.prepare('SELECT urun_id, depo_id, min_seviye FROM stok_urun_raf').all()) minMap[`${m.urun_id}|${m.depo_id}`] = m.min_seviye;
+    rows = rows.map((r) => ({ ...r, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '', birim: urunMap[r.urun_id]?.ana_birim || 'ADET', min_seviye: minMap[`${r.urun_id}|${r.depo_id}`] || 0 }));
+    if (mode === 'zero') rows = rows.filter((r) => r.mevcut <= 1e-9);
+    else if (mode === 'critical') rows = rows.filter((r) => r.mevcut > 0 && r.mevcut <= (r.min_seviye || 10));
+    if (q) { const s = q.toLowerCase(); rows = rows.filter((r) => `${r.urun_adi} ${r.urun_kodu} ${r.depo_adi} ${r.raf_adi} ${r.grup}`.toLowerCase().includes(s)); }
+    const tot = rows.reduce((a, r) => ({ giren: a.giren + r.giren, cikan: a.cikan + r.cikan, mevcut: a.mevcut + r.mevcut }), { giren: 0, cikan: 0, mevcut: 0 });
+    res.json({ rows, toplam: tot });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/rapor/ekstre', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { urun_id, depo_id, t1, t2 } = req.query;
+  if (!urun_id) return res.status(400).json({ error: 'urun_id gerekli' });
+  try {
+    const cond = ['h.urun_id=?'], params = [urun_id];
+    if (depo_id) { cond.push('h.depo_id=?'); params.push(depo_id); }
+    if (t1) { cond.push('h.tarih>=?'); params.push(t1); }
+    if (t2) { cond.push('h.tarih<=?'); params.push(t2); }
+    const rows = db.prepare(`SELECT h.tarih, h.fis_no, h.fis_tip, h.depo_adi, h.raf_adi, h.tip, h.miktar
+      FROM stok_hareketler h WHERE ${cond.join(' AND ')}
+      ORDER BY h.tarih, h.created_date`).all(...params);
+    let bakiye = 0;
+    const out = rows.map((r) => {
+      const giris = r.tip === 'giris' ? r.miktar : 0;
+      const cikis = r.tip === 'cikis' ? r.miktar : 0;
+      bakiye += giris - cikis;
+      return { tarih: r.tarih, fis_no: r.fis_no, tip: r.fis_tip, depo: r.depo_adi, raf: r.raf_adi, giris, cikis, bakiye: +bakiye.toFixed(4) };
+    });
+    res.json({ rows: out, son_bakiye: bakiye });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/rapor/hareket', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { t1, t2, depo_id, tip } = req.query;
+    const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "durum='onayli'"], params = [];
+    if (t1) { cond.push('tarih>=?'); params.push(t1); }
+    if (t2) { cond.push('tarih<=?'); params.push(t2); }
+    if (tip && tip !== 'hepsi') { cond.push('tip=?'); params.push(tip); }
+    if (depo_id) { cond.push('(kaynak_depo_id=? OR hedef_depo_id=?)'); params.push(depo_id, depo_id); }
+    const fisler = db.prepare(`SELECT * FROM stok_fisler WHERE ${cond.join(' AND ')} ORDER BY tarih DESC, created_date DESC LIMIT 500`).all(...params);
+    const out = fisler.map((f) => ({
+      fis_no: f.fis_no, tip: f.tip, tarih: f.tarih, cari: f.cari_adi,
+      depo: f.tip === 'giris' ? f.hedef_depo_adi : `${f.kaynak_depo_adi || '—'} → ${f.hedef_saha_adi || f.hedef_depo_adi || '—'}`,
+      satir: f.satir_sayisi, miktar: f.toplam_miktar, kullanici: f.olusturan,
+    }));
+    res.json({ rows: out });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/rapor/raf-doluluk', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { depo_id } = req.query;
+    const depoCond = depo_id ? 'AND r.depo_id=?' : '';
+    const raflar = db.prepare(`SELECT r.id, r.kod, r.ad, r.tip, r.kapasite, r.depo_id, r.depo_adi
+      FROM stok_raflar r WHERE (r.is_deleted=0 OR r.is_deleted IS NULL) ${depoCond} ORDER BY r.depo_adi, r.kod`).all(...(depo_id ? [depo_id] : []));
+    const stokMap = {};
+    for (const h of db.prepare("SELECT raf_id, COALESCE(SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END),0) m, COUNT(DISTINCT urun_id) u FROM stok_hareketler WHERE raf_id IS NOT NULL GROUP BY raf_id").all()) stokMap[h.raf_id] = h;
+    const out = raflar.map((r) => {
+      const s = stokMap[r.id] || { m: 0, u: 0 };
+      const doluluk = r.kapasite > 0 ? Math.round((s.m / r.kapasite) * 100) : null;
+      return { ...r, mevcut: s.m, urun_sayisi: s.u, doluluk };
+    });
+    const byDepo = {};
+    for (const r of out) { (byDepo[r.depo_adi] = byDepo[r.depo_adi] || []).push(r); }
+    res.json({ raflar: out, gruplu: byDepo, ozet: {
+      toplam: out.length, dolu: out.filter((r) => r.mevcut > 0).length, bos: out.filter((r) => r.mevcut <= 0).length,
+      kritik: out.filter((r) => r.doluluk != null && r.doluluk >= 85).length,
+    } });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/rapor/degerleme', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { depo_id, urun_id } = req.query;
+    const cond = ["durum!='kapali'", 'kalan_bakiye>0'], params = [];
+    if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
+    if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
+    const rows = db.prepare(`SELECT urun_id, MAX(urun_adi) urun_adi, depo_id, MAX(depo_adi) depo_adi,
+        SUM(kalan_bakiye) miktar, SUM(kalan_bakiye*alis_maliyeti) deger,
+        CASE WHEN SUM(kalan_bakiye)>0 THEN SUM(kalan_bakiye*alis_maliyeti)/SUM(kalan_bakiye) ELSE 0 END ort_maliyet
+      FROM stok_partiler WHERE ${cond.join(' AND ')}
+      GROUP BY urun_id, depo_id ORDER BY deger DESC`).all(...params);
+    const toplam = rows.reduce((a, r) => a + r.deger, 0);
+    res.json({ rows, toplam_deger: +toplam.toFixed(2) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/stok/rapor/merkez', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const aktifUrun = db.prepare("SELECT COUNT(*) n FROM stok_urunler WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const aktifDepo = db.prepare("SELECT COUNT(*) n FROM stok_depolar WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const aktifRaf = db.prepare("SELECT COUNT(*) n FROM stok_raflar WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const stokBiten = db.prepare(`SELECT COUNT(*) n FROM (SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id HAVING m<=0)`).get().n;
+    const kritik = db.prepare(`SELECT COUNT(*) n FROM (SELECT urun_id, depo_id, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY urun_id, depo_id HAVING m>0 AND m<=10)`).get().n;
+    const depoYogunluk = db.prepare(`SELECT depo_adi, SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m FROM stok_hareketler GROUP BY depo_id ORDER BY m DESC LIMIT 8`).all();
+    const sonHareket = db.prepare("SELECT fis_no, urun_adi, depo_adi, raf_adi, tip, miktar, tarih FROM stok_hareketler ORDER BY created_date DESC LIMIT 12").all();
+    res.json({ aktif_urun: aktifUrun, aktif_depo: aktifDepo, aktif_raf: aktifRaf, stok_biten: stokBiten, kritik, depo_yogunluk: depoYogunluk, son_hareket: sonHareket });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 const { startCronJobs } = require('./cronJobs');

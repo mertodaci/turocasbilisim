@@ -276,6 +276,8 @@ export const stok = {
   },
   async partiOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/parti-ozet`, { credentials: 'include' })); },
   async fifoYenidenHesapla() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-yeniden-hesapla`, _sjson('POST'))); },
+  async fifoTutarlilik() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fifo-tutarlilik`, { credentials: 'include' })); },
+  async uyarilar() { return handleResponse(await fetch(`${BASE_URL}/api/stok/uyarilar`, { credentials: 'include' })); },
   async sayimOlustur(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim`, _sjson('POST', body))); },
   async sayimGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, { credentials: 'include' })); },
   async sayimKaydet(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/sayim/${id}`, _sjson('PUT', body))); },

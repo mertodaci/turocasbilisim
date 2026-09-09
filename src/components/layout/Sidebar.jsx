@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 
 
 
-import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useTQNotifications } from '@/lib/NotificationContext';
+import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useTQNotifications, useStokAlerts } from '@/lib/NotificationContext';
 
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -174,6 +174,7 @@ export default function Sidebar() {
   const { pendingExpenseCount, pendingExpenseIKCount } = useExpense();
   const { assignedTicketCount } = useTQNotifications();
   const { pendingWorkTaskCount } = useWorkTasks();
+  const { stokUyariCount } = useStokAlerts();
   const { t } = useLanguage();
   const { hasPermission } = useRolePermissions();
   const userPerms = user?.permissions || [];
@@ -243,6 +244,7 @@ export default function Sidebar() {
     const childShowMessageBadge = child.labelKey === "messages" && unreadMessageCount > 0;
     const childShowTodoBadge = child.labelKey === "todos" && unreadTodoCount > 0;
     const childShowWorkTaskBadge = child.labelKey === "work_tracking" && pendingWorkTaskCount > 0;
+    const childShowStokBadge = child.labelKey === "stok_dashboard" && stokUyariCount > 0;
     const isFav = favorites.includes(child.labelKey);
 
     return (
@@ -262,6 +264,7 @@ export default function Sidebar() {
         {childShowMessageBadge && <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadMessageCount}</span>}
         {childShowTodoBadge && <span className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">{unreadTodoCount}</span>}
         {childShowWorkTaskBadge && <span className="flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{pendingWorkTaskCount}</span>}
+        {childShowStokBadge && <span className="flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
         {!collapsed && (
           <button
             onClick={(e) => toggleFavorite(e, child.labelKey)}
@@ -380,6 +383,7 @@ export default function Sidebar() {
             const supportTotal = pendingWorkTaskCount + unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount;
             const showSupportBadge = item.labelKey === "support_center" && supportTotal > 0;
             const showTQBadge = item.labelKey === "taskqube_v3" && assignedTicketCount > 0;
+            const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
 
             return (
               <div key={item.labelKey}>
@@ -402,10 +406,11 @@ export default function Sidebar() {
                         {showMyLeaveBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount}</span>}
                         {showSupportBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{supportTotal}</span>}
                         {showTQBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
+                        {showStokBadge && <span className="ml-auto flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
                         <ChevronDown className={cn("ml-auto w-4 h-4 transition-transform shrink-0", isMenuExpanded && "rotate-180")} />
                       </>
                     )}
-                    {collapsed && (showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showTQBadge) && (
+                    {collapsed && (showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showTQBadge || showStokBadge) && (
                       <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
                     )}
                   </button>

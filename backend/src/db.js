@@ -381,6 +381,10 @@ function initDb() {
     "ALTER TABLE customers ADD COLUMN gsm TEXT",
     "ALTER TABLE customers ADD COLUMN website TEXT",
     "ALTER TABLE customers ADD COLUMN working_region TEXT",
+    // is_customer: satis "Musteriler" listesi bunu 1 kabul eder. Mevcut kayitlar
+    // ve normal musteri girisi 1 (varsayilan). Stok modulunden acilan saf tedarikci
+    // is_customer=0 ile eklenir -> satis listesinde gorunmez, sadece Tedarikciler'de.
+    "ALTER TABLE customers ADD COLUMN is_customer INTEGER DEFAULT 1",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

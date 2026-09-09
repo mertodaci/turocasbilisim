@@ -22,6 +22,7 @@ export default function StokPartiTakibi() {
   const [filtre, setFiltre] = useState({ q: "", urun_id: "", depo_id: "", durum: "acik" });
 
   const { data: ozet } = useQuery({ queryKey: ["stok_parti_ozet"], queryFn: () => flowApi.stok.partiOzet() });
+  const { data: tutarlilik } = useQuery({ queryKey: ["stok_fifo_tutarlilik"], queryFn: () => flowApi.stok.fifoTutarlilik() });
   const { data: partiler = [], isLoading } = useQuery({
     queryKey: ["stok_partiler", filtre],
     queryFn: () => flowApi.stok.partiler(filtre),
@@ -34,6 +35,7 @@ export default function StokPartiTakibi() {
     onSuccess: (r) => {
       queryClient.invalidateQueries({ queryKey: ["stok_partiler"] });
       queryClient.invalidateQueries({ queryKey: ["stok_parti_ozet"] });
+      queryClient.invalidateQueries({ queryKey: ["stok_fifo_tutarlilik"] });
       toast.success(`FIFO yeniden kuruldu — ${r.fis} fiş, ${r.parti} parti, ${r.tahsis} tahsis`);
     },
     onError: (e) => toast.error(String(e?.message || "Hesaplanamadı")),
@@ -64,6 +66,27 @@ export default function StokPartiTakibi() {
           </Button>
         )}
       </div>
+
+      {tutarlilik?.sayisi > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-semibold text-amber-800 dark:text-amber-300">{tutarlilik.sayisi} ürün/depo için parti izi ile stok bakiyesi uyuşmuyor</p>
+              <p className="text-amber-700 dark:text-amber-400/80 mt-0.5">
+                Genelde parti kaydı açılmadan yapılan çıkışlardan olur. FIFO maliyeti ve SKT takibi eksik kalır.
+                {user?.role === "admin" ? " Düzeltmek için “FIFO Yeniden Hesapla”yı çalıştırın." : " Bir yönetici “FIFO Yeniden Hesapla” çalıştırmalı."}
+              </p>
+              <ul className="mt-2 space-y-0.5 text-xs text-amber-700 dark:text-amber-400/80">
+                {tutarlilik.tutarsiz.slice(0, 6).map((r, i) => (
+                  <li key={i}>• {r.urun_adi} @ {r.depo_adi}: stok {r.hareket_net}, parti {r.parti_kalan} (fark {r.fark > 0 ? "+" : ""}{r.fark})</li>
+                ))}
+                {tutarlilik.sayisi > 6 && <li>• … +{tutarlilik.sayisi - 6} kayıt daha</li>}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kart(Layers, "Açık Parti", k.acik_parti, `Bakiye: ${(k.acik_miktar ?? 0)}`)}

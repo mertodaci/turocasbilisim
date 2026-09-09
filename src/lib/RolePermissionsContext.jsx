@@ -62,6 +62,7 @@ export const MODULES = [
   { key: "stok_iade",           label: "Tedarikçiye İade",       path: "/stok/iade" },
   { key: "stok_fisler",         label: "Stok Fiş Listesi",       path: "/stok/fisler" },
   { key: "stok_talep",          label: "Malzeme Talebi",         path: "/stok/talep" },
+  { key: "stok_rezervasyon",    label: "Proje Rezervasyonu",     path: "/stok/rezervasyon" },
   { key: "stok_sayim",          label: "Sayım / Envanter",       path: "/stok/sayim" },
   { key: "stok_parti_takibi",   label: "Parti & Raf Ömrü",       path: "/stok/partiler" },
   { key: "stok_raporlar",       label: "Stok Raporları",         path: "/stok/raporlar" },

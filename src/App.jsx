@@ -77,6 +77,7 @@ const StokFisListesi = lazy(() => import('./pages/stok/StokFisListesi'));
 const StokPartiTakibi = lazy(() => import('./pages/stok/StokPartiTakibi'));
 const StokSayim = lazy(() => import('./pages/stok/StokSayim'));
 const StokTalep = lazy(() => import('./pages/stok/StokTalep'));
+const StokRezervasyon = lazy(() => import('./pages/stok/StokRezervasyon'));
 const StokRaporlar = lazy(() => import('./pages/stok/StokRaporlar'));
 const StokSatinAlma = lazy(() => import('./pages/stok/StokSatinAlma'));
 const StokZimmet = lazy(() => import('./pages/stok/StokZimmet'));
@@ -226,6 +227,7 @@ const AuthenticatedApp = () => {
         <Route path="/stok/sayim" element={guard("stok_sayim", <StokSayim />)} />
         {/* Faz 5: Malzeme Talep */}
         <Route path="/stok/talep" element={guard("stok_talep", <StokTalep />)} />
+        <Route path="/stok/rezervasyon" element={guard("stok_rezervasyon", <StokRezervasyon />)} />
         {/* Faz 6: Raporlar */}
         <Route path="/stok/raporlar" element={guard("stok_raporlar", <StokRaporlar />)} />
         {/* Faz 7: Satın Alma */}

@@ -9,7 +9,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar','stok_talepler',
-  'stok_personeller','stok_demirbaslar'];
+  'stok_personeller','stok_demirbaslar','stok_rezervasyonlar'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -141,6 +141,8 @@ const TABLE_TO_MODULE = {
   stok_sayim_satirlari: 'stok_sayim',
   stok_talepler: 'stok_talep',
   stok_talep_satirlari: 'stok_talep',
+  stok_rezervasyonlar: 'stok_rezervasyon',
+  stok_rezervasyon: 'stok_rezervasyon',
   stok_urun_tedarikci: 'stok_satinalma',
   stok_fiyat_gecmisi: 'stok_satinalma',
   stok_personeller: 'stok_zimmet',
@@ -269,6 +271,7 @@ const ALLOWED_COLUMNS = {
   stok_sayimlar: ['sayim_no','depo_id','depo_adi','tarih','tip','durum','aciklama','satir_sayisi','farkli_satir','olusturan','onaylayan','tamamlanma_tarihi','duzeltme_giris_fis_id','duzeltme_cikis_fis_id','is_deleted'],
   stok_sayim_satirlari: ['sayim_id','urun_id','urun_adi','urun_kodu','raf_id','raf_adi','sistem_miktar','sayilan_miktar','fark','sayan','not_'],
   stok_talepler: ['talep_no','talep_eden','departman','hedef_saha_id','hedef_saha_adi','kaynak_depo_id','kaynak_depo_adi','is_emri_no','tarih','ihtiyac_tarihi','oncelik','durum','aciklama','satir_sayisi','olusturan','onaylayan','onay_tarihi','is_deleted'],
+  stok_rezervasyonlar: ['rez_no','urun_id','urun_adi','depo_id','depo_adi','saha_id','saha_adi','talep_id','talep_no','miktar','karsilanan','durum','tarih','ihtiyac_tarihi','aciklama','olusturan','is_deleted'],
   stok_talep_satirlari: ['talep_id','urun_id','urun_adi','urun_kodu','miktar','birim','karsilanan_miktar','not_'],
   stok_urun_tedarikci: ['urun_id','urun_adi','cari_id','cari_adi','tedarikci_urun_kodu','marka','model','birim','birim_fiyat','para_birimi','fiyat_tarihi','teslim_suresi_gun','min_siparis','stok_durumu','tercih_edilen','aktif','not_'],
   stok_fiyat_gecmisi: ['urun_id','urun_adi','cari_id','cari_adi','alis_fiyati','para_birimi','tarih','kaynak','fis_no','not_'],

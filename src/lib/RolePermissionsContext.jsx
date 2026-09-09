@@ -60,6 +60,11 @@ export const MODULES = [
   { key: "stok_urun_raf",       label: "Ürün - Raf Atama",       path: "/stok/urun-raf" },
   { key: "stok_sahalar",        label: "Sahalar / Projeler",     path: "/stok/sahalar" },
   { key: "stok_tedarikciler",   label: "Tedarikçiler",           path: "/stok/tedarikciler" },
+  // Faz 2: Hareket fişleri
+  { key: "stok_giris",          label: "Stok Giriş",             path: "/stok/giris" },
+  { key: "stok_cikis",          label: "Stok Çıkış",             path: "/stok/cikis" },
+  { key: "stok_transfer",       label: "Depo Transfer",          path: "/stok/transfer" },
+  { key: "stok_fisler",         label: "Stok Fiş Listesi",       path: "/stok/fisler" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

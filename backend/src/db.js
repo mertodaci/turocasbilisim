@@ -399,6 +399,8 @@ function initDb() {
       // Faz 1: Tanımlar
       'stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf',
       'stok_sahalar','stok_tedarikciler',
+      // Faz 2: Hareket fişleri
+      'stok_giris','stok_cikis','stok_transfer','stok_fisler',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -513,6 +515,53 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_gruplari_ust ON stok_urun_gruplari(ust_grup_id);
     `);
   } catch(e) { console.error('stok tablolari:', e.message); }
+
+  // ── Stok Faz 2: hareket fişleri + onay akışı + türetilmiş hareketler ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_fisler (
+        id TEXT PRIMARY KEY, fis_no TEXT, tip TEXT NOT NULL,      -- giris | cikis | transfer | sayim | talep
+        tarih TEXT, durum TEXT DEFAULT 'taslak',                  -- taslak | onay_bekliyor | onayli | iptal
+        cari_id TEXT, cari_adi TEXT,
+        kaynak_depo_id TEXT, kaynak_depo_adi TEXT,
+        hedef_depo_id TEXT, hedef_depo_adi TEXT,
+        hedef_saha_id TEXT, hedef_saha_adi TEXT,
+        fatura_no TEXT, irsaliye_no TEXT, belge_no TEXT, aciklama TEXT,
+        teslim_eden TEXT, teslim_alan TEXT, gonderim_adresi TEXT,
+        kaynak_ref_tip TEXT, kaynak_ref_id TEXT,                  -- ör. talep -> cikis fisi
+        satir_sayisi INTEGER DEFAULT 0, toplam_miktar REAL DEFAULT 0,
+        olusturan TEXT, onaylayan TEXT, onay_tarihi TEXT,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_fis_satirlari (
+        id TEXT PRIMARY KEY, fis_id TEXT NOT NULL,
+        urun_id TEXT, urun_adi TEXT, urun_kodu TEXT, barkod TEXT,
+        kaynak_raf_id TEXT, kaynak_raf_adi TEXT, hedef_raf_id TEXT, hedef_raf_adi TEXT,
+        birim TEXT, carpan REAL DEFAULT 1, miktar REAL DEFAULT 0, miktar_ana_birim REAL DEFAULT 0,
+        birim_fiyat REAL DEFAULT 0, tutar REAL DEFAULT 0, icerik_aciklamasi TEXT,
+        lot_no TEXT, uretim_tarihi TEXT, raf_omru_ay REAL, kontrol_tarihi TEXT, skt TEXT,
+        raf_omru_durumu TEXT, seri_no TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_hareketler (
+        id TEXT PRIMARY KEY, urun_id TEXT, urun_adi TEXT,
+        depo_id TEXT, depo_adi TEXT, raf_id TEXT, raf_adi TEXT,
+        tip TEXT,                                                 -- giris | cikis
+        miktar REAL DEFAULT 0, birim_maliyet REAL DEFAULT 0,
+        fis_id TEXT, fis_no TEXT, fis_tip TEXT, fis_satir_id TEXT,
+        cari_id TEXT, saha_id TEXT, tarih TEXT, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_fisler_tip ON stok_fisler(tip);
+      CREATE INDEX IF NOT EXISTS idx_stok_fisler_durum ON stok_fisler(durum);
+      CREATE INDEX IF NOT EXISTS idx_stok_fisler_no ON stok_fisler(fis_no);
+      CREATE INDEX IF NOT EXISTS idx_stok_fis_sat_fis ON stok_fis_satirlari(fis_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_hrk_urun ON stok_hareketler(urun_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_hrk_depo ON stok_hareketler(depo_id);
+      CREATE INDEX IF NOT EXISTS idx_stok_hrk_fis ON stok_hareketler(fis_id);
+    `);
+  } catch(e) { console.error('stok faz2 tablolari:', e.message); }
 
   // Stok modülü ilk kurulumda: hiç can_view=1 satırı yoksa YALNIZ admin tam yetki.
   // (Depo Yetkilisi / Satın Alma / Muhasebe rolleri Yetkilendirme ekranından verilir.)

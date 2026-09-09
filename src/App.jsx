@@ -74,6 +74,10 @@ const StokRaflar = lazy(() => import('./pages/stok/StokRaflar'));
 const StokUrunRaf = lazy(() => import('./pages/stok/StokUrunRaf'));
 const StokSahalar = lazy(() => import('./pages/stok/StokSahalar'));
 const StokTedarikciler = lazy(() => import('./pages/stok/StokTedarikciler'));
+const StokGiris = lazy(() => import('./pages/stok/StokGiris'));
+const StokCikis = lazy(() => import('./pages/stok/StokCikis'));
+const StokTransfer = lazy(() => import('./pages/stok/StokTransfer'));
+const StokFisListesi = lazy(() => import('./pages/stok/StokFisListesi'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -207,6 +211,11 @@ const AuthenticatedApp = () => {
         <Route path="/stok/urun-raf" element={guard("stok_urun_raf", <StokUrunRaf />)} />
         <Route path="/stok/sahalar" element={guard("stok_sahalar", <StokSahalar />)} />
         <Route path="/stok/tedarikciler" element={guard("stok_tedarikciler", <StokTedarikciler />)} />
+        {/* Faz 2: Hareket fişleri */}
+        <Route path="/stok/giris" element={guard("stok_giris", <StokGiris />)} />
+        <Route path="/stok/cikis" element={guard("stok_cikis", <StokCikis />)} />
+        <Route path="/stok/transfer" element={guard("stok_transfer", <StokTransfer />)} />
+        <Route path="/stok/fisler" element={guard("stok_fisler", <StokFisListesi />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

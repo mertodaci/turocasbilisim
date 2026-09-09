@@ -86,6 +86,9 @@ const ENTITY_MAP = {
   StokUrunRaf:       'stok_urun_raf',
   StokSaha:          'stok_sahalar',
   StokTeslimatAdres: 'stok_teslimat_adresleri',
+  StokFis:           'stok_fisler',
+  StokFisSatir:      'stok_fis_satirlari',
+  StokHareket:       'stok_hareketler',
 };
 
 function createEntityClient(entityName) {
@@ -233,9 +236,29 @@ export const auth = {
   },
 };
 
+// Stok / Depo Yönetimi — özel (transactional) uç noktalar
+const _sjson = (method, body) => ({
+  method, credentials: 'include', headers: { 'Content-Type': 'application/json' },
+  ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+});
+export const stok = {
+  async createFis(fis, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis`, _sjson('POST', { fis, satirlar }))); },
+  async getFis(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}`, { credentials: 'include' })); },
+  async updateFis(id, fis, satirlar) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}`, _sjson('PUT', { fis, satirlar }))); },
+  async onayla(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}/onayla`, _sjson('POST'))); },
+  async iptal(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis/${id}/iptal`, _sjson('POST'))); },
+  async stokDurum(urun_id, depo_id, raf_id) {
+    const p = new URLSearchParams({ urun_id, depo_id });
+    if (raf_id) p.set('raf_id', raf_id);
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/stok-durum?${p}`, { credentials: 'include' }));
+  },
+  async fisOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/fis-ozet`, { credentials: 'include' })); },
+};
+
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde
 export const flowApi = {
   auth,
+  stok,
   entities: new Proxy({}, {
     get(_, entityName) {
       return createEntityClient(entityName);

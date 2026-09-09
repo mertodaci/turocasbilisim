@@ -76,6 +76,10 @@ const translations = {
     stok_urun_raf: "Ürün - Raf Atama",
     stok_sahalar: "Sahalar / Projeler",
     stok_tedarikciler: "Tedarikçiler",
+    stok_giris: "Stok Giriş",
+    stok_cikis: "Stok Çıkış",
+    stok_transfer: "Depo Transfer",
+    stok_fisler: "Stok Fiş Listesi",
   },
   en: {
     dashboard: "Dashboard",
@@ -142,6 +146,10 @@ const translations = {
     stok_urun_raf: "Product - Shelf Assignment",
     stok_sahalar: "Sites / Projects",
     stok_tedarikciler: "Suppliers",
+    stok_giris: "Stock In",
+    stok_cikis: "Stock Out",
+    stok_transfer: "Warehouse Transfer",
+    stok_fisler: "Stock Vouchers",
   },
 };
 

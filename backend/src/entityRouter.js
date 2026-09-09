@@ -8,7 +8,7 @@ const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
 const SOFT_DELETE_TABLES = ['customers','tq_tickets','tq_projects','employees','sales_activities',
-  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar'];
+  'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -125,6 +125,9 @@ const TABLE_TO_MODULE = {
   stok_urun_raf: 'stok_urun_raf',
   stok_sahalar: 'stok_sahalar',
   stok_teslimat_adresleri: 'stok_depolar',
+  stok_fisler: 'stok_fisler',
+  stok_fis_satirlari: 'stok_fisler',
+  stok_hareketler: 'stok_fisler',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -231,6 +234,9 @@ const ALLOWED_COLUMNS = {
   stok_urun_raf: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','min_seviye','max_seviye','varsayilan','notlar'],
   stok_sahalar: ['kod','ad','adres','yetkili','telefon','customer_id','aktif','notlar','is_deleted'],
   stok_teslimat_adresleri: ['baslik','adres','customer_id','saha_id'],
+  stok_fisler: ['fis_no','tip','tarih','durum','cari_id','cari_adi','kaynak_depo_id','kaynak_depo_adi','hedef_depo_id','hedef_depo_adi','hedef_saha_id','hedef_saha_adi','fatura_no','irsaliye_no','belge_no','aciklama','teslim_eden','teslim_alan','gonderim_adresi','kaynak_ref_tip','kaynak_ref_id','satir_sayisi','toplam_miktar','olusturan','onaylayan','onay_tarihi','is_deleted'],
+  stok_fis_satirlari: ['fis_id','urun_id','urun_adi','urun_kodu','barkod','kaynak_raf_id','kaynak_raf_adi','hedef_raf_id','hedef_raf_adi','birim','carpan','miktar','miktar_ana_birim','birim_fiyat','tutar','icerik_aciklamasi','lot_no','uretim_tarihi','raf_omru_ay','kontrol_tarihi','skt','raf_omru_durumu','seri_no'],
+  stok_hareketler: ['urun_id','urun_adi','depo_id','depo_adi','raf_id','raf_adi','tip','miktar','birim_maliyet','fis_id','fis_no','fis_tip','fis_satir_id','cari_id','saha_id','tarih'],
 };
 
 // Zorunlu alanlar
@@ -275,6 +281,8 @@ const REQUIRED_FIELDS = {
   stok_urun_raf: ['urun_id','depo_id'],
   stok_sahalar: ['ad'],
   stok_teslimat_adresleri: ['adres'],
+  stok_fisler: ['tip'],
+  stok_fis_satirlari: ['fis_id'],
 };
 
 function validateData(tableName, data, isUpdate = false) {
@@ -312,7 +320,7 @@ const ALLOWED_SORT_COLS = new Set([
   'title','sort_order','last_message_at','due_date','start_date','end_date',
   'priority','ticket_number','total_amount','day_count','half_day_period','offer_date','valid_until',
   'employee_name','customer_name','activity_type','last_message_at',
-  'kod','ad','sira','depo_adi','urun_adi'
+  'kod','ad','sira','depo_adi','urun_adi','fis_no','tarih','tip','durum'
 ]);
 
 function createEntityRouter(tableName) {

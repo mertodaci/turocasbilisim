@@ -32,10 +32,19 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
     || {};
   const p = { n: pnt.n_gun || 0, u: pnt.u_gun || 0, e: pnt.e_gun || 0, i: pnt.i_gun || 0, r: pnt.r_gun || 0, m: pnt.m_gun || 0, ct: pnt.ct_gun || 0 };
 
-  // Yol/Yemek hak günü azaltan gün sayısı: E + İ + R + Ü + M + CT
-  const kesilecekGun = p.e + p.i + p.r + p.u + p.m + p.ct;
-  // Maaş eksik günü: ücretsiz izin + gelmedi (İ/R maaşı etkilemez — SGK'lı istirahat/yıllık)
-  const eksikGun = p.u + p.e;
+  // Kişi bazlı cumartesi kuralı — CT günlerinin nereden kesileceği
+  const cKural = db.prepare("SELECT kesinti_tipi FROM ik_bordro_yemek_kural WHERE personel_id=? AND aktif=1").get(emp.id);
+  const cTip = cKural ? cKural.kesinti_tipi : 'her_ikisi';   // her_ikisi (vars.) | hic | yol | yemek | maas
+  const ctYol = (cTip === 'her_ikisi' || cTip === 'yol') ? p.ct : 0;
+  const ctYemek = (cTip === 'her_ikisi' || cTip === 'yemek') ? p.ct : 0;
+  const ctMaas = cTip === 'maas' ? p.ct : 0;
+
+  // Hak günü azaltan gün sayısı (tür bazlı): E + İ + R + Ü + M + (CT kurala göre)
+  const kesOrtak = p.e + p.i + p.r + p.u + p.m;
+  const kesYol = kesOrtak + ctYol;
+  const kesYemek = kesOrtak + ctYemek;
+  // Maaş eksik günü: ücretsiz izin + gelmedi (+ cumartesi kuralı 'maas' ise CT). İ/R maaşı etkilemez.
+  const eksikGun = p.u + p.e + ctMaas;
   const calisilanGun = Math.max(0, 30 - eksikGun);
 
   const aylik = Number(emp.aylik_ucret) || 0;
@@ -55,14 +64,15 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
   let ticketKesilecek = p.u; // ücretsiz her zaman keser
   if (on(ay0.ticket_e_kes)) ticketKesilecek += p.e;
   if (on(ay0.ticket_izin_rapor_kes)) ticketKesilecek += p.i + p.r;
-  ticketKesilecek += p.m + p.ct; // mazeret + cumartesi: yol/yemek ile aynı
+  ticketKesilecek += p.m + ctYemek; // mazeret + cumartesi (yemek kuralıyla aynı)
 
   // Yol/Yemek/Ticket hak edişi: günlük × hak gün
+  const kesByTur = { yol: kesYol, yemek: kesYemek, ticket: ticketKesilecek };
   const tanimlar = db.prepare("SELECT tur, aktif, baz_gun, aylik_tutar FROM ik_hakedis_tanim WHERE personel_id=? AND aktif=1").all(emp.id);
   const hak = { yol: 0, yemek: 0, ticket: 0, yol_hak_gun: 0, yemek_hak_gun: 0, ticket_hak_gun: 0 };
   for (const tn of tanimlar) {
     const bazGun = tn.baz_gun > 0 ? tn.baz_gun : (ctx.varsayilanBazGun || 26);
-    const kesGun = tn.tur === 'ticket' ? ticketKesilecek : kesilecekGun;
+    const kesGun = kesByTur[tn.tur] ?? kesOrtak;
     const hakGun = Math.max(0, bazGun - kesGun);
     const gunluk = bazGun > 0 ? tn.aylik_tutar / bazGun : 0;
     hak[tn.tur] = +(gunluk * hakGun).toFixed(2);
@@ -121,10 +131,75 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
   };
 }
 
+// Bir dönem için: aktif plan taksitleri + puantaj kaynaklı gün kesintileri + iç borç
+// aylık taksiti → ik_kesintiler / ik_ic_borc_tahsilat. (Elle avans/diğer korunur.)
+function ikKesintiDonemUret(db, { yil, ay, email }) {
+  yil = Number(yil); ay = Number(ay);
+  const now = new Date().toISOString();
+  let planN = 0, gunN = 0, borcN = 0;
+  db.transaction(() => {
+    db.prepare("DELETE FROM ik_kesintiler WHERE donem_yil=? AND donem_ay=? AND kaynak IN ('plan','puantaj')").run(yil, ay);
+
+    // 1) Aktif planlar → taksit (icra: aylık max maaş/4, son taksit bakiye)
+    for (const p of db.prepare("SELECT * FROM ik_kesinti_planlari WHERE aktif=1 AND (is_deleted=0 OR is_deleted IS NULL)").all()) {
+      const gecenAy = (yil - p.baslangic_yil) * 12 + (ay - p.baslangic_ay);
+      if (gecenAy < 0 || gecenAy >= p.taksit_sayisi) continue;
+      const buTaksit = Math.min(p.aylik_taksit, Math.max(0, p.toplam_tutar - gecenAy * p.aylik_taksit));
+      if (buTaksit <= 0) continue;
+      db.prepare(`INSERT INTO ik_kesintiler (id, personel_id, personel_adi, donem_yil, donem_ay, tur, tutar, plan_id, taksit_no, aciklama, kaynak, tarih, created_by, created_date, updated_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?, 'plan', ?, ?, ?, ?)`).run(
+        _uuid(), p.personel_id, p.personel_adi, yil, ay, p.tur, +buTaksit.toFixed(2), p.id, gecenAy + 1,
+        `${p.tur.toUpperCase()} taksit ${gecenAy + 1}/${p.taksit_sayisi}`, now.slice(0, 10), email, now, now);
+      planN++;
+    }
+
+    // 2) Puantaj devam kodları → yol/yemek gün kesintisi (bilgi amaçlı; net'ten tekrar düşülmez)
+    const t1 = `${yil}-${String(ay).padStart(2, '0')}-01`, t2 = `${yil}-${String(ay).padStart(2, '0')}-31`;
+    for (const g of db.prepare(`SELECT personel_id, MAX(personel_adi) personel_adi,
+        SUM(CASE WHEN durum_kodu IN ('E','I','R','U','M','CT') THEN 1 ELSE 0 END) kesilecek
+      FROM ik_puantaj WHERE tarih>=? AND tarih<=? GROUP BY personel_id`).all(t1, t2)) {
+      if (!g.kesilecek) continue;
+      let toplamKes = 0; const parcalar = [];
+      for (const t of db.prepare("SELECT tur, baz_gun, aylik_tutar FROM ik_hakedis_tanim WHERE personel_id=? AND aktif=1").all(g.personel_id)) {
+        if (t.tur === 'ticket') continue;
+        const gunluk = t.baz_gun > 0 ? t.aylik_tutar / t.baz_gun : 0;
+        const kes = +(gunluk * g.kesilecek).toFixed(2);
+        if (kes > 0) { toplamKes += kes; parcalar.push(`${t.tur}:${kes}`); }
+      }
+      if (toplamKes > 0) {
+        db.prepare(`INSERT INTO ik_kesintiler (id, personel_id, personel_adi, donem_yil, donem_ay, tur, tutar, aciklama, kaynak, tarih, created_by, created_date, updated_date)
+          VALUES (?,?,?,?,?, 'gun_kes', ?, ?, 'puantaj', ?, ?, ?, ?)`).run(
+          _uuid(), g.personel_id, g.personel_adi, yil, ay, +toplamKes.toFixed(2),
+          `${g.kesilecek} gün yol/yemek kesintisi (${parcalar.join(', ')})`, now.slice(0, 10), email, now, now);
+        gunN++;
+      }
+    }
+
+    // 3) İç borç aylık taksiti → ik_ic_borc_tahsilat (bordro motoru genel net'ten düşer)
+    const doW = yil * 12 + ay;
+    db.prepare("DELETE FROM ik_ic_borc_tahsilat WHERE donem_yil=? AND donem_ay=?").run(yil, ay);
+    for (const bc of db.prepare("SELECT * FROM ik_ic_borclar WHERE durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)").all()) {
+      const onceki = db.prepare("SELECT COALESCE(SUM(tutar),0) t FROM ik_ic_borc_tahsilat WHERE borc_id=? AND (donem_yil*12 + donem_ay) < ?").get(bc.id, doW)?.t || 0;
+      const kalanOnce = +(Number(bc.acilis_tutar) - onceki).toFixed(2);
+      if (kalanOnce <= 0) { db.prepare("UPDATE ik_ic_borclar SET kalan_bakiye=0, durum='kapali', updated_date=? WHERE id=?").run(now, bc.id); continue; }
+      const taksit = Number(bc.aylik_taksit) > 0 ? Math.min(Number(bc.aylik_taksit), kalanOnce) : kalanOnce;
+      if (taksit <= 0) continue;
+      db.prepare(`INSERT INTO ik_ic_borc_tahsilat (id, borc_id, personel_id, donem_yil, donem_ay, tutar, kaynak, created_by, created_date)
+        VALUES (?,?,?,?,?,?,?,?,?)`).run(_uuid(), bc.id, bc.personel_id, yil, ay, +taksit.toFixed(2), bc.varsayilan_kaynak || 'maas', email, now);
+      const kalanSonra = +(kalanOnce - taksit).toFixed(2);
+      db.prepare("UPDATE ik_ic_borclar SET kalan_bakiye=?, durum=?, updated_date=? WHERE id=?").run(kalanSonra, kalanSonra <= 0 ? 'kapali' : 'acik', now, bc.id);
+      borcN++;
+    }
+  })();
+  return { plan_taksiti: planN, gun_kesintisi: gunN, ic_borc_tahsilat: borcN };
+}
+
 // Bir dönemin tüm (veya tek) personel bordro satırlarını hesaplayıp yaz.
-function ikBordroHesapla(db, { yil, ay, personel_id, force, email }) {
+function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
   const donem = ikDonemGetirYaOlustur(db, Number(yil), Number(ay), email);
   if (donem.durum === 'kapali') { const e = new Error('Kapalı dönem yeniden hesaplanamaz'); e.code = 400; throw e; }
+  // sync: bordrodan önce kesinti/plan/borç kayıtlarını döneme çek
+  if (sync && !personel_id) { try { ikKesintiDonemUret(db, { yil, ay, email }); } catch (e) { console.error('[ikBordro] sync:', e.message); } }
 
   const genelAyar = db.prepare('SELECT * FROM ik_hakedis_genel_ayar WHERE id=1').get() || {};
   const ctx = { varsayilanBazGun: genelAyar.varsayilan_baz_gun || 26, ticketAyar: genelAyar };
@@ -168,4 +243,4 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email }) {
   return { ok: true, donem_id: donem.id, satir: n };
 }
 
-module.exports = { ikDonemGetirYaOlustur, ikBordroSatirHesapla, ikBordroHesapla };
+module.exports = { ikDonemGetirYaOlustur, ikBordroSatirHesapla, ikBordroHesapla, ikKesintiDonemUret };

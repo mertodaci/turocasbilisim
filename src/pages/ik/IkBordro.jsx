@@ -35,11 +35,8 @@ export default function IkBordro() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["ik_bordro_liste"] });
 
   const hesapla = useMutation({
-    mutationFn: async (force) => {
-      // Önce kesinti/borç kayıtlarını döneme çek (yetki yoksa sessizce atla), sonra bordroyu üret.
-      try { await flowApi.ik.kesintiDonemUret({ donem_yil: yil, donem_ay: ay }); } catch { /* ikb_kesinti yetkisi yoksa atlanır */ }
-      return flowApi.ik.bordroHesapla({ yil, ay, force });
-    },
+    // sync: backend önce kesinti/plan/icra/BES/borç kayıtlarını döneme çeker, sonra bordroyu üretir
+    mutationFn: (force) => flowApi.ik.bordroHesapla({ yil, ay, force, sync: true }),
     onSuccess: (r) => { invalidate(); toast.success(`Bordro hesaplandı — ${r.satir} satır`); },
     onError: (e) => toast.error(String(e?.message || "Hesaplanamadı")),
   });

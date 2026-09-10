@@ -2928,13 +2928,22 @@ app.put('/api/ik/bordro/satir/:id', authMiddleware, (req, res) => {
 
 app.post('/api/ik/bordro/onayla', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
-  const { yil, ay } = req.body || {};
+  const { yil, ay, geri_al } = req.body || {};
   const donem = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
   if (!donem) return res.status(404).json({ error: 'Dönem yok' });
-  if (donem.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem' });
+  if (donem.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem — önce Ay Kapanışı ekranından kilidi açın' });
   const now = new Date().toISOString();
+  if (geri_al) {
+    // Onayı geri al: dönem taslağa döner, onaylayan bilgisi temizlenir.
+    db.prepare("UPDATE ik_bordro_donemleri SET durum='taslak', onaylayan=NULL, onay_tarihi=NULL, updated_date=? WHERE id=?").run(now, donem.id);
+    try {
+      db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+        .run(_stokUUID(), req.user.email, 'bordro_donem_onay_geri_alindi', `${yil}-${String(ay).padStart(2,'0')}`, `onaylayan: ${donem.onaylayan}`, 'taslak');
+    } catch (e) {}
+    return res.json({ ok: true, durum: 'taslak' });
+  }
   db.prepare("UPDATE ik_bordro_donemleri SET durum='onayli', onaylayan=?, onay_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
-  res.json({ ok: true });
+  res.json({ ok: true, durum: 'onayli' });
 });
 
 // Ay Kapanışı — dönemi kilitle (geri alınabilir)

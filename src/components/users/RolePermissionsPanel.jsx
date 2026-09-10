@@ -34,7 +34,7 @@ const CATEGORIES = [
   { label: "Stok — Zimmet", keys: ["stok_zimmet", "stok_zimmet_yerleri"] },
   { label: "Stok — e-Belge", keys: ["stok_qnb"] },
   { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler", "ikb_vardiyalar", "ikb_vardiya_planlari", "ikb_tatil_sihirbazi", "ikb_hakedis_ayar", "ikb_bordro_yemek", "ikb_sirket"] },
-  { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_izin_evrak", "ikb_vip", "ikb_vardiya_atama", "ikb_puantaj", "ikb_mesai", "ikb_kesinti", "ikb_ic_borc", "ikb_personel_masraf", "ikb_bordro", "ikb_ay_kapanis", "ikb_tutanak", "ikb_ilan"] },
+  { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_izin_evrak", "ikb_vardiya_atama", "ikb_puantaj", "ikb_mesai", "ikb_kesinti", "ikb_ic_borc", "ikb_personel_masraf", "ikb_bordro", "ikb_ay_kapanis", "ikb_tutanak", "ikb_ilan"] },
   { label: "İK/Bordro — Raporlar", keys: ["ikb_puantaj_rapor", "ikb_maas_ozet", "ikb_dashboard"] },
 ];
 

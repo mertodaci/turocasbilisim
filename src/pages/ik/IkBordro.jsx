@@ -10,8 +10,8 @@ import { Calculator, RefreshCw, CheckCircle2, Printer, Pencil, Download } from "
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ucretPusulasiYazdir } from "@/lib/ikBordroPusula";
+import { paraSade as nf } from "@/lib/ikFormat";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function IkBordro() {
@@ -42,8 +42,8 @@ export default function IkBordro() {
     onError: (e) => toast.error(String(e?.message || "Hesaplanamadı")),
   });
   const onayla = useMutation({
-    mutationFn: () => flowApi.ik.bordroOnayla({ yil, ay }),
-    onSuccess: () => { invalidate(); toast.success("Bordro onaylandı"); },
+    mutationFn: (geriAl) => flowApi.ik.bordroOnayla({ yil, ay, geri_al: !!geriAl }),
+    onSuccess: (r) => { invalidate(); toast.success(r?.durum === "taslak" ? "Onay geri alındı — dönem taslağa döndü" : "Bordro onaylandı"); },
     onError: (e) => toast.error(String(e?.message || "hata")),
   });
   const satirDuzelt = useMutation({
@@ -105,7 +105,8 @@ export default function IkBordro() {
       <div className="flex flex-wrap gap-2 items-center">
         <Button disabled={hesapla.isPending || kapali} onClick={() => hesapla.mutate(false)}><RefreshCw className={`w-4 h-4 mr-1.5 ${hesapla.isPending ? "animate-spin" : ""}`} /> Hesapla / Güncelle</Button>
         <Button variant="outline" disabled={hesapla.isPending || kapali} onClick={() => { if (confirm("Manuel düzeltilmiş satırlar da yeniden hesaplanacak. Devam?")) hesapla.mutate(true); }}>Zorla Yeniden Hesapla</Button>
-        {!onayli && <Button variant="outline" disabled={onayla.isPending || !rows.length} onClick={() => onayla.mutate()}><CheckCircle2 className="w-4 h-4 mr-1.5" /> Bordroyu Onayla</Button>}
+        {!onayli && <Button variant="outline" disabled={onayla.isPending || !rows.length} onClick={() => onayla.mutate(false)}><CheckCircle2 className="w-4 h-4 mr-1.5" /> Bordroyu Onayla</Button>}
+        {onayli && !kapali && <Button variant="outline" disabled={onayla.isPending} onClick={() => { if (confirm("Onay geri alınacak, dönem taslağa dönecek. Devam?")) onayla.mutate(true); }}><RefreshCw className="w-4 h-4 mr-1.5" /> Onayı Geri Al</Button>}
         <Button variant="outline" disabled={!rows.length} onClick={excel}><Download className="w-4 h-4 mr-1.5" /> Muhasebe Excel</Button>
         <Select value={sube || "hepsi"} onValueChange={(v) => setSube(v === "hepsi" ? "" : v)}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Şube" /></SelectTrigger>
@@ -127,14 +128,14 @@ export default function IkBordro() {
             <thead className="bg-muted/40 border-b">
               <tr>
                 <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Personel</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Maaş</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">F.Mesai</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Yol/Yemek/Ticket</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground" title="SGK + İşsizlik + Gelir Vergisi + Damga Vergisi">Yasal Kesinti</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Resmî Net</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Kesinti</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Şahsi</th>
-                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Genel Net</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Maaş ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">F.Mesai ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Yol/Yemek/Ticket ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground" title="SGK + İşsizlik + Gelir Vergisi + Damga Vergisi">Yasal Kesinti ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Resmî Net ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Kesinti ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Şahsi ₺</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Genel Net ₺</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>

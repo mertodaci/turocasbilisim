@@ -9,7 +9,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Receipt, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { paraSade as nf } from "@/lib/ikFormat";
 
 export default function IkZam() {
   const queryClient = useQueryClient();

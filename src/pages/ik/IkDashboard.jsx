@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { flowApi } from "@/api/flowApiClient";
 import { Users, CalendarClock, Umbrella, AlertTriangle, Clock, Cake, Calculator, FileWarning, CheckCircle2 } from "lucide-react";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR");
+import { sayi as nf } from "@/lib/ikFormat";
 
 function Kart({ icon: Icon, label, value, sub, to, tone = "" }) {
   const body = (

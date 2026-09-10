@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Wrench, ShieldAlert, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { paraSade as nf } from "@/lib/ikFormat";
 const GENEL_ALANLAR = [
   ["ticket_qr_yoksa_kes", "Normal çalışma gününde QR girişi yoksa Ticket kes"],
   ["ticket_e_kes", "E / Gelmedi durumunda Ticket kes"],

@@ -10,7 +10,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Wallet, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { paraSade as nf } from "@/lib/ikFormat";
 const now = new Date();
 const KAYNAK_MASRAF = { sadece_not: "Sadece Bordro Notu", maas: "Maaştan", yol: "Yoldan", yemek: "Yemekten", ticket: "Ticket'tan", sahsi: "Şahsi Hesaptan" };
 
@@ -62,10 +62,10 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Wallet className="w-6 h-6 text-primary" /> {mode === "borc" ? "İçeriye Borçlar" : "Personel Masrafları"}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Wallet className="w-6 h-6 text-primary" /> {mode === "borc" ? "İçeriye Borçlar" : "Bordro Masraf Kesintisi"}</h1>
           <p className="text-sm text-muted-foreground mt-1">{mode === "borc"
             ? "Personelin şirkete borcu; bordrodan seçilen kaynaktan taksitle tahsil edilir."
-            : "Personel masrafı; açıklama bordroda görünür, seçilen kaynaktan düşer. \"Sadece Bordro Notu\" hak edişten düşmez."}</p>
+            : "Personelin şirket kanalıyla (maaş/yol/yemek/ticket) harcadığı tutar; bordroda genel net'ten kesilir. Bu, çalışana geri ödenen \"Harcamalar\" (masraf raporu) modülünden farklıdır. \"Sadece Bordro Notu\" hak edişten düşmez, yalnız pusulada görünür."}</p>
         </div>
         <div className="flex gap-2">
           {mode === "masraf" && (
@@ -111,7 +111,7 @@ export default function IkIcBorcMasraf({ mode = "borc" }) {
 
       <Dialog open={dialog} onOpenChange={setDialog}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{mode === "borc" ? "İç Borç Kaydı" : "Personel Masrafı"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{mode === "borc" ? "İç Borç Kaydı" : "Masraf Kesintisi Kaydı"}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
             <div><Label className="mb-1.5 block">Personel</Label>
               <SearchableSelect value={form.personel_id} onChange={(v) => setForm({ ...form, personel_id: v })} options={aktif.map((p) => ({ value: p.id, label: p.full_name }))} placeholder="Personel seçin" />

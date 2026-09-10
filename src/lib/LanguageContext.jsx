@@ -74,7 +74,7 @@ const translations = {
     stok_mobil: "Mobil Hızlı İşlem",
     stok_etiket: "Toplu QR/Barkod Yazdırma",
     stok_excel: "Excel Stok Yükleme",
-    stok_urunler: "Ürün Kartları",
+    stok_urunler: "Malzeme Tanımı",
     stok_gruplar: "Ürün Grupları",
     stok_depolar: "Depolar",
     stok_raflar: "Raf Tanımları",

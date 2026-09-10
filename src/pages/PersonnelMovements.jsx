@@ -271,8 +271,8 @@ export default function PersonnelMovements() {
       {/* Başlık */}
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Personel Hareketleri</h1>
-          <p className="text-sm text-muted-foreground">Kartlı geçiş sistemi giriş/çıkış kayıtları</p>
+          <h1 className="text-2xl font-bold">Kart Geçiş Geçmişi</h1>
+          <p className="text-sm text-muted-foreground">Kartlı geçiş sistemi ham giriş/çıkış kayıtları (günlük puantaj için "Puantaj Cetveli")</p>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/kart-yonetimi">

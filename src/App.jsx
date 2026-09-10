@@ -30,7 +30,6 @@ const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
 const ActivityDetail = lazy(() => import('./pages/ActivityDetail'));
 const Todos = lazy(() => import('./pages/Todos'));
 const Messages = lazy(() => import('./pages/Messages'));
-const LeaveRequests = lazy(() => import('./pages/LeaveRequests'));
 const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
 const EmployeeReport = lazy(() => import('./pages/EmployeeReport'));
 const OrgChart = lazy(() => import('./pages/OrgChart'));
@@ -91,7 +90,6 @@ const StokFiyatArastir = lazy(() => import('./pages/stok/StokFiyatArastir'));
 // ── İK / Özlük / Bordro ──
 const IkSubeler = lazy(() => import('./pages/ik/IkSubeler'));
 const IkBolumler = lazy(() => import('./pages/ik/IkBolumler'));
-const IkPersonel = lazy(() => import('./pages/ik/IkPersonel'));
 const IkZam = lazy(() => import('./pages/ik/IkZam'));
 const IkVardiyalar = lazy(() => import('./pages/ik/IkVardiyalar'));
 const IkVardiyaTransfer = lazy(() => import('./pages/ik/IkVardiyaTransfer'));
@@ -112,7 +110,6 @@ const IkOzlukEvrak = lazy(() => import('./pages/ik/IkOzlukEvrak'));
 const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
 const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
 const IkVip = lazy(() => import('./pages/ik/IkVip'));
-const IkHareketRapor = lazy(() => import('./pages/ik/IkHareketRapor'));
 const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
 const IkDashboard = lazy(() => import('./pages/ik/IkDashboard'));
 
@@ -203,7 +200,7 @@ const AuthenticatedApp = () => {
         <Route path="/aktivite/:id" element={guard("activities", <ActivityDetail />)} />
         <Route path="/yapilacaklar" element={guard("todos", <Todos />)} />
         <Route path="/mesajlar" element={guard("messages", <Messages />)} />
-        <Route path="/izin-talepleri" element={guard("leave_requests", <LeaveRequests />)} />
+        <Route path="/izin-talepleri" element={<Navigate to="/ik-izin-yonetimi" replace />} />
         <Route path="/izinlerim" element={guard("my_leave_requests", <MyLeaveRequests />)} />
         <Route path="/ik-izin-yonetimi" element={guard("ik_leave_requests", <IKLeaveRequests />)} />
         <Route path="/ik-harcama-yonetimi" element={guard("ik_expense_requests", <IKExpenseRequests />)} />
@@ -278,7 +275,7 @@ const AuthenticatedApp = () => {
         <Route path="/stok/fiyat-arastir" element={guard("stok_fiyat_arastir", <StokFiyatArastir />)} />
         <Route path="/ik/subeler" element={guard("ikb_subeler", <IkSubeler />)} />
         <Route path="/ik/bolumler" element={guard("ikb_bolumler", <IkBolumler />)} />
-        <Route path="/ik/personel" element={guard("ikb_personel", <IkPersonel />)} />
+        <Route path="/ik/personel" element={<Navigate to="/calisanlar?f=bordro" replace />} />
         <Route path="/ik/zam" element={guard("ikb_zam", <IkZam />)} />
         <Route path="/ik/vardiyalar" element={guard("ikb_vardiyalar", <IkVardiyalar />)} />
         <Route path="/ik/vardiya-transfer" element={guard("ikb_vardiya_atama", <IkVardiyaTransfer />)} />
@@ -300,7 +297,7 @@ const AuthenticatedApp = () => {
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />
         <Route path="/ik/ilan" element={guard("ikb_ilan", <IkIlan />)} />
         <Route path="/ik/vip" element={guard("ikb_vip", <IkVip />)} />
-        <Route path="/ik/hareket-rapor" element={guard("ikb_hareket_rapor", <IkHareketRapor />)} />
+        <Route path="/ik/hareket-rapor" element={<Navigate to="/ik/maas-ozet" replace />} />
         <Route path="/ik/izin-evrak" element={guard("ikb_izin_evrak", <IkIzinEvrak />)} />
         <Route path="/ik/dashboard" element={guard("ikb_dashboard", <IkDashboard />)} />
       </Route>

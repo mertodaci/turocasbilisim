@@ -2599,7 +2599,7 @@ app.post('/api/ik/zam-uygula', authMiddleware, (req, res) => {
 
 // İşten çıkış ver
 app.post('/api/ik/personel/:id/cikis', authMiddleware, (req, res) => {
-  if (!ikPerm(req, 'can_edit', 'ikb_cikis', 'ikb_personel')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  if (!ikPerm(req, 'can_edit', 'ikb_personel')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const emp = db.prepare('SELECT * FROM employees WHERE id=?').get(req.params.id);
   if (!emp) return res.status(404).json({ error: 'Personel bulunamadı' });
   const { exit_date, exit_reason, exit_notes } = req.body || {};
@@ -3284,7 +3284,7 @@ app.post('/api/ik/ozluk-evrak/toplu-uygula', authMiddleware, (req, res) => {
 
 // Personel Hareket Raporları — tek merkez (giriş-çıkış + avans + YYT + kesinti + masraf + izin + mesai + bordro)
 app.get('/api/ik/hareket-rapor', authMiddleware, (req, res) => {
-  if (!ikPerm(req, 'can_view', 'ikb_hareket_rapor', 'ikb_maas_ozet')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  if (!ikPerm(req, 'can_view', 'ikb_maas_ozet')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const { personel_id, bas, bit } = req.query;
   let { sube_id } = req.query;
   // GUVENLIK: sube_yoneticisi sadece kendi subesini gorebilir -- istemcinin

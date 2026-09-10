@@ -186,7 +186,7 @@ const TABLE_TO_MODULE = {
   ik_bordro_donemleri: 'ikb_bordro',
   ik_bordro_satirlari: 'ikb_bordro',
   ik_sirket_bilgileri: 'ikb_sirket',
-  ik_toplu_yukleme: 'ikb_toplu_yukleme',
+  ik_toplu_yukleme: 'ikb_bordro',
   ik_ozluk_evraklari: 'ikb_ozluk_evrak',
   ik_tutanaklar: 'ikb_tutanak',
   ik_ilanlar: 'ikb_ilan',

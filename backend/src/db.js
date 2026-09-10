@@ -532,12 +532,12 @@ function initDb() {
       // Faz 14: Fiyat Araştır
       'stok_fiyat_arastir',
       // ── İK / Özlük / Bordro modülü (önek: ikb_) ──────────────────
-      // Faz 1: şube, bölüm, personel özlük+ücret, zam, şahsi hesap
-      'ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak','ikb_cikis',
+      // Faz 1: şube, bölüm, bordro personel işlemleri (zam/çıkış/ücret geçmişi yetkisi), zam, şahsi hesap
+      'ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak',
       // Faz 2: vardiya + tatil
       'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
       // Faz 3-4: puantaj
-      'ikb_puantaj','ikb_puantaj_rapor','ikb_qr_harita',
+      'ikb_puantaj','ikb_puantaj_rapor',
       // Faz 5: mesai
       'ikb_mesai',
       // Faz 6: hak ediş ayarları
@@ -545,9 +545,9 @@ function initDb() {
       // Faz 7-8: kesinti + borç + masraf
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf',
       // Faz 9-10: bordro + ay kapanışı
-      'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_toplu_yukleme','ikb_sirket',
-      // Faz 11: evrak + tutanak + ilan + raporlar + VIP + izin evrak
-      'ikb_tutanak','ikb_ilan','ikb_hareket_rapor','ikb_vip','ikb_izin_evrak',
+      'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_sirket',
+      // Faz 11: evrak + tutanak + ilan + VIP + izin evrak
+      'ikb_tutanak','ikb_ilan','ikb_vip','ikb_izin_evrak',
       // Faz 12: dashboard
       'ikb_dashboard',
     ];
@@ -1523,14 +1523,14 @@ function initDb() {
         else db.prepare('UPDATE role_permissions SET can_view=?, can_add=?, can_edit=?, can_delete=?, updated_date=? WHERE id=?').run(v, a, e, d, now, exists.id);
       }
     };
-    const IK_HEP = ['ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak','ikb_cikis',
+    const IK_HEP = ['ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak',
       'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
-      'ikb_puantaj','ikb_puantaj_rapor','ikb_qr_harita','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
+      'ikb_puantaj','ikb_puantaj_rapor','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis',
-      'ikb_toplu_yukleme','ikb_sirket','ikb_tutanak','ikb_ilan','ikb_hareket_rapor','ikb_vip','ikb_izin_evrak','ikb_dashboard'];
-    const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_toplu_yukleme','ikb_hakedis_ayar','ikb_bordro_yemek'];
-    const IK_RAPOR = ['ikb_puantaj_rapor','ikb_qr_harita','ikb_maas_ozet','ikb_hareket_rapor','ikb_dashboard','ikb_personel'];
-    const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor','ikb_hareket_rapor','ikb_dashboard'];
+      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_vip','ikb_izin_evrak','ikb_dashboard'];
+    const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_hakedis_ayar','ikb_bordro_yemek'];
+    const IK_RAPOR = ['ikb_puantaj_rapor','ikb_maas_ozet','ikb_dashboard','ikb_personel'];
+    const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor','ikb_dashboard'];
 
     const ikVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='ik' AND module LIKE 'ikb_%' AND can_view=1 LIMIT 1").get();
     if (!ikVar) {

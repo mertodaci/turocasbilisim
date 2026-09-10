@@ -36,14 +36,14 @@ export default function IkDashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kart icon={Users} label="Aktif Personel" value={nf(k.aktif_personel)} to="/ik/personel" />
+        <Kart icon={Users} label="Aktif Personel" value={nf(k.aktif_personel)} to="/calisanlar" />
         <Kart icon={CalendarClock} label="Bugün Puantaj Kaydı" value={nf(k.bugun_puantaj)} to="/ik/puantaj" />
         <Kart icon={Umbrella} label="Bugün İzinli" value={nf(k.bugun_izinli)} />
         <Kart icon={Clock} label="Bugün Geç Kalan" value={nf(k.bugun_gec_kalan)} sub={`Toplam ${nf(k.bugun_gec_dk)} dk`} tone={k.bugun_gec_kalan ? "text-amber-600" : ""} to="/ik/puantaj-rapor" />
         <Kart icon={AlertTriangle} label="Bugün Gelmeyen" value={nf(k.bugun_gelmeyen)} tone={k.bugun_gelmeyen ? "text-red-600" : ""} to="/ik/puantaj-rapor" />
         <Kart icon={Clock} label="Bekleyen Mesai Onayı" value={nf(k.bekleyen_mesai)} tone={k.bekleyen_mesai ? "text-amber-600" : ""} to="/ik/mesai" />
         <Kart icon={FileWarning} label="Eksik Evraklı İzin" value={nf(k.eksik_evrakli_izin)} tone={k.eksik_evrakli_izin ? "text-amber-600" : ""} to="/ik/izin-evrak" />
-        <Kart icon={AlertTriangle} label="Tutarsız Personel" value={nf(k.tutarsiz_personel)} sub="Eksik özlük/ücret" tone={k.tutarsiz_personel ? "text-red-600" : ""} to="/ik/personel" />
+        <Kart icon={AlertTriangle} label="Tutarsız Personel" value={nf(k.tutarsiz_personel)} sub="Eksik özlük/ücret" tone={k.tutarsiz_personel ? "text-red-600" : ""} to="/calisanlar?f=bordro" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">

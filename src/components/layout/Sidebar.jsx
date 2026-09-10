@@ -92,7 +92,6 @@ export const allNavItems = [
     {
       labelKey: "ik_bordro_islem", path: null, icon: Users, roles: ["admin", "yonetici", "ik"],
       children: [
-        { labelKey: "ikb_personel", path: "/ik/personel", icon: Users, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_zam", path: "/ik/zam", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_puantaj", path: "/ik/puantaj", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_mesai", path: "/ik/mesai", icon: Clock, roles: ["admin", "yonetici", "ik"] },
@@ -114,7 +113,6 @@ export const allNavItems = [
       children: [
         { labelKey: "ikb_puantaj_rapor", path: "/ik/puantaj-rapor", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_maas_ozet", path: "/ik/maas-ozet", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_hareket_rapor", path: "/ik/hareket-rapor", icon: Activity, roles: ["admin", "yonetici", "ik"] },
       ]
     },
   ]
@@ -380,7 +378,7 @@ export default function Sidebar() {
 
   const renderChildLink = (child) => {
     const isChildActive = location.pathname === child.path;
-    const childShowLeaveBadge = (child.labelKey === "leave_requests" || child.labelKey === "my_leave_requests" || child.labelKey === "ik_leave_requests") && pendingLeaveCount > 0;
+    const childShowLeaveBadge = (child.labelKey === "my_leave_requests" || child.labelKey === "ik_leave_requests") && pendingLeaveCount > 0;
     const childShowExpenseBadge = child.labelKey === "expenses" && pendingExpenseCount > 0;
     const childShowExpenseIKBadge = child.labelKey === "ik_expense_requests" && pendingExpenseIKCount > 0;
     const childShowJTBadge = child.labelKey === "is_takibi_biletler" && assignedTicketCount > 0;

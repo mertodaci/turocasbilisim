@@ -30,6 +30,7 @@ const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
 const EmployeeReport = lazy(() => import('./pages/EmployeeReport'));
 const OrgChart = lazy(() => import('./pages/OrgChart'));
 const QuickReport = lazy(() => import('./pages/QuickReport'));
+const Yardim = lazy(() => import('./pages/Yardim'));
 const Users = lazy(() => import('./pages/Users'));
 const RolePermissions = lazy(() => import('./pages/RolePermissions'));
 const Definitions = lazy(() => import('./pages/Definitions'));
@@ -201,7 +202,8 @@ const AuthenticatedApp = () => {
         <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />
         <Route path="/kart-yonetimi" element={guard("personel_hareketleri", <CardManagement />)} />
         <Route path="/org-sema" element={guard("employees", <OrgChart />)} />
-        <Route path="/hizli-rapor" element={guard("reports", <QuickReport />)} />
+        <Route path="/hizli-rapor" element={guard("quick_report", <QuickReport />)} />
+        <Route path="/yardim" element={<Yardim />} />
         <Route path="/kullanicilar" element={guard("users", <Users />)} />
         <Route path="/yetkilendirme" element={guard("role_permissions", <RolePermissions />)} />
         <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <Definitions />)} />

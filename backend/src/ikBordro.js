@@ -245,11 +245,29 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
       sahsi_hesap_net=excluded.sahsi_hesap_net, genel_net=excluded.genel_net, updated_date=excluded.updated_date
     WHERE ik_bordro_satirlari.manuel_override=0 ${force ? "OR 1=1" : ""}`);
 
+  // "Zorla Yeniden Hesapla": mevcut satırdaki ELLE girilen prim + tazminat + özel sigorta
+  // kolonları ON CONFLICT SET'te güncellenmez (korunur). Ama genel_net/resmi_toplam bu
+  // kalemleri içermeli — yoksa satır tutarsız kalır (tazminat kolonu dolu, net'e girmemiş).
+  const mevSat = force
+    ? db.prepare(`SELECT s.personel_id, s.prim, s.fesih_tazminati, s.ihbar_tazminati, s.kasa_tazminati, s.ozel_sigorta, s.ozel_sigorta_es_cocuk
+         FROM ik_bordro_satirlari s WHERE s.donem_id=?`).all(donem.id).reduce((m, r) => (m[r.personel_id] = r, m), {})
+    : {};
+
   const now = new Date().toISOString();
   let n = 0;
   db.transaction(() => {
     for (const emp of emps) {
       const row = ikBordroSatirHesapla(db, emp, Number(yil), Number(ay), ctx);
+      const mv = mevSat[emp.id];
+      if (mv) {
+        const ekPrim = Number(mv.prim) || 0;
+        const taz = (Number(mv.fesih_tazminati) || 0) + (Number(mv.ihbar_tazminati) || 0) + (Number(mv.kasa_tazminati) || 0)
+          + (Number(mv.ozel_sigorta) || 0) + (Number(mv.ozel_sigorta_es_cocuk) || 0);
+        row.prim = ekPrim;
+        row.resmi_toplam = +(row.resmi_toplam + ekPrim).toFixed(2);
+        row.resmi_net = row.resmi_toplam;
+        row.genel_net = +(row.genel_net + ekPrim + taz).toFixed(2);
+      }
       ins.run({ ...row, id: _uuid(), donem_id: donem.id, now });
       n++;
     }

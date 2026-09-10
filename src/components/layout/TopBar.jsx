@@ -211,7 +211,7 @@ export default function TopBar() {
   return (
     <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 gap-2 relative z-50">
       <div className="text-sm font-semibold text-foreground truncate min-w-0 hidden md:block">
-        Turocas Bilişim – Sektöre Özel Yazılım Çözümleri
+        THIS IS OUR HOME
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <WeatherWidget />

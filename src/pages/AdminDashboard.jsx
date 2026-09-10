@@ -6,8 +6,7 @@ import ContractAlerts from "@/components/dashboard/ContractAlerts";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, Activity, ClipboardList, CheckSquare, ArrowUpRight, Zap, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock } from "lucide-react";
-import { activityTypes } from "@/lib/activityHelpers";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, Zap, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts } from "@/lib/NotificationContext";
@@ -29,7 +28,6 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { stokUyari } = useStokAlerts();
 
-  const { data: activities = [] } = useQuery({ queryKey: ["activities-admin"], queryFn: () => flowApi.entities.Activity.list("-created_date", 40) });
   const { data: summary = { openTickets: [], openCount: 0, byStatus: [], dailyTrend: [] } } = useQuery({ queryKey: ["admin-summary"], queryFn: () => fetch("/api/dashboard/admin-summary", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000 });
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
@@ -51,7 +49,6 @@ export default function AdminDashboard() {
   });
 
   const openTickets = summary.openTickets || [];
-  const recentActivities = [...activities].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
 
   const aktifSozlesme = (contracts.stats || []).find(s => s.status === "aktif")?.c || 0;
   const yaklasanSozlesme = (contracts.expiring || []).length;
@@ -187,60 +184,33 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* SON AÇIK BİLETLER + SON AKTİVİTELER */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-teal-500" /> Son Açık Biletler
-            </h3>
-            <Link to="/is-takibi/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
-          </div>
-          {openTickets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Açık bilet yok</p></div>
-          ) : (
-            <div className="space-y-2">
-              {openTickets.slice(0, 8).map(t => {
-                const pc = { kritik: "bg-red-500", yuksek: "bg-orange-500", orta: "bg-amber-400", dusuk: "bg-green-500" }[t.priority] || "bg-gray-400";
-                return (
-                  <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className={cn("w-2 h-2 rounded-full shrink-0", pc)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
-                      {t.customer_name && <p className="text-xs text-muted-foreground truncate">{t.customer_name}</p>}
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 bg-muted rounded-full shrink-0 text-muted-foreground">{statusName(t.status)}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+      {/* SON AÇIK BİLETLER */}
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-teal-500" /> Son Açık Biletler
+          </h3>
+          <Link to="/is-takibi/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
         </div>
-
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-500" /> Son Aktiviteler
-            </h3>
-            <Link to="/aktiviteler" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
-          </div>
-          {recentActivities.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">Aktivite yok</div>
-          ) : (
-            <div className="space-y-2">
-              {recentActivities.map(a => (
-                <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/40 flex items-center justify-center shrink-0"><Activity className="w-4 h-4 text-indigo-600" /></div>
+        {openTickets.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Açık bilet yok</p></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {openTickets.slice(0, 10).map(t => {
+              const pc = { kritik: "bg-red-500", yuksek: "bg-orange-500", orta: "bg-amber-400", dusuk: "bg-green-500" }[t.priority] || "bg-gray-400";
+              return (
+                <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", pc)} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{activityTypes[a.activity_type]?.label || a.activity_type}</p>
-                    <p className="text-xs text-muted-foreground truncate">{a.employee_name}{a.customer_name ? ` · ${a.customer_name}` : ""}</p>
+                    <p className="text-sm font-medium truncate">{t.title}</p>
+                    {t.customer_name && <p className="text-xs text-muted-foreground truncate">{t.customer_name}</p>}
                   </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0">{a.date && format(new Date(a.date), "d MMM", { locale: tr })}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-muted rounded-full shrink-0 text-muted-foreground">{statusName(t.status)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="text-center text-xs text-muted-foreground pb-2">

@@ -453,6 +453,35 @@ const REQUIRED_FIELDS = {
   ik_izin_evraklari: ['leave_id'],
 };
 
+// ── İK: kapatılmış bordro dönemine ait kayıt entity API ile değiştirilemez ──
+// "Ay Kapanışı" bordro/puantaj/kesinti satırlarını dondurur; bordro/hesapla,
+// bordro/satir/:id, puantaj/hesapla özel uç noktaları bunu zaten kontrol eder
+// ama ekran-içi satır düzenlemeleri generic entityRouter üzerinden geçtiği için
+// burada da aynı kilidi uygulamak gerekiyor.
+const IK_DONEM_KILITLI_TABLOLAR = {
+  ik_puantaj: (r) => r.tarih ? { yil: +String(r.tarih).slice(0, 4), ay: +String(r.tarih).slice(5, 7) } : null,
+  ik_puantaj_duzeltme_log: (r) => r.tarih ? { yil: +String(r.tarih).slice(0, 4), ay: +String(r.tarih).slice(5, 7) } : null,
+  ik_kesintiler: (r) => (r.donem_yil && r.donem_ay) ? { yil: +r.donem_yil, ay: +r.donem_ay } : null,
+  ik_mesai_kayitlari: (r) => (r.donem_yil && r.donem_ay) ? { yil: +r.donem_yil, ay: +r.donem_ay } : null,
+  ik_personel_masraf: (r) => (r.donem_yil && r.donem_ay) ? { yil: +r.donem_yil, ay: +r.donem_ay } : null,
+  ik_ic_borc_tahsilat: (r) => (r.donem_yil && r.donem_ay) ? { yil: +r.donem_yil, ay: +r.donem_ay } : null,
+  ik_bordro_satirlari: null, // dönem donem_id ile — aşağıda özel çözülür
+};
+function ikDonemKilitliMi(db, tableName, row) {
+  if (!row) return false;
+  if (tableName === 'ik_bordro_satirlari') {
+    if (!row.donem_id) return false;
+    const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE id=?').get(row.donem_id);
+    return d?.durum === 'kapali';
+  }
+  const fn = IK_DONEM_KILITLI_TABLOLAR[tableName];
+  if (!fn) return false;
+  const p = fn(row);
+  if (!p || !p.yil || !p.ay) return false;
+  const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(p.yil, p.ay);
+  return d?.durum === 'kapali';
+}
+
 function validateData(tableName, data, isUpdate = false) {
   const errors = [];
 
@@ -700,6 +729,7 @@ function createEntityRouter(tableName) {
     try {
       const validationErrors = validateData(tableName, req.body, false);
       if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
+      if (ikDonemKilitliMi(db, tableName, req.body)) return res.status(400).json({ error: 'Kapatılmış bordro dönemi — kayıt eklenemez. Önce "Ay Kapanışı → Kilidi Aç".' });
       const data = stringifyJsonColumns(tableName, req.body);
       // GUVENLIK: admin disindaki roller yeni calisan olustururken de
       // ayricalik/kimlik alanlarini set edemez (bkz. PUT)
@@ -848,6 +878,8 @@ function createEntityRouter(tableName) {
     try {
       const existing = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Bulunamadı' });
+      if (ikDonemKilitliMi(db, tableName, existing) || ikDonemKilitliMi(db, tableName, req.body))
+        return res.status(400).json({ error: 'Kapatılmış bordro dönemi — kayıt değiştirilemez. Önce "Ay Kapanışı → Kilidi Aç".' });
 
       // Yorum duzenleme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
       // baskasininkini duzenleyemez; musteri rolu hicbir yorumu duzenleyemez.
@@ -1085,6 +1117,8 @@ function createEntityRouter(tableName) {
     try {
       const existing = db.prepare(`SELECT * FROM ${tableName} WHERE id = ?`).get(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Bulunamadı' });
+      if (ikDonemKilitliMi(db, tableName, existing))
+        return res.status(400).json({ error: 'Kapatılmış bordro dönemi — kayıt silinemez. Önce "Ay Kapanışı → Kilidi Aç".' });
 
       // Yorum silme: SADECE kendi (sistem-olmayan) yorumun. Admin dahil kimse
       // baskasininkini silemez; musteri rolu hicbir yorumu silemez.

@@ -92,7 +92,9 @@ const apiLimiter = rateLimit({
   max: 20000,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip,
+  // keyGenerator verilmezse express-rate-limit v7 istemci IP'sini IPv6-guvenli
+  // sekilde kendi cikarir. Ozel `req => req.ip` IPv6'yi normalize etmiyordu
+  // (ERR_ERL_KEY_GEN_IPV6 uyarisi + IPv6 istemcilerin limiti asma riski).
   message: { error: 'Çok fazla istek gönderildi, lütfen birkaç dakika sonra tekrar deneyin.' },
 });
 app.use('/api/', apiLimiter);
@@ -104,7 +106,6 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip,
   message: { error: 'Çok fazla giriş denemesi, lütfen bir süre sonra tekrar deneyin.' },
 });
 
@@ -3392,6 +3393,28 @@ app.get('/api/ik/dashboard', authMiddleware, (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+
+// ── Genel hata yakalayıcı ──────────────────────────────────────────
+// try/catch'i olmayan senkron route handler'larda bir hata fırlarsa Express'in
+// varsayılan işleyicisi devreye girer ve (NODE_ENV=production değilse) stack
+// trace'i istemciye sızdırır. Bu handler her durumda temiz bir JSON döndürür.
+// (404: bu API'de bilinmeyen /api/* yolu — HTML yerine JSON dönsün.)
+app.use('/api', (req, res) => res.status(404).json({ error: 'Bulunamadı' }));
+app.use((err, req, res, next) => {
+  console.error('[unhandled route error]', req.method, req.originalUrl, '-', err?.message);
+  if (res.headersSent) return next(err);
+  res.status(err?.status || 500).json({ error: 'Sunucu hatası' });
+});
+
+// ── Süreç güvenliği: yakalanmamış hata sürecin sessizce çökmesine yol açmasın ──
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+  // Süreci öldürmüyoruz — pm2 zaten fork modunda tek instance; log'a düşürüp
+  // ayakta kalmak, tek bir istek hatasında tüm kullanıcıları düşürmekten iyi.
+});
 
 const { startCronJobs } = require('./cronJobs');
 startCronJobs();

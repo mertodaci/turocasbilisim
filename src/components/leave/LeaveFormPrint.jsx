@@ -87,7 +87,7 @@ export default function LeaveFormPrint({ leave, onClose }) {
         {/* YAZDIRILAN ALAN */}
         <div id="leave-form-print" style={{ padding: 32, fontFamily: "Arial, sans-serif", color: "#0f172a" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#4f46e5" }}>Turocas</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#4f46e5" }}>Turkonix</div>
             <div style={{ fontSize: 12, color: "#64748b" }}>{fmtDate(new Date())}</div>
           </div>
 

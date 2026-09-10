@@ -60,7 +60,7 @@ export function fisBelgeYazdir(fis, opt = {}) {
 </style></head><body>
   <div class="head">
     <div>
-      <div class="firma">Turocas Bilişim</div>
+      <div class="firma">Turkonix — Sınırsız İletişim</div>
       <div class="sub">Depo / Stok / Zimmet Yönetimi</div>
     </div>
     <div style="text-align:right">

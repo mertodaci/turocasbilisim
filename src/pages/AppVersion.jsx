@@ -151,7 +151,7 @@ export default function AppVersion() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">Uygulama Versiyonu</h1>
-        <p className="text-sm text-muted-foreground mt-1">Turocas sürüm geçmişi ve değişiklik notları</p>
+        <p className="text-sm text-muted-foreground mt-1">Turkonix sürüm geçmişi ve değişiklik notları</p>
       </div>
 
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 flex items-center gap-5">

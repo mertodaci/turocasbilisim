@@ -378,7 +378,7 @@ export default function Sidebar() {
         className={cn(
           "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative",
           isChildActive
-            ? "bg-sidebar-primary/15 text-sidebar-primary"
+            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-sm shadow-fuchsia-500/20"
             : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
         )}>
         <child.icon className="w-4 h-4 shrink-0" />
@@ -441,12 +441,12 @@ export default function Sidebar() {
       )}>
         <div className={cn("p-4 flex items-center justify-between", collapsed && "justify-center")}>
           <div className="flex items-center gap-3">
-            <Link to="/" className="w-9 h-9 rounded-xl bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity" onClick={() => setMobileOpen(false)}>
-              <Activity className="w-5 h-5 text-sidebar-primary-foreground" />
+            <Link to="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity" onClick={() => setMobileOpen(false)}>
+              <Activity className="w-5 h-5 text-white" />
             </Link>
             {!collapsed && (
               <div>
-                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">Turocas</Link>
+                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">Turkonix</Link>
               </div>
             )}
           </div>
@@ -477,7 +477,7 @@ export default function Sidebar() {
                   <Link key={item.labelKey} to={item.path} onClick={() => setMobileOpen(false)}
                     className={cn(
                       "group flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all",
-                      isActive ? "bg-sidebar-primary/20 text-sidebar-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      isActive ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     )}>
                     <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
                     {t(item.labelKey)}
@@ -519,7 +519,7 @@ export default function Sidebar() {
                       "w-full flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 relative text-xs",
                       collapsed && "justify-center px-2",
                       isActive || isMenuExpanded ?
-                        "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/25" :
+                        "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25" :
                         "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     )}>
                     <item.icon className="w-5 h-5 shrink-0" />
@@ -546,7 +546,7 @@ export default function Sidebar() {
                       "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative",
                       collapsed && "justify-center px-2",
                       isActive ?
-                        "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/25" :
+                        "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25" :
                         "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     )}>
                     <item.icon className="w-5 h-5 shrink-0" />
@@ -571,7 +571,7 @@ export default function Sidebar() {
         <div className={cn("px-2 py-2 border-t border-sidebar-border/30", collapsed && "px-1")}>
           <SidebarUserMenu collapsed={collapsed} />
           {!collapsed && (
-            <p className="text-[10px] text-sidebar-foreground/30 text-center mt-2">Turocas v3.0</p>
+            <p className="text-[10px] text-sidebar-foreground/30 text-center mt-2">Turkonix</p>
           )}
         </div>
       </aside>

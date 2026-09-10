@@ -74,6 +74,9 @@ function migrateLegacyJobTrackingRename() {
   try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
   try { db.prepare("DELETE FROM roles WHERE name='satis'").run(); } catch {}
   try { db.prepare("DELETE FROM role_permissions WHERE role_name='satis'").run(); } catch {}
+  // Rebrand: dokunulmamış varsayılan firma ünvanını güncelle (müşteri kendi
+  // adını girdiyse eşleşmez, korunur).
+  try { db.prepare("UPDATE ik_sirket_bilgileri SET unvan='Turkonix — Sınırsız İletişim' WHERE unvan='Turocas Bilişim'").run(); } catch {}
 }
 
 function initDb() {
@@ -1265,7 +1268,7 @@ function initDb() {
         created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
         UNIQUE(kapsam)
       );
-      INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turocas Bilişim');
+      INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turkonix — Sınırsız İletişim');
       -- Toplu Excel yükleme kayıtları (geri alınabilir)
       CREATE TABLE IF NOT EXISTS ik_toplu_yukleme (
         id TEXT PRIMARY KEY, tur TEXT,        -- temel_bilgi | donem_hakedis

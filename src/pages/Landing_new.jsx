@@ -62,8 +62,8 @@ export default function Landing() {
         <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden">
           {/* Üst kısım */}
           <div className="bg-gradient-to-br from-blue-600 to-blue-800 px-8 pt-10 pb-8 text-center">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Turocas</h1>
-            <p className="text-blue-200 text-xs mt-1">Turocas Bilişim – Sektöre Özel Yazılım Çözümleri</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Turkonix</h1>
+            <p className="text-blue-200 text-xs mt-1">Turkonix — Sınırsız İletişim</p>
           </div>
 
           {/* Tab butonları */}

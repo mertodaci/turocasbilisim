@@ -61,7 +61,7 @@ export default function StokSatinAlma() {
 
   return (
     <div className="space-y-5">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6 text-primary" /> Satın Alma</h1>
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6 text-primary" /> Fiyat Analiz</h1>
         <p className="text-sm text-muted-foreground mt-1">Tedarikçi fiyatları, karşılaştırma, alış fiyat geçmişi. Cari seçili onaylı giriş fişleri fiyat geçmişini otomatik günceller.</p></div>
 
       <div className="flex flex-wrap gap-1.5 border-b">

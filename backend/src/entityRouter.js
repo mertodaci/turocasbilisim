@@ -125,7 +125,6 @@ const TABLE_TO_MODULE = {
   // ── Stok / Depo Yönetimi ──
   stok_urunler: 'stok_urunler',
   stok_urun_gruplari: 'stok_gruplar',
-  stok_urun_birimleri: 'stok_urunler',
   stok_urun_barkodlari: 'stok_urunler',
   stok_depolar: 'stok_depolar',
   stok_raflar: 'stok_raflar',
@@ -324,7 +323,6 @@ const ALLOWED_COLUMNS = {
   // ── Stok / Depo Yönetimi — Faz 1 ──
   stok_urun_gruplari: ['ad','ust_grup_id','ust_grup_adi','sira','aktif'],
   stok_urunler: ['kod','ad','barkod','grup_id','grup_adi','uretici_kodu','uretici','urun_tipi','marka','model','ana_birim','kdv','alis_fiyati','satis_fiyati','varsayilan_raf_omru_ay','skt_uyari_gun','el_aleti_takip','seri_no_takip','gorsel_url','aktif','notlar','is_deleted'],
-  stok_urun_birimleri: ['urun_id','birim_adi','carpan'],
   stok_urun_barkodlari: ['urun_id','barkod','birim'],
   stok_depolar: ['kod','ad','turu','adres','plaka','sorumlu_personel_id','isletim_modu','aktif','kural_giris','kural_cikis','kural_transfer','sira','notlar','is_deleted'],
   stok_raflar: ['depo_id','depo_adi','kod','ad','tip','kapasite','aktif','is_deleted'],
@@ -419,7 +417,6 @@ const REQUIRED_FIELDS = {
   // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
   stok_urun_gruplari: ['ad'],
   stok_urunler: ['ad'],
-  stok_urun_birimleri: ['urun_id','birim_adi'],
   stok_urun_barkodlari: ['urun_id','barkod'],
   stok_depolar: ['ad'],
   stok_raflar: ['depo_id'],

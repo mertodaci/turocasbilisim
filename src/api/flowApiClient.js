@@ -79,7 +79,6 @@ const ENTITY_MAP = {
   // ── Stok / Depo Yönetimi ──
   StokUrun:          'stok_urunler',
   StokUrunGrup:      'stok_urun_gruplari',
-  StokUrunBirim:     'stok_urun_birimleri',
   StokUrunBarkod:    'stok_urun_barkodlari',
   StokDepo:          'stok_depolar',
   StokRaf:           'stok_raflar',

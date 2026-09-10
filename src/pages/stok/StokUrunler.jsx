@@ -26,7 +26,6 @@ export default function StokUrunler() {
   const [tab, setTab] = useState("genel");
   const [q, setQ] = useState("");
   const [barkodInput, setBarkodInput] = useState("");
-  const [birimForm, setBirimForm] = useState({ birim_adi: "", carpan: 1 });
 
   const { data: urunler = [], isLoading } = useQuery({
     queryKey: ["stok_urunler"],
@@ -38,11 +37,6 @@ export default function StokUrunler() {
   });
 
   const editingId = dialog.item?.id;
-  const { data: birimler = [] } = useQuery({
-    queryKey: ["stok_urun_birimleri", editingId],
-    queryFn: () => flowApi.entities.StokUrunBirim.filter({ urun_id: editingId }),
-    enabled: !!editingId,
-  });
   const { data: barkodlar = [] } = useQuery({
     queryKey: ["stok_urun_barkodlari", editingId],
     queryFn: () => flowApi.entities.StokUrunBarkod.filter({ urun_id: editingId }),
@@ -51,7 +45,6 @@ export default function StokUrunler() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["stok_urunler"] });
   const invalidateSub = () => {
-    queryClient.invalidateQueries({ queryKey: ["stok_urun_birimleri", editingId] });
     queryClient.invalidateQueries({ queryKey: ["stok_urun_barkodlari", editingId] });
   };
   const grupAdi = (id) => gruplar.find((g) => g.id === id)?.ad || "";
@@ -72,15 +65,6 @@ export default function StokUrunler() {
     onError: (e) => toast.error("Silinemedi: " + (e?.message || "hata")),
   });
 
-  const addBirim = useMutation({
-    mutationFn: (data) => flowApi.entities.StokUrunBirim.create({ ...data, urun_id: editingId }),
-    onSuccess: () => { invalidateSub(); setBirimForm({ birim_adi: "", carpan: 1 }); },
-    onError: (e) => toast.error("Birim eklenemedi: " + (e?.message || "hata")),
-  });
-  const delBirim = useMutation({
-    mutationFn: (id) => flowApi.entities.StokUrunBirim.delete(id),
-    onSuccess: invalidateSub,
-  });
   const addBarkod = useMutation({
     mutationFn: (barkod) => flowApi.entities.StokUrunBarkod.create({ urun_id: editingId, barkod }),
     onSuccess: () => { invalidateSub(); setBarkodInput(""); },
@@ -196,7 +180,6 @@ export default function StokUrunler() {
           <Tabs value={tab} onValueChange={setTab} className="pt-1">
             <TabsList>
               <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
-              <TabsTrigger value="birim" disabled={!editingId}>Çoklu Birim</TabsTrigger>
               <TabsTrigger value="barkod" disabled={!editingId}>Barkodlar</TabsTrigger>
             </TabsList>
 
@@ -256,6 +239,9 @@ export default function StokUrunler() {
                   <Label className="mb-1.5 block">Satış Fiyatı</Label>
                   <Input type="number" value={form.satis_fiyati} onChange={(e) => setForm({ ...form, satis_fiyati: parseFloat(e.target.value) || 0 })} />
                 </div>
+                <div className="col-span-3 -mt-2">
+                  <p className="text-xs text-muted-foreground">Bu alanlar sadece varsayılan/referans fiyattır — her fişte gerçek işlem fiyatı ayrıca girilir ve değiştirilebilir, tedarikçi bazlı fiyat geçmişi ayrıca tutulur.</p>
+                </div>
                 <div>
                   <Label className="mb-1.5 block">Varsayılan Raf Ömrü (Ay)</Label>
                   <Input type="number" value={form.varsayilan_raf_omru_ay} onChange={(e) => setForm({ ...form, varsayilan_raf_omru_ay: parseFloat(e.target.value) || 0 })} />
@@ -289,33 +275,6 @@ export default function StokUrunler() {
                   {createMutation.isPending || updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
                 </Button>
               </div>
-            </TabsContent>
-
-            <TabsContent value="birim" className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Çarpan: bu birimin kaç ana birime (<b>{form.ana_birim}</b>) karşılık geldiği. Örn. KOLİ = 12 → 1 koli = 12 adet.
-              </p>
-              <div className="flex gap-2">
-                <Input placeholder="Birim adı (KOLİ, PAKET...)" value={birimForm.birim_adi} onChange={(e) => setBirimForm({ ...birimForm, birim_adi: e.target.value })} />
-                <Input type="number" className="w-28" placeholder="Çarpan" value={birimForm.carpan} onChange={(e) => setBirimForm({ ...birimForm, carpan: parseFloat(e.target.value) || 1 })} />
-                <Button onClick={() => { if (birimForm.birim_adi.trim()) addBirim.mutate(birimForm); }}>Ekle</Button>
-              </div>
-              <table className="w-full text-sm border rounded-lg overflow-hidden">
-                <thead className="bg-muted/40"><tr><th className="text-left px-3 py-2">Birim</th><th className="text-left px-3 py-2">Çarpan</th><th className="px-3 py-2"></th></tr></thead>
-                <tbody>
-                  {birimler.length === 0 ? (
-                    <tr><td colSpan={3} className="px-3 py-4 text-center text-muted-foreground">Ek birim yok.</td></tr>
-                  ) : birimler.map((b) => (
-                    <tr key={b.id} className="border-t">
-                      <td className="px-3 py-2">{b.birim_adi}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{b.carpan}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => delBirim.mutate(b.id)}><X className="w-3.5 h-3.5" /></Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </TabsContent>
 
             <TabsContent value="barkod" className="space-y-3">

@@ -62,7 +62,7 @@ export default function StokEtiket() {
 
   return (
     <div className="space-y-5 max-w-4xl">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Tags className="w-6 h-6 text-primary" /> Etiket Bas</h1>
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Tags className="w-6 h-6 text-primary" /> Toplu QR/Barkod Yazdırma</h1>
         <p className="text-sm text-muted-foreground mt-1">Ürün seç → etiket sepetine ekle → yazdır. Basılan listeler kayıt altına alınır.</p></div>
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">

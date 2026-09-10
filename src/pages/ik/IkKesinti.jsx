@@ -10,7 +10,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Scissors, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { paraSade as nf } from "@/lib/ikFormat";
 const TUR_L = { avans: "Avans", icra: "İcra", bes: "BES", diger: "Diğer", gun_kes: "Gün Kesintisi" };
 
 export default function IkKesinti() {

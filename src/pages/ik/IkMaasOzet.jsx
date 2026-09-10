@@ -9,30 +9,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileSpreadsheet, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ymd } from "@/lib/dateUtils";
+import { paraSade, sayi } from "@/lib/ikFormat";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const nf = paraSade;
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
+// Kolon: [anahtar, etiket, tip]  — tip: "para" (varsayılan sayısal, ₺), "gun" (gün/adet, ₺ yok), "metin"
 const OZET_COLS = [
-  ["tc", "TC"], ["personel_adi", "Adı Soyadı"], ["sube_adi", "İşyeri"], ["gorev", "Görev"],
-  ["aylik_ucret", "Maaş"], ["saatlik_ucret", "Saatlik"], ["dakikalik_ucret", "Dakikalık"],
-  ["genel_net", "Net"], ["resmi_toplam", "Brüt"], ["sgk_isci", "SGK"], ["issizlik_isci", "İşsizlik"], ["gelir_vergisi", "Gelir Vergisi"], ["damga_vergisi", "Damga Vergisi"],
-  ["calisilan_gun", "Gün"], ["eksik_gun", "Eksik Gün"],
-  ["avans", "Avans"], ["icra", "İcra"], ["bes", "BES"], ["diger_kesinti", "Diğer Kesinti"], ["personel_masrafi", "Personel Masrafı"],
-  ["fesih_tazminati", "Fesih Tazminatı"], ["ihbar_tazminati", "İhbar Tazminatı"], ["kasa_tazminati", "Kasa Tazminatı"],
-  ["ozel_sigorta", "Özel Sigorta"], ["ozel_sigorta_es_cocuk", "Özel Sigorta Eş-Çocuk"],
-  ["prim", "Prim"], ["fazla_mesai", "Fazla Mesai"], ["bayram", "Tatil Mesai"], ["yemek", "Yemek"], ["ticket", "Ticket"], ["yol", "Yol"],
+  ["tc", "TC", "metin"], ["personel_adi", "Adı Soyadı", "metin"], ["sube_adi", "İşyeri", "metin"], ["gorev", "Görev", "metin"],
+  ["aylik_ucret", "Maaş ₺"], ["saatlik_ucret", "Saatlik ₺"], ["dakikalik_ucret", "Dakikalık ₺"],
+  ["genel_net", "Net ₺"], ["resmi_toplam", "Brüt ₺"], ["sgk_isci", "SGK ₺"], ["issizlik_isci", "İşsizlik ₺"], ["gelir_vergisi", "Gelir Vergisi ₺"], ["damga_vergisi", "Damga Vergisi ₺"],
+  ["calisilan_gun", "Gün", "gun"], ["eksik_gun", "Eksik Gün", "gun"],
+  ["avans", "Avans ₺"], ["icra", "İcra ₺"], ["bes", "BES ₺"], ["diger_kesinti", "Diğer Kesinti ₺"], ["personel_masrafi", "Masraf Kesintisi ₺"],
+  ["fesih_tazminati", "Fesih Tazminatı ₺"], ["ihbar_tazminati", "İhbar Tazminatı ₺"], ["kasa_tazminati", "Kasa Tazminatı ₺"],
+  ["ozel_sigorta", "Özel Sigorta ₺"], ["ozel_sigorta_es_cocuk", "Özel Sigorta Eş-Çocuk ₺"],
+  ["prim", "Prim ₺"], ["fazla_mesai", "Fazla Mesai ₺"], ["bayram", "Tatil Mesai ₺"], ["yemek", "Yemek ₺"], ["ticket", "Ticket ₺"], ["yol", "Yol ₺"],
 ];
 const HAREKET_COLS = [
-  ["personel_adi", "Personel"], ["status", "Durum"],
-  ["avans", "Avans"], ["icra", "İcra"], ["bes", "BES"], ["diger_kesinti", "Diğer Kes."], ["gun_kes", "Gün Kes."],
-  ["personel_masrafi", "Personel Masrafı"],
-  ["izin_adet", "İzin Adet"], ["izin_gun", "İzin Gün"],
+  ["personel_adi", "Personel", "metin"], ["status", "Durum", "metin"],
+  ["avans", "Avans ₺"], ["icra", "İcra ₺"], ["bes", "BES ₺"], ["diger_kesinti", "Diğer Kes. ₺"], ["gun_kes", "Gün Kes. ₺"],
+  ["personel_masrafi", "Masraf Kesintisi ₺"],
+  ["izin_adet", "İzin Adet", "gun"], ["izin_gun", "İzin Gün", "gun"],
   ["mesai_fazla", "Fazla Mesai ₺"], ["mesai_tatil", "Tatil Mesai ₺"],
-  ["yol", "Yol"], ["yemek", "Yemek"], ["ticket", "Ticket"], ["prim", "Prim"],
-  ["bordro_brut", "Bordro Brüt"], ["bordro_net", "Bordro Net"],
+  ["yol", "Yol ₺"], ["yemek", "Yemek ₺"], ["ticket", "Ticket ₺"], ["prim", "Prim ₺"],
+  ["bordro_brut", "Bordro Brüt ₺"], ["bordro_net", "Bordro Net ₺"],
 ];
-const TXT = ["personel_adi", "sube_adi", "gorev", "tc", "status"];
+
+function hucre(val, tip) {
+  if (tip === "metin") return val || "—";
+  if (tip === "gun") return typeof val === "number" ? sayi(val) : (val ?? "—");
+  return typeof val === "number" ? paraSade(val) : (val ?? "—");
+}
 
 function DataTable({ cols, rows, isFetching, emptyText }) {
   return (
@@ -40,14 +47,14 @@ function DataTable({ cols, rows, isFetching, emptyText }) {
       {isFetching ? <div className="h-32 flex items-center justify-center text-muted-foreground">Yükleniyor...</div> : (
         <table className="w-full text-xs min-w-[1400px]">
           <thead className="bg-muted/40 border-b">
-            <tr>{cols.map(([k, l]) => <th key={k} className={`px-2 py-2 font-semibold text-muted-foreground ${TXT.includes(k) ? "text-left" : "text-right"}`}>{l}</th>)}</tr>
+            <tr>{cols.map(([k, l, tip]) => <th key={k} className={`px-2 py-2 font-semibold text-muted-foreground ${tip === "metin" ? "text-left" : "text-right"}`}>{l}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id || r.personel_id || i} className="border-b last:border-0">
-                {cols.map(([k]) => (
-                  <td key={k} className={`px-2 py-1.5 ${TXT.includes(k) ? "" : "text-right"}`}>
-                    {typeof r[k] === "number" ? nf(r[k]) : (r[k] || "—")}
+                {cols.map(([k, , tip]) => (
+                  <td key={k} className={`px-2 py-1.5 ${tip === "metin" ? "" : "text-right"}`}>
+                    {hucre(r[k], tip)}
                   </td>
                 ))}
               </tr>
@@ -61,7 +68,8 @@ function DataTable({ cols, rows, isFetching, emptyText }) {
 }
 
 function xlsxYaz(cols, rows, adi) {
-  const ws = XLSX.utils.json_to_sheet(rows.map((r) => Object.fromEntries(cols.map(([k, l]) => [l, typeof r[k] === "number" ? r[k] : (r[k] || "")]))));
+  // Excel'de ham sayı; başlıktaki " ₺" işareti kaldırılır.
+  const ws = XLSX.utils.json_to_sheet(rows.map((r) => Object.fromEntries(cols.map(([k, l]) => [l.replace(/ ₺$/, ""), typeof r[k] === "number" ? r[k] : (r[k] || "")]))));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, adi.slice(0, 28));
   XLSX.writeFile(wb, `${adi}.xlsx`);

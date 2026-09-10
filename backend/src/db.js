@@ -67,7 +67,8 @@ function migrateLegacyJobTrackingRename() {
   try {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
-       'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle')`).run();
+       'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle',
+       'ikb_vip')`).run();
   } catch { /* role_permissions henüz yoksa sorun değil */ }
   // 'satis' rolü kaldırıldı — mevcut kullanıcılar 'kullanici'ye taşınır.
   try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
@@ -434,7 +435,6 @@ function initDb() {
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_banka TEXT",
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_iban TEXT",
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_aciklama TEXT",
-    "ALTER TABLE employees ADD COLUMN vip_mi INTEGER DEFAULT 0",
     "ALTER TABLE employees ADD COLUMN vardiya_id TEXT",
     // İK Faz 12 gözden geçirme: cumartesi çalışılmayan işyeri varsayılanı + iç borç aylık taksiti
     "ALTER TABLE ik_hakedis_genel_ayar ADD COLUMN cumartesi_tatil INTEGER DEFAULT 1",
@@ -517,8 +517,8 @@ function initDb() {
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf',
       // Faz 9-10: bordro + ay kapanışı
       'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_sirket',
-      // Faz 11: evrak + tutanak + ilan + VIP + izin evrak
-      'ikb_tutanak','ikb_ilan','ikb_vip','ikb_izin_evrak',
+      // Faz 11: evrak + tutanak + ilan + izin evrak
+      'ikb_tutanak','ikb_ilan','ikb_izin_evrak',
       // Faz 12: dashboard
       'ikb_dashboard',
     ];
@@ -1488,7 +1488,7 @@ function initDb() {
       'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
       'ikb_puantaj','ikb_puantaj_rapor','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis',
-      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_vip','ikb_izin_evrak','ikb_dashboard'];
+      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_izin_evrak','ikb_dashboard'];
     const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_hakedis_ayar','ikb_bordro_yemek'];
     const IK_RAPOR = ['ikb_puantaj_rapor','ikb_maas_ozet','ikb_dashboard','ikb_personel'];
     const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor','ikb_dashboard'];

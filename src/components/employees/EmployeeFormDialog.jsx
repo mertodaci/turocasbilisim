@@ -29,7 +29,7 @@ const emptyForm = {
   education_history: [],
   education_documents: [],
   // Özlük & Ücret (Bordro) — employees tablosunda tutulur, ayrı ekran yok
-  sube_id: "", bolum_id: "", meslek_kodu: "", kanun_no: "", emekli_mi: 0, vip_mi: 0,
+  sube_id: "", bolum_id: "", meslek_kodu: "", kanun_no: "", emekli_mi: 0,
   personel_adresi: "",
   aylik_ucret: 0, ticket_aylik: 0,
   sahsi_hesap_aktif: 0, sahsi_hesap_tutar: 0, sahsi_hesap_banka: "", sahsi_hesap_iban: "", sahsi_hesap_aciklama: "",
@@ -100,7 +100,6 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
         meslek_kodu: employee.meslek_kodu || "",
         kanun_no: employee.kanun_no || "",
         emekli_mi: employee.emekli_mi ?? 0,
-        vip_mi: employee.vip_mi ?? 0,
         personel_adresi: employee.personel_adresi || "",
         aylik_ucret: employee.aylik_ucret ?? 0,
         ticket_aylik: employee.ticket_aylik ?? 0,
@@ -180,7 +179,6 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
     payload.ticket_aylik = Number(form.ticket_aylik) || 0;
     payload.sahsi_hesap_tutar = Number(form.sahsi_hesap_tutar) || 0;
     payload.emekli_mi = form.emekli_mi ? 1 : 0;
-    payload.vip_mi = form.vip_mi ? 1 : 0;
     payload.sahsi_hesap_aktif = form.sahsi_hesap_aktif ? 1 : 0;
     onSubmit(payload);
   };
@@ -523,7 +521,6 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
                 <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.emekli_mi} onCheckedChange={(v) => setForm({ ...form, emekli_mi: v ? 1 : 0 })} /> Emekli</label>
-                <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.vip_mi} onCheckedChange={(v) => setForm({ ...form, vip_mi: v ? 1 : 0 })} /> VIP (QR/puantaj muaf — tam gün sayılır)</label>
                 <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.sahsi_hesap_aktif} onCheckedChange={(v) => setForm({ ...form, sahsi_hesap_aktif: v ? 1 : 0 })} /> Şahsi hesap kullan</label>
               </div>
               {!!form.sahsi_hesap_aktif && (

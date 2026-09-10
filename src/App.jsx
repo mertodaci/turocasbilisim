@@ -99,7 +99,6 @@ const IkSirket = lazy(() => import('./pages/ik/IkSirket'));
 const IkOzlukEvrak = lazy(() => import('./pages/ik/IkOzlukEvrak'));
 const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
 const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
-const IkVip = lazy(() => import('./pages/ik/IkVip'));
 const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
 const IkDashboard = lazy(() => import('./pages/ik/IkDashboard'));
 
@@ -274,7 +273,6 @@ const AuthenticatedApp = () => {
         <Route path="/ik/ozluk-evrak" element={guard("ikb_ozluk_evrak", <IkOzlukEvrak />)} />
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />
         <Route path="/ik/ilan" element={guard("ikb_ilan", <IkIlan />)} />
-        <Route path="/ik/vip" element={guard("ikb_vip", <IkVip />)} />
         <Route path="/ik/hareket-rapor" element={<Navigate to="/ik/maas-ozet" replace />} />
         <Route path="/ik/izin-evrak" element={guard("ikb_izin_evrak", <IkIzinEvrak />)} />
         <Route path="/ik/dashboard" element={guard("ikb_dashboard", <IkDashboard />)} />

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { ymd } from "@/lib/dateUtils";
 import { useAuth } from "@/lib/AuthContext";
 
-const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { paraSade as nf } from "@/lib/ikFormat";
 // ymd(): toISOString().slice(0,10) UTC donusumu yuzunden Turkiye (+3) saat
 // diliminde ay basini bir gun geriye kaydiriyordu.
 const ay0 = () => { const d = new Date(); return ymd(new Date(d.getFullYear(), d.getMonth(), 1)); };

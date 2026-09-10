@@ -121,7 +121,6 @@ const translations = {
     ikb_tutanak: "Tutanak & İhtarlar",
     ikb_ilan: "İlanlar",
     ikb_izin_evrak: "İzin & Rapor Evrakları",
-    ikb_dashboard: "İK / PDKS Kontrol Paneli",
   },
   en: {
     dashboard: "Dashboard",
@@ -240,7 +239,6 @@ const translations = {
     ikb_tutanak: "Records & Warnings",
     ikb_ilan: "Postings",
     ikb_izin_evrak: "Leave & Report Documents",
-    ikb_dashboard: "HR / PDKS Dashboard",
   },
 };
 

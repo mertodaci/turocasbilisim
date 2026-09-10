@@ -45,7 +45,6 @@ export const allNavItems = [
 {
   labelKey: "insan_kaynaklari", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici", "ik"],
   children: [
-    { labelKey: "ikb_dashboard", path: "/ik/dashboard", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
     {
       labelKey: "ik_grp_personel", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici", "ik"],
       children: [

@@ -91,7 +91,6 @@ export const MODULES = [
   { key: "ikb_tutanak",         label: "Tutanak & İhtarlar",     path: "/ik/tutanak" },
   { key: "ikb_ilan",            label: "İlanlar",                path: "/ik/ilan" },
   { key: "ikb_izin_evrak",      label: "İzin & Rapor Evrak Takibi", path: "/ik/izin-evrak" },
-  { key: "ikb_dashboard",       label: "İK / PDKS Kontrol Paneli", path: "/ik/dashboard" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));

@@ -56,11 +56,12 @@ export const MODULES = [
   { key: "stok_urun_raf",       label: "Ürün - Raf Atama",       path: "/stok/urun-raf" },
   { key: "stok_sahalar",        label: "Sahalar / Projeler",     path: "/stok/sahalar" },
   { key: "stok_tedarikciler",   label: "Tedarikçiler",           path: "/stok/tedarikciler" },
-  // Faz 2: Hareket fişleri
-  { key: "stok_giris",          label: "Stok Giriş",             path: "/stok/giris" },
-  { key: "stok_cikis",          label: "Stok Çıkış",             path: "/stok/cikis" },
-  { key: "stok_transfer",       label: "Depo Transfer",          path: "/stok/transfer" },
-  { key: "stok_iade",           label: "Tedarikçiye İade",       path: "/stok/iade" },
+  // Faz 2: Hareket fişleri — Giriş/Çıkış/Transfer/İade artık Stok Fiş Listesi'nin
+  // "+" menüsünden açılıyor, ayrı sidebar öğeleri değil (path: null = gizli, izin anahtarı duruyor).
+  { key: "stok_giris",          label: "Stok Giriş",             path: null },
+  { key: "stok_cikis",          label: "Stok Çıkış",             path: null },
+  { key: "stok_transfer",       label: "Depo Transfer",          path: null },
+  { key: "stok_iade",           label: "Tedarikçiye İade",       path: null },
   { key: "stok_fisler",         label: "Stok Fiş Listesi",       path: "/stok/fisler" },
   { key: "stok_talep",          label: "Malzeme Talebi",         path: "/stok/talep" },
   { key: "stok_rezervasyon",    label: "Proje Rezervasyonu",     path: "/stok/rezervasyon" },

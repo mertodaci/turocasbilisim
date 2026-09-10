@@ -175,10 +175,6 @@ export const allNavItems = [
       labelKey: "stok_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "kullanici"],
       children: [
         { labelKey: "stok_mobil", path: "/stok/mobil", icon: Smartphone, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_giris", path: "/stok/giris", icon: ArrowDownToLine, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_cikis", path: "/stok/cikis", icon: ArrowUpFromLine, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_transfer", path: "/stok/transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_iade", path: "/stok/iade", icon: Undo2, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_talep", path: "/stok/talep", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_rezervasyon", path: "/stok/rezervasyon", icon: BookmarkCheck, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_fisler", path: "/stok/fisler", icon: FileText, roles: ["admin", "yonetici", "kullanici"] },

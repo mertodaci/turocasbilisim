@@ -5,7 +5,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer, Undo2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer, Undo2, Plus } from "lucide-react";
 import { fisBelgeYazdir } from "@/lib/stokBelge";
 import { toast } from "sonner";
 
@@ -30,7 +30,10 @@ export default function StokFisListesi() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("hepsi");
   const [q, setQ] = useState("");
+  const [t1, setT1] = useState("");
+  const [t2, setT2] = useState("");
   const [detay, setDetay] = useState(null);
+  const [turSecici, setTurSecici] = useState(false);
 
   const { data: fisler = [], isLoading } = useQuery({
     queryKey: ["stok_fisler"],
@@ -61,12 +64,14 @@ export default function StokFisListesi() {
   const filtered = useMemo(() => fisler.filter((f) => {
     if (f.is_deleted === 1) return false;
     if (tab !== "hepsi" && f.tip !== tab) return false;
+    if (t1 && (!f.tarih || f.tarih < t1)) return false;
+    if (t2 && (!f.tarih || f.tarih > t2)) return false;
     if (q) {
       const s = q.toLowerCase();
       if (!`${f.fis_no} ${f.cari_adi} ${f.kaynak_depo_adi} ${f.hedef_depo_adi} ${f.hedef_saha_adi} ${f.aciklama}`.toLowerCase().includes(s)) return false;
     }
     return true;
-  }), [fisler, tab, q]);
+  }), [fisler, tab, q, t1, t2]);
 
   const openDetay = async (f) => {
     try { setDetay(await flowApi.stok.getFis(f.id)); }
@@ -87,12 +92,7 @@ export default function StokFisListesi() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="w-6 h-6 text-primary" /> Stok Fiş Listesi</h1>
           <p className="text-sm text-muted-foreground mt-1">Giriş, çıkış ve transfer fişleri. Stok hareketi yalnız <b>onaylı</b> fişten oluşur.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="text-emerald-700" onClick={() => navigate("/stok/giris")}><ArrowDownToLine className="w-4 h-4 mr-1.5" /> Giriş</Button>
-          <Button variant="outline" className="text-red-700" onClick={() => navigate("/stok/cikis")}><ArrowUpFromLine className="w-4 h-4 mr-1.5" /> Çıkış</Button>
-          <Button variant="outline" className="text-blue-700" onClick={() => navigate("/stok/transfer")}><ArrowLeftRight className="w-4 h-4 mr-1.5" /> Transfer</Button>
-          <Button variant="outline" className="text-orange-700" onClick={() => navigate("/stok/iade")}><Undo2 className="w-4 h-4 mr-1.5" /> Ted. İade</Button>
-        </div>
+        <Button onClick={() => setTurSecici(true)}><Plus className="w-4 h-4 mr-1.5" /> Yeni Fiş</Button>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
@@ -113,7 +113,12 @@ export default function StokFisListesi() {
             {t === "hepsi" ? "Tümü" : TIP_BADGE[t].label}
           </Button>
         ))}
-        <Input className="max-w-xs ml-auto" placeholder="Fiş no / firma / depo / açıklama ara" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex items-center gap-1.5 ml-auto">
+          <Input type="date" className="w-[150px]" value={t1} onChange={(e) => setT1(e.target.value)} title="Başlangıç tarihi" />
+          <span className="text-muted-foreground text-sm">–</span>
+          <Input type="date" className="w-[150px]" value={t2} onChange={(e) => setT2(e.target.value)} title="Bitiş tarihi" />
+        </div>
+        <Input className="max-w-xs" placeholder="Fiş no / firma / depo / açıklama ara" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
       <div className="bg-card rounded-2xl border shadow-sm overflow-x-auto">
@@ -182,6 +187,26 @@ export default function StokFisListesi() {
           </table>
         )}
       </div>
+
+      <Dialog open={turSecici} onOpenChange={setTurSecici}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>İşlem türü seçiniz</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <Button variant="outline" className="h-16 flex-col gap-1 text-emerald-700" onClick={() => navigate("/stok/giris")}>
+              <ArrowDownToLine className="w-5 h-5" /> Giriş
+            </Button>
+            <Button variant="outline" className="h-16 flex-col gap-1 text-red-700" onClick={() => navigate("/stok/cikis")}>
+              <ArrowUpFromLine className="w-5 h-5" /> Çıkış
+            </Button>
+            <Button variant="outline" className="h-16 flex-col gap-1 text-blue-700" onClick={() => navigate("/stok/transfer")}>
+              <ArrowLeftRight className="w-5 h-5" /> Depolar Arası Transfer
+            </Button>
+            <Button variant="outline" className="h-16 flex-col gap-1 text-orange-700" onClick={() => navigate("/stok/iade")}>
+              <Undo2 className="w-5 h-5" /> Tedarikçiye İade
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!detay} onOpenChange={(v) => !v && setDetay(null)}>
         <DialogContent className="sm:max-w-2xl">

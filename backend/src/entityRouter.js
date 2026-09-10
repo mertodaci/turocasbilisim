@@ -12,7 +12,8 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
   'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
-  'ik_ozluk_evraklari','ik_tutanaklar','ik_ilanlar','ik_izin_evraklari'];
+  'ik_ozluk_evraklari','ik_tutanaklar','ik_ilanlar','ik_izin_evraklari',
+  'ik_bordro_satirlari'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
@@ -173,6 +174,8 @@ const TABLE_TO_MODULE = {
   ik_puantaj_duzeltme_log: 'ikb_puantaj',
   ik_mesai_kayitlari: 'ikb_mesai',
   ik_hakedis_genel_ayar: 'ikb_hakedis_ayar',
+  ik_vergi_ayarlari: 'ikb_hakedis_ayar',
+  ik_gelir_vergisi_dilimleri: 'ikb_hakedis_ayar',
   ik_hakedis_tanim: 'ikb_hakedis_ayar',
   ik_bordro_yemek_kural: 'ikb_bordro_yemek',
   ik_kesinti_planlari: 'ikb_kesinti',
@@ -215,6 +218,40 @@ function checkPermission(db, role, tableName, action) {
   ).get(role, module);
   if (!perm) return false;            // kayıt yoksa reddet (fail-closed)
   return perm[action] === 1;
+}
+
+// GUVENLIK/BUTUNLUK: bordro/puantaj/kesinti verisi icin donem kapatma (Ay Kapanisi)
+// kontrolunu dedicated /api/ik/* route'lari zaten uyguluyordu, ama bu tablolar ayni
+// zamanda genel /api/entities/:table CRUD'a da acikti ve o yol donem kilidini hic
+// bilmiyordu -- kapali (odenmis) bir donemin bordro/puantaj/kesinti kaydi bu genel
+// yoldan hala duzenlenebiliyor/silinebiliyordu. Asagidaki fonksiyon PUT/DELETE'te
+// tabloya gore ilgili donemin kapali olup olmadigini kontrol eder.
+function ikDonemKapaliMi(yil, ay) {
+  if (!yil || !ay) return false;
+  const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
+  return d?.durum === 'kapali';
+}
+function ikKayitDonemKapaliMi(tableName, row) {
+  if (tableName === 'ik_bordro_satirlari') {
+    const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE id=?').get(row.donem_id);
+    return d?.durum === 'kapali';
+  }
+  if (tableName === 'ik_kesintiler') return ikDonemKapaliMi(row.donem_yil, row.donem_ay);
+  if (tableName === 'ik_puantaj' && row.tarih) {
+    return ikDonemKapaliMi(Number(row.tarih.slice(0, 4)), Number(row.tarih.slice(5, 7)));
+  }
+  return false;
+}
+
+// GUVENLIK: 'sube_yoneticisi' rolu "kendi subesi" gorevi icin yetkilendirilmisti
+// (bkz. db.js rol tanimi) ama bu sinirlama hicbir yerde uygulanmiyordu -- bu rol,
+// ikb_personel izniyle acilan ik_ucret_gecmisi (zam/ucret degisikligi gecmisi)
+// tablosunu genel API uzerinden TUM sirketin verisini gorecek sekilde
+// sorgulayabiliyordu. Kendi subesindeki personel id'lerini dondurur.
+function ikKendiSubePersonelIds(email) {
+  const emp = db.prepare("SELECT sube_id FROM employees WHERE lower(email)=lower(?) AND (is_deleted=0 OR is_deleted IS NULL)").get(email || '');
+  if (!emp || !emp.sube_id) return [];
+  return db.prepare("SELECT id FROM employees WHERE sube_id=? AND (is_deleted=0 OR is_deleted IS NULL)").all(emp.sube_id).map(r => r.id);
 }
 
 // Bir job_comments satiri istekteki kullaniciya mi ait? (kendi yorumunu
@@ -328,6 +365,8 @@ const ALLOWED_COLUMNS = {
   ik_puantaj_duzeltme_log: ['puantaj_id','personel_id','tarih','alan','eski','yeni','aciklama','actor_email'],
   ik_mesai_kayitlari: ['personel_id','personel_adi','tarih','tur','katsayi','rt_tipi','sure_dk','saatlik_ucret','tutar','onay','kaynak','aciklama','onaylayan','onay_tarihi','donem_yil','donem_ay','is_deleted'],
   ik_hakedis_genel_ayar: ['varsayilan_baz_gun','ticket_qr_yoksa_kes','ticket_e_kes','ticket_izin_rapor_kes','ticket_rt_kesme','ticket_cumartesi_yemek_kurali','cumartesi_tatil'],
+  ik_vergi_ayarlari: ['sgk_isci_orani','issizlik_isci_orani','sgk_taban','sgk_tavan','asgari_ucret_brut','damga_vergisi_orani','dogrulanmis_mi','dogrulayan','dogrulama_tarihi'],
+  ik_gelir_vergisi_dilimleri: ['yil','alt_sinir','ust_sinir','oran','sira'],
   ik_hakedis_tanim: ['personel_id','personel_adi','tur','aktif','baz_gun','aylik_tutar'],
   ik_bordro_yemek_kural: ['personel_id','personel_adi','cumartesi_kurali','kesinti_tipi','aciklama','aktif'],
   ik_kesinti_planlari: ['personel_id','personel_adi','tur','toplam_tutar','baslangic_yil','baslangic_ay','taksit_sayisi','aylik_taksit','referans_maas','kalan_bakiye','aktif','aciklama','is_deleted'],
@@ -521,6 +560,16 @@ function createEntityRouter(tableName) {
       if (tableName === 'job_comments' && req.user?.role === 'musteri') {
         conditions.push('(is_internal = 0 OR is_internal IS NULL)');
       }
+      // GUVENLIK: 'sube_yoneticisi' rolu "kendi subesi" gorevi icin
+      // yetkilendirilmisti ama ik_ucret_gecmisi (zam/ucret degisikligi gecmisi)
+      // tablosunda hicbir sube filtresi yoktu -- bu rol TUM sirketin maas
+      // zammi gecmisini bu genel API'den gorebiliyordu. Tabloda sube_id kolonu
+      // olmadigi icin personel_id uzerinden IN filtresi uygulanir.
+      if (tableName === 'ik_ucret_gecmisi' && req.user?.role === 'sube_yoneticisi') {
+        const izinliIds = ikKendiSubePersonelIds(req.user?.email);
+        if (!izinliIds.length) conditions.push('1=0');
+        else { conditions.push(`personel_id IN (${izinliIds.map(() => '?').join(',')})`); params.push(...izinliIds); }
+      }
       if (conditions.length > 0) {
         query += ` WHERE ${conditions.join(' AND ')}`;
       }
@@ -599,6 +648,12 @@ function createEntityRouter(tableName) {
         if (tableName === 'job_comments' && row.is_internal === 1) {
           return res.status(404).json({ error: 'Bulunamadı' });
         }
+      }
+      // GUVENLIK: sube_yoneticisi tek kayit (GET/:id) yoluyla da baska subenin
+      // ucret gecmisini okuyamamali (LIST'teki filtrenin IDOR koruması eşdeğeri).
+      if (tableName === 'ik_ucret_gecmisi' && req.user?.role === 'sube_yoneticisi') {
+        const izinliIds = ikKendiSubePersonelIds(req.user?.email);
+        if (!izinliIds.includes(row.personel_id)) return res.status(403).json({ error: 'Bu kayda erişim yetkiniz yok' });
       }
       const parsedRow = parseJsonColumns(tableName, row);
       res.json(tableName === 'employees' ? stripSensitiveEmployeeFields(parsedRow, req) : parsedRow);
@@ -814,6 +869,19 @@ function createEntityRouter(tableName) {
       if (tableName === 'job_effort_logs' && req.user?.role !== 'admin') {
         if (!ownEffortLogEdit) return res.status(403).json({ error: 'Yalnızca kendi girdiğiniz efor kaydını düzenleyebilirsiniz' });
         for (const f of ['ticket_id', 'team', 'person_id', 'person_name']) delete req.body[f];
+      }
+
+      // GUVENLIK/BUTUNLUK: kapali bordro donemine ait satir/puantaj/kesinti kaydi
+      // bu genel yoldan duzenlenemez (dedicated /api/ik/* route'lariyla ayni kural).
+      if (['ik_bordro_satirlari', 'ik_kesintiler', 'ik_puantaj'].includes(tableName) && req.user?.role !== 'admin' && ikKayitDonemKapaliMi(tableName, existing)) {
+        return res.status(400).json({ error: 'Kapalı döneme ait bu kayıt düzenlenemez' });
+      }
+      // GUVENLIK: bordro donem durumu (taslak/onayli/kapali) SADECE dedicated
+      // /api/ik/bordro/onayla ve /api/ik/bordro/kapat uzerinden degistirilebilir --
+      // o route'lar kapanis/acilis denetim bilgisini (kapatan/kapanis_tarihi,
+      // audit_log) dogru yaziyor; bu genel yoldan 'durum' degistirmek o kaydi atlar.
+      if (tableName === 'ik_bordro_donemleri' && 'durum' in (req.body || {})) {
+        delete req.body.durum;
       }
 
       // GUVENLIK: sadece konusmanin bir katilimcisi o konusmayi guncelleyebilir
@@ -1059,6 +1127,16 @@ function createEntityRouter(tableName) {
         const isOwner = existing.created_by === ownEmail || existing.employee_email === ownEmail;
         if (!isOwner) return res.status(403).json({ error: 'Bu izin talebini yalnizca sahibi silebilir' });
         if (existing.status === 'onaylandi') return res.status(403).json({ error: 'Onaylanmis izin talebi silinemez' });
+      }
+      // GUVENLIK/BUTUNLUK: bordro donem kaydinin kendisi (ik_bordro_donemleri) hicbir
+      // rol tarafindan genel API'den silinemez -- dedicated bir "donem sil" akisi yok,
+      // silinirse o donemin tum bordro satirlariyla iliskisi (donem_id) kopar.
+      if (tableName === 'ik_bordro_donemleri') {
+        return res.status(403).json({ error: 'Bordro dönemi bu şekilde silinemez' });
+      }
+      // GUVENLIK/BUTUNLUK: kapali donem satir/puantaj/kesinti kaydi bu genel yoldan silinemez.
+      if (['ik_bordro_satirlari', 'ik_kesintiler', 'ik_puantaj'].includes(tableName) && req.user?.role !== 'admin' && ikKayitDonemKapaliMi(tableName, existing)) {
+        return res.status(400).json({ error: 'Kapalı döneme ait bu kayıt silinemez' });
       }
       if (SOFT_DELETE_TABLES.includes(tableName)) {
         // Soft delete: kaydi silme, is_deleted=1 yap (geri getirilebilir)

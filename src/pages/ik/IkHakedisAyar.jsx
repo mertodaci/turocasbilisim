@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wrench } from "lucide-react";
+import { Wrench, ShieldAlert, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -20,6 +21,7 @@ const GENEL_ALANLAR = [
 
 export default function IkHakedisAyar() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [subeF, setSubeF] = useState("");
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(new Set());
@@ -27,11 +29,40 @@ export default function IkHakedisAyar() {
 
   const { data, isLoading } = useQuery({ queryKey: ["ik_hakedis_liste"], queryFn: () => flowApi.ik.hakedisListe() });
   const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: vergiAyarlariData } = useQuery({ queryKey: ["ik_vergi_ayarlari"], queryFn: () => flowApi.entities.IkVergiAyar.get(1) });
+  const currentYil = new Date().getFullYear();
+  const { data: dilimlerData = [] } = useQuery({ queryKey: ["ik_gelir_vergisi_dilimleri", currentYil], queryFn: () => flowApi.entities.IkGelirVergisiDilim.filter({ yil: currentYil }, "sira") });
   const rows = data?.rows || [];
   const genel = data?.genel || {};
 
   const [genelForm, setGenelForm] = useState(null);
   const g = genelForm || genel;
+  const [vergiForm, setVergiForm] = useState(null);
+  const va = vergiForm || vergiAyarlariData || {};
+  const [yeniDilim, setYeniDilim] = useState({ alt_sinir: "", ust_sinir: "", oran: "" });
+
+  const vergiKaydet = useMutation({
+    mutationFn: () => flowApi.entities.IkVergiAyar.update(1, {
+      sgk_isci_orani: Number(va.sgk_isci_orani) || 0, issizlik_isci_orani: Number(va.issizlik_isci_orani) || 0,
+      sgk_taban: Number(va.sgk_taban) || 0, sgk_tavan: Number(va.sgk_tavan) || 0,
+      asgari_ucret_brut: Number(va.asgari_ucret_brut) || 0, damga_vergisi_orani: Number(va.damga_vergisi_orani) || 0,
+      dogrulanmis_mi: va.dogrulanmis_mi ? 1 : 0,
+      dogrulayan: va.dogrulanmis_mi ? (user?.email || null) : null,
+      dogrulama_tarihi: va.dogrulanmis_mi ? new Date().toISOString().slice(0, 10) : null,
+    }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ik_vergi_ayarlari"] }); setVergiForm(null); toast.success("Vergi oranları kaydedildi"); },
+    onError: (e) => toast.error(String(e?.message || "hata")),
+  });
+  const dilimEkle = useMutation({
+    mutationFn: () => flowApi.entities.IkGelirVergisiDilim.create({ yil: currentYil, alt_sinir: Number(yeniDilim.alt_sinir) || 0, ust_sinir: yeniDilim.ust_sinir === "" ? null : Number(yeniDilim.ust_sinir), oran: Number(yeniDilim.oran) || 0, sira: dilimlerData.length }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ik_gelir_vergisi_dilimleri"] }); setYeniDilim({ alt_sinir: "", ust_sinir: "", oran: "" }); toast.success("Dilim eklendi"); },
+    onError: (e) => toast.error(String(e?.message || "hata")),
+  });
+  const dilimSil = useMutation({
+    mutationFn: (id) => flowApi.entities.IkGelirVergisiDilim.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ik_gelir_vergisi_dilimleri"] }); toast.success("Dilim silindi"); },
+    onError: (e) => toast.error(String(e?.message || "hata")),
+  });
 
   const subeAdi = (id) => subeler.find((s) => s.id === id)?.ad || "";
   const filtered = useMemo(() => rows.filter((r) => {
@@ -82,6 +113,55 @@ export default function IkHakedisAyar() {
           </div>
         ))}
         <Button size="sm" onClick={() => genelKaydet.mutate()} disabled={genelKaydet.isPending}>Kuralları Kaydet</Button>
+      </div>
+
+      <div className="bg-card border rounded-2xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className={`w-4 h-4 ${va.dogrulanmis_mi ? "text-emerald-600" : "text-red-500"}`} />
+          <p className="text-sm font-semibold">SGK / Gelir Vergisi / Damga Vergisi Oranları</p>
+        </div>
+        {!va.dogrulanmis_mi && (
+          <p className="text-xs bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg px-3 py-1.5">
+            ⚠ Bu oranlar örnek/placeholder değerlerdir. Muhasebecinizle güncel resmi oranları teyit edip aşağıdaki değerleri güncelleyin, sonra "Teyit ettim" kutusunu işaretleyip kaydedin.
+          </p>
+        )}
+        {va.dogrulanmis_mi === 1 && (
+          <p className="text-xs text-emerald-600">✓ {va.dogrulayan || "bilinmiyor"} tarafından {va.dogrulama_tarihi} tarihinde teyit edildi.</p>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div><Label className="mb-1.5 block text-xs">SGK Primi (İşçi) %</Label><Input type="number" step="0.01" value={va.sgk_isci_orani ?? 0} onChange={(e) => setVergiForm({ ...va, sgk_isci_orani: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block text-xs">İşsizlik Sigortası (İşçi) %</Label><Input type="number" step="0.01" value={va.issizlik_isci_orani ?? 0} onChange={(e) => setVergiForm({ ...va, issizlik_isci_orani: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block text-xs">Damga Vergisi %</Label><Input type="number" step="0.001" value={va.damga_vergisi_orani ?? 0} onChange={(e) => setVergiForm({ ...va, damga_vergisi_orani: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block text-xs">SGK Taban (₺)</Label><Input type="number" value={va.sgk_taban ?? 0} onChange={(e) => setVergiForm({ ...va, sgk_taban: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block text-xs">SGK Tavan (₺)</Label><Input type="number" value={va.sgk_tavan ?? 0} onChange={(e) => setVergiForm({ ...va, sgk_tavan: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block text-xs">Asgari Ücret (Brüt, ₺)</Label><Input type="number" value={va.asgari_ucret_brut ?? 0} onChange={(e) => setVergiForm({ ...va, asgari_ucret_brut: e.target.value })} /></div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Switch checked={!!va.dogrulanmis_mi} onCheckedChange={(v) => setVergiForm({ ...va, dogrulanmis_mi: v ? 1 : 0 })} />
+          <Label className="text-xs">Bu oranları muhasebeci/yetkili olarak teyit ettim, gerçek bordro hesabında kullanılabilir.</Label>
+        </div>
+
+        <p className="text-sm font-semibold pt-2 border-t">Gelir Vergisi Dilimleri ({currentYil})</p>
+        <table className="w-full text-sm max-w-xl">
+          <thead><tr className="text-xs text-muted-foreground"><th className="text-left py-1">Alt Sınır</th><th className="text-left py-1">Üst Sınır</th><th className="text-left py-1">Oran %</th><th></th></tr></thead>
+          <tbody>
+            {dilimlerData.map((d) => (
+              <tr key={d.id} className="border-t">
+                <td className="py-1">{nf(d.alt_sinir)}</td>
+                <td className="py-1">{d.ust_sinir == null ? "∞" : nf(d.ust_sinir)}</td>
+                <td className="py-1">%{d.oran}</td>
+                <td className="py-1 text-right"><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => dilimSil.mutate(d.id)}><Trash2 className="w-3 h-3" /></Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex flex-wrap gap-2 items-end">
+          <div><Label className="mb-1 block text-[11px]">Alt Sınır</Label><Input type="number" className="w-28" value={yeniDilim.alt_sinir} onChange={(e) => setYeniDilim({ ...yeniDilim, alt_sinir: e.target.value })} /></div>
+          <div><Label className="mb-1 block text-[11px]">Üst Sınır (boş=sonsuz)</Label><Input type="number" className="w-28" value={yeniDilim.ust_sinir} onChange={(e) => setYeniDilim({ ...yeniDilim, ust_sinir: e.target.value })} /></div>
+          <div><Label className="mb-1 block text-[11px]">Oran %</Label><Input type="number" className="w-20" value={yeniDilim.oran} onChange={(e) => setYeniDilim({ ...yeniDilim, oran: e.target.value })} /></div>
+          <Button size="sm" variant="outline" disabled={dilimEkle.isPending || yeniDilim.alt_sinir === "" || yeniDilim.oran === ""} onClick={() => dilimEkle.mutate()}><Plus className="w-3.5 h-3.5 mr-1" /> Dilim Ekle</Button>
+        </div>
+        <Button size="sm" onClick={() => vergiKaydet.mutate()} disabled={vergiKaydet.isPending}>Vergi Oranlarını Kaydet</Button>
       </div>
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">

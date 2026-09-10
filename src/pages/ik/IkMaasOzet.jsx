@@ -8,12 +8,12 @@ import { FileSpreadsheet, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const now = new Date();
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const COLS = [
   ["tc", "TC"], ["personel_adi", "Adı Soyadı"], ["sube_adi", "İşyeri"], ["gorev", "Görev"],
   ["aylik_ucret", "Maaş"], ["saatlik_ucret", "Saatlik"], ["dakikalik_ucret", "Dakikalık"],
-  ["genel_net", "Net"], ["resmi_toplam", "Brüt"], ["calisilan_gun", "Gün"], ["eksik_gun", "Eksik Gün"],
+  ["genel_net", "Net"], ["resmi_toplam", "Brüt"], ["sgk_isci", "SGK"], ["issizlik_isci", "İşsizlik"], ["gelir_vergisi", "Gelir Vergisi"], ["damga_vergisi", "Damga Vergisi"],
+  ["calisilan_gun", "Gün"], ["eksik_gun", "Eksik Gün"],
   ["avans", "Avans"], ["icra", "İcra"], ["bes", "BES"], ["diger_kesinti", "Diğer Kesinti"], ["personel_masrafi", "Personel Masrafı"],
   ["fesih_tazminati", "Fesih Tazminatı"], ["ihbar_tazminati", "İhbar Tazminatı"], ["kasa_tazminati", "Kasa Tazminatı"],
   ["ozel_sigorta", "Özel Sigorta"], ["ozel_sigorta_es_cocuk", "Özel Sigorta Eş-Çocuk"],
@@ -21,8 +21,9 @@ const COLS = [
 ];
 
 export default function IkMaasOzet() {
-  const [yil, setYil] = useState(now.getFullYear());
-  const [ay, setAy] = useState(now.getMonth() + 1);
+  // "now" module-scope sabit degil, component ilk render edildiginde hesaplanir.
+  const [yil, setYil] = useState(() => new Date().getFullYear());
+  const [ay, setAy] = useState(() => new Date().getMonth() + 1);
   const [sube, setSube] = useState("");
 
   const { data, isFetching } = useQuery({ queryKey: ["ik_bordro_liste", yil, ay, sube], queryFn: () => flowApi.ik.bordroListe({ yil, ay, ...(sube ? { sube_id: sube } : {}) }) });

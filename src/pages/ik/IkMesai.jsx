@@ -9,13 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Timer, Plus, Check, X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { ymd } from "@/lib/dateUtils";
+import { useAuth } from "@/lib/AuthContext";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ay0 = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); };
-const bugun = () => new Date().toISOString().slice(0, 10);
+// ymd(): toISOString().slice(0,10) UTC donusumu yuzunden Turkiye (+3) saat
+// diliminde ay basini bir gun geriye kaydiriyordu.
+const ay0 = () => { const d = new Date(); return ymd(new Date(d.getFullYear(), d.getMonth(), 1)); };
+const bugun = () => ymd(new Date());
 
 export default function IkMesai() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [t1, setT1] = useState(ay0());
   const [t2, setT2] = useState(bugun());
   const [sel, setSel] = useState(new Set());
@@ -32,6 +37,9 @@ export default function IkMesai() {
   });
   const { data: personeller = [] } = useQuery({ queryKey: ["ik_personel_full"], queryFn: () => flowApi.entities.Employee.list("full_name", 8000) });
   const aktif = useMemo(() => personeller.filter((p) => p.app_role !== "musteri" && p.is_deleted !== 1 && p.status !== "pasif" && !p.exit_date), [personeller]);
+  // Kendi kendini onaylama engeli: giris yapan kullanicinin kendi personel kaydi
+  // bulunursa, o personele ait mesai satirlari toplu onay icin secilemez.
+  const myEmpId = useMemo(() => personeller.find((p) => p.email && user?.email && p.email.toLowerCase() === user.email.toLowerCase())?.id, [personeller, user]);
 
   const donem = kayitlar.filter((k) => k.is_deleted !== 1 && k.tarih >= t1 && k.tarih <= t2);
   const adaylar = adaylarR?.rows || [];
@@ -109,11 +117,16 @@ export default function IkMesai() {
             </tr>
           </thead>
           <tbody>
-            {donem.map((k) => (
+            {donem.map((k) => {
+              const kendisi = myEmpId && k.personel_id === myEmpId && user?.role !== "admin";
+              return (
               <tr key={k.id} className={`border-b last:border-0 ${sel.has(k.id) ? "bg-primary/5" : ""}`}>
-                <td className="px-4 py-2 text-center"><input type="checkbox" checked={sel.has(k.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(k.id) ? n.delete(k.id) : n.add(k.id); return n; })} /></td>
+                <td className="px-4 py-2 text-center">
+                  <input type="checkbox" checked={sel.has(k.id)} disabled={kendisi} title={kendisi ? "Kendi mesai kaydınızı onaylayamazsınız" : undefined}
+                    onChange={() => setSel((s) => { const n = new Set(s); n.has(k.id) ? n.delete(k.id) : n.add(k.id); return n; })} />
+                </td>
                 <td className="px-4 py-2 text-muted-foreground">{k.tarih}</td>
-                <td className="px-4 py-2 font-medium">{k.personel_adi}</td>
+                <td className="px-4 py-2 font-medium">{k.personel_adi}{kendisi && <span className="ml-1.5 text-[10px] text-muted-foreground">(siz)</span>}</td>
                 <td className="px-4 py-2">{k.tur === "tatil" ? `Tatil (${k.rt_tipi})` : "Fazla Mesai"}</td>
                 <td className="px-4 py-2 text-right">{k.sure_dk} dk · {k.katsayi}x</td>
                 <td className="px-4 py-2 text-right font-medium">{nf(k.tutar)} ₺</td>
@@ -123,7 +136,8 @@ export default function IkMesai() {
                   </span>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {!donem.length && <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Bu aralıkta mesai kaydı yok.</td></tr>}
           </tbody>
         </table>

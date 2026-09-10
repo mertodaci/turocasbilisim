@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart3, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { ymd } from "@/lib/dateUtils";
 
-const ay0 = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); };
-const bugun = () => new Date().toISOString().slice(0, 10);
+// ymd(): toISOString().slice(0,10) UTC donusumu yuzunden Turkiye (+3) saat
+// diliminde ay basini bir gun geriye kaydiriyordu.
+const ay0 = () => { const d = new Date(); return ymd(new Date(d.getFullYear(), d.getMonth(), 1)); };
+const bugun = () => ymd(new Date());
 
 export default function IkPuantajRapor() {
   const [f, setF] = useState({ t1: ay0(), t2: bugun(), sube_id: "", tur: "tumu" });

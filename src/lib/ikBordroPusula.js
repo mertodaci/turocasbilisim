@@ -34,7 +34,10 @@ export function ucretPusulasiYazdir(satir, donem) {
     <tr class="grp"><td colspan="2">RESMÎ HAK EDİŞLER</td></tr>
     ${r("Maaş", satir.resmi_maas)}${r("Bayram / Tatil Mesai", satir.bayram)}${r("Fazla Mesai", satir.fazla_mesai)}${r("Prim", satir.prim)}
     ${r(`Yol (${satir.yol_hak_gun} gün)`, satir.yol)}${r(`Yemek (${satir.yemek_hak_gun} gün)`, satir.yemek)}${r(`Ticket (${satir.ticket_hak_gun} gün)`, satir.ticket)}
-    <tr class="grp"><td>Resmî Toplam / Net</td><td class="r">${nf(satir.resmi_toplam)} / ${nf(satir.resmi_net)} ₺</td></tr>
+    <tr class="grp"><td>Resmî Toplam</td><td class="r">${nf(satir.resmi_toplam)} ₺</td></tr>
+    <tr class="grp"><td colspan="2">YASAL KESİNTİLER</td></tr>
+    ${r("SGK Primi (İşçi Payı)", satir.sgk_isci)}${r("İşsizlik Sigortası (İşçi Payı)", satir.issizlik_isci)}${r("Gelir Vergisi", satir.gelir_vergisi)}${r("Damga Vergisi", satir.damga_vergisi)}
+    <tr class="grp"><td>Resmî Net</td><td class="r">${nf(satir.resmi_net)} ₺</td></tr>
     <tr class="grp"><td colspan="2">KESİNTİLER</td></tr>
     ${r("Avans", satir.avans)}${r("İcra", satir.icra)}${r("BES", satir.bes)}${r("Diğer Kesinti", satir.diger_kesinti)}
     ${r("Yol/Yemek Gün Kesintisi", satir.yol_kes)}${r("Personel Masrafı", satir.personel_masrafi)}${r("İç Borç Tahsilatı", satir.borc_toplam)}

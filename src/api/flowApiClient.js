@@ -133,6 +133,8 @@ const ENTITY_MAP = {
   IkTutanak:         'ik_tutanaklar',
   IkIlan:            'ik_ilanlar',
   IkIzinEvrak:       'ik_izin_evraklari',
+  IkVergiAyar:       'ik_vergi_ayarlari',
+  IkGelirVergisiDilim: 'ik_gelir_vergisi_dilimleri',
 };
 
 function createEntityClient(entityName) {

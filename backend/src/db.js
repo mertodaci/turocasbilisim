@@ -467,6 +467,23 @@ function initDb() {
     // İK Faz 12 gözden geçirme: cumartesi çalışılmayan işyeri varsayılanı + iç borç aylık taksiti
     "ALTER TABLE ik_hakedis_genel_ayar ADD COLUMN cumartesi_tatil INTEGER DEFAULT 1",
     "ALTER TABLE ik_ic_borclar ADD COLUMN aylik_taksit REAL DEFAULT 0",
+    // Bordro gözden geçirme: yasal kesinti (SGK/gelir vergisi/damga vergisi) motoru için
+    // gerçek kolonlar + kapalı dönem kaydının genel API'den kalıcı silinmesini engellemek
+    // için soft-delete kolonu.
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN sgk_matrah REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN sgk_isci REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN issizlik_isci REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN gelir_vergisi_matrahi REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN gelir_vergisi REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN damga_vergisi REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN kumulatif_matrah_oncesi REAL DEFAULT 0",
+    "ALTER TABLE ik_bordro_satirlari ADD COLUMN kumulatif_matrah_sonrasi REAL DEFAULT 0",
+    // Ay kapanışı geçmişi: her kapatma/açma işlemi audit_log'a yazılıyor, ama en son
+    // kapanış bilgisini (kim/ne zaman) "Geri Al" ile sıfırlamak yerine bir önceki
+    // kapanışı da saklıyoruz ki dönem tekrar kapanmadan önceki durum kaybolmasın.
+    "ALTER TABLE ik_bordro_donemleri ADD COLUMN onceki_kapatan TEXT",
+    "ALTER TABLE ik_bordro_donemleri ADD COLUMN onceki_kapanis_tarihi TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -1085,6 +1102,36 @@ function initDb() {
         updated_date TEXT DEFAULT (datetime('now'))
       );
       INSERT OR IGNORE INTO ik_hakedis_genel_ayar (id) VALUES (1);
+      -- Bordro gözden geçirme: SGK primi / işsizlik sigortası / damga vergisi oranları +
+      -- asgari ücret istisnası için tek satırlık ayar tablosu. DEĞERLER ÖRNEK/YER
+      -- TUTUCUDUR — dogrulanmis_mi=0 iken Bordro ekranı "oranlar teyit edilmedi"
+      -- uyarısı gösterir; muhasebeci güncel resmi oranları girip onaylamalı.
+      CREATE TABLE IF NOT EXISTS ik_vergi_ayarlari (
+        id INTEGER PRIMARY KEY CHECK (id=1),
+        sgk_isci_orani REAL DEFAULT 14,
+        issizlik_isci_orani REAL DEFAULT 1,
+        sgk_taban REAL DEFAULT 20002.50,
+        sgk_tavan REAL DEFAULT 150018.90,
+        asgari_ucret_brut REAL DEFAULT 20002.50,
+        damga_vergisi_orani REAL DEFAULT 0.759,
+        dogrulanmis_mi INTEGER DEFAULT 0,
+        dogrulayan TEXT, dogrulama_tarihi TEXT,
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      INSERT OR IGNORE INTO ik_vergi_ayarlari (id) VALUES (1);
+      -- Gelir vergisi dilimleri (yıl bazlı, kümülatif matrah dilimleri). Örnek/placeholder
+      -- 2026 dilimleri seed edilir; muhasebeci Bordrolama Ayarları'ndan güncelleyebilir.
+      CREATE TABLE IF NOT EXISTS ik_gelir_vergisi_dilimleri (
+        id TEXT PRIMARY KEY, yil INTEGER NOT NULL,
+        alt_sinir REAL NOT NULL, ust_sinir REAL, oran REAL NOT NULL, sira INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now'))
+      );
+      -- NOT: kümülatif gelir vergisi matrahı için ayrı bir "durum" tablosu YOK —
+      -- her hesaplamada personelin O YIL, bu aydan ÖNCEKİ aylara ait
+      -- ik_bordro_satirlari kayıtlarından SUM ile türetilir (ikBordro.js). Bu,
+      -- "Zorla Yeniden Hesapla" tekrar çalıştırıldığında kümülatif tutarın
+      -- yanlışlıkla ikinci kez eklenmesini (çift sayım) yapısal olarak imkansız
+      -- kılar — ayrı bir cache tablosu tutsaydık bu senkron dışı kalabilirdi.
       -- Personel bazlı Yol/Yemek/Ticket tanımı (tur başına 1 satır)
       CREATE TABLE IF NOT EXISTS ik_hakedis_tanim (
         id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
@@ -1105,6 +1152,27 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_ik_hakedis_tanim_personel ON ik_hakedis_tanim(personel_id);
     `);
   } catch(e) { console.error('ik faz6 tablolari:', e.message); }
+
+  // Gelir vergisi dilimleri: hiç satır yoksa örnek/placeholder bir dilim seti eklenir
+  // (dogrulanmis_mi=0 ile birlikte "teyit edilmedi" uyarısı tetiklenir). Bir kez çalışır;
+  // muhasebeci gerçek dilimleri girdikten sonra bu satırlar Bordrolama Ayarları'ndan
+  // düzenlenir/silinir, burada tekrar eklenmez.
+  try {
+    const anyDilim = db.prepare('SELECT 1 FROM ik_gelir_vergisi_dilimleri LIMIT 1').get();
+    if (!anyDilim) {
+      const { v4: uuidv4 } = require('uuid');
+      const yil = new Date().getFullYear();
+      const ornekDilimler = [
+        [0, 158000, 15],
+        [158000, 330000, 20],
+        [330000, 1200000, 27],
+        [1200000, 4300000, 35],
+        [4300000, null, 40],
+      ];
+      const ins = db.prepare('INSERT INTO ik_gelir_vergisi_dilimleri (id, yil, alt_sinir, ust_sinir, oran, sira) VALUES (?,?,?,?,?,?)');
+      ornekDilimler.forEach(([alt, ust, oran], i) => ins.run(uuidv4(), yil, alt, ust, oran, i));
+    }
+  } catch (e) { console.error('gelir vergisi dilim seed:', e.message); }
 
   // ── İK / Özlük / Bordro — Faz 7-8: kesinti merkezi + iç borç + masraf ──
   try {

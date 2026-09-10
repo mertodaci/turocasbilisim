@@ -12,13 +12,13 @@ import * as XLSX from "xlsx";
 import { ucretPusulasiYazdir } from "@/lib/ikBordroPusula";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const now = new Date();
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function IkBordro() {
   const qc = useQueryClient();
-  const [yil, setYil] = useState(now.getFullYear());
-  const [ay, setAy] = useState(now.getMonth() + 1);
+  // "now" module-scope sabit degil, component ilk render edildiginde hesaplanir.
+  const [yil, setYil] = useState(() => new Date().getFullYear());
+  const [ay, setAy] = useState(() => new Date().getMonth() + 1);
   const [sube, setSube] = useState("");
   const [edit, setEdit] = useState(null);
   const [ef, setEf] = useState({});
@@ -28,6 +28,7 @@ export default function IkBordro() {
     queryFn: () => flowApi.ik.bordroListe({ yil, ay, ...(sube ? { sube_id: sube } : {}) }),
   });
   const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: vergiAyarlari } = useQuery({ queryKey: ["ik_vergi_ayarlari"], queryFn: () => flowApi.entities.IkVergiAyar.get(1) });
 
   const rows = data?.rows || [];
   const ozet = data?.ozet || {};
@@ -61,7 +62,9 @@ export default function IkBordro() {
     const ws = XLSX.utils.json_to_sheet(rows.map((r) => ({
       TC: r.tc, "Ad Soyad": r.personel_adi, İşyeri: r.sube_adi, Görev: r.gorev,
       Maaş: r.resmi_maas, Bayram: r.bayram, "Fazla Mesai": r.fazla_mesai, Prim: r.prim,
-      Yol: r.yol, Yemek: r.yemek, Ticket: r.ticket, "Resmî Toplam": r.resmi_toplam, "Resmî Net": r.resmi_net,
+      Yol: r.yol, Yemek: r.yemek, Ticket: r.ticket, "Resmî Toplam": r.resmi_toplam,
+      "SGK (İşçi)": r.sgk_isci, "İşsizlik (İşçi)": r.issizlik_isci, "Gelir Vergisi": r.gelir_vergisi, "Damga Vergisi": r.damga_vergisi,
+      "Resmî Net": r.resmi_net,
       Avans: r.avans, İcra: r.icra, BES: r.bes, "Diğer Kesinti": r.diger_kesinti, "Personel Masrafı": r.personel_masrafi,
       "Yol Kes.": r.yol_kes, "Yemek Kes.": r.yemek_kes, "Ticket Kes.": r.ticket_kes,
       "Borç Maaş": r.borc_maas, "Borç Y/Y/T": r.borc_yyt, "Borç Toplam": r.borc_toplam,
@@ -81,8 +84,13 @@ export default function IkBordro() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Calculator className="w-6 h-6 text-primary" /> Bordrolama</h1>
-          <p className="text-sm text-muted-foreground mt-1">Maaş + bayram + fazla mesai + yol/yemek/ticket (gün bazlı) − kesintiler − borç = net. SGK/gelir vergisi tevkifatı yok (Resmî Net = Resmî Toplam).</p>
+          <p className="text-sm text-muted-foreground mt-1">Maaş + bayram + fazla mesai + yol/yemek/ticket (gün bazlı) − SGK/işsizlik/gelir vergisi/damga vergisi = Resmî Net − kesintiler − borç = Genel Net.</p>
           <p className="text-xs text-amber-600 mt-1">Sıra: (1) Puantaj Cetveli → "Bu Ayı Üret" · (2) burada "Hesapla" (kesinti/icra/BES/borç kayıtlarını otomatik döneme çeker) · (3) "Bordroyu Onayla" · (4) Ay Kapanışı.</p>
+          {vergiAyarlari && !vergiAyarlari.dogrulanmis_mi && (
+            <p className="text-xs bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg px-3 py-1.5 mt-2 inline-block">
+              ⚠ SGK/gelir vergisi/damga vergisi oranları henüz teyit edilmedi (örnek/placeholder değerler). Muhasebeciniz güncel oranları "Bordrolama Ayarları" ekranından girip onaylamadan gerçek maaş ödemesi için kullanmayın.
+            </p>
+          )}
         </div>
         <div className="flex gap-2 items-center">
           <Input type="number" className="w-20" value={yil} onChange={(e) => setYil(Number(e.target.value))} />
@@ -122,6 +130,7 @@ export default function IkBordro() {
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Maaş</th>
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">F.Mesai</th>
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Yol/Yemek/Ticket</th>
+                <th className="text-right px-3 py-2 font-semibold text-muted-foreground" title="SGK + İşsizlik + Gelir Vergisi + Damga Vergisi">Yasal Kesinti</th>
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Resmî Net</th>
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Kesinti</th>
                 <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Şahsi</th>
@@ -136,6 +145,9 @@ export default function IkBordro() {
                   <td className="px-3 py-2 text-right">{nf(r.resmi_maas)}</td>
                   <td className="px-3 py-2 text-right">{nf(r.fazla_mesai + r.bayram)}</td>
                   <td className="px-3 py-2 text-right">{nf(r.yol + r.yemek + r.ticket)}</td>
+                  <td className="px-3 py-2 text-right text-red-600" title={`SGK: ${nf(r.sgk_isci)} · İşsizlik: ${nf(r.issizlik_isci)} · Gelir V.: ${nf(r.gelir_vergisi)} · Damga V.: ${nf(r.damga_vergisi)}`}>
+                    {nf((r.sgk_isci || 0) + (r.issizlik_isci || 0) + (r.gelir_vergisi || 0) + (r.damga_vergisi || 0))}
+                  </td>
                   <td className="px-3 py-2 text-right font-medium">{nf(r.resmi_net)}</td>
                   <td className="px-3 py-2 text-right text-red-600">{nf(r.avans + r.icra + r.bes + r.diger_kesinti + r.personel_masrafi + r.borc_toplam)}</td>
                   <td className="px-3 py-2 text-right">{nf(r.sahsi_hesap_net)}</td>

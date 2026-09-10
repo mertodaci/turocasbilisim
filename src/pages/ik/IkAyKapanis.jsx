@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Lock, Unlock, Download } from "lucide-react";
 import { toast } from "sonner";
 
-const now = new Date();
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function IkAyKapanis() {
   const qc = useQueryClient();
-  const [yil, setYil] = useState(now.getFullYear());
-  const [ay, setAy] = useState(now.getMonth() + 1);
+  // "now" module-scope sabit degil, component ilk render edildiginde hesaplanir
+  // (bkz. IkKesinti.jsx'teki ayni duzeltme).
+  const [yil, setYil] = useState(() => new Date().getFullYear());
+  const [ay, setAy] = useState(() => new Date().getMonth() + 1);
   const [sube, setSube] = useState("");
 
   const { data } = useQuery({ queryKey: ["ik_bordro_liste", yil, ay, ""], queryFn: () => flowApi.ik.bordroListe({ yil, ay }) });
@@ -46,7 +47,12 @@ export default function IkAyKapanis() {
       <div className="bg-card border rounded-2xl p-5 space-y-3">
         <p className="text-sm font-semibold">Dönem Kilitleme</p>
         {!donem ? <p className="text-sm text-muted-foreground">Bu dönem için henüz bordro hesaplanmamış.</p> : kapali ? (
-          <Button variant="outline" disabled={kapat.isPending} onClick={() => kapat.mutate(true)}><Unlock className="w-4 h-4 mr-1.5" /> Kilidi Aç (Geri Al)</Button>
+          // Kilidi acmak, kapatmaktan daha az korumali degil — dahasi olmali: bir
+          // KEZ odenmis/kapatilmis donemi tekrar duzenlenebilir hale getiriyor.
+          // Eskiden tek tikla, onaysiz calisiyordu; kapatma zaten confirm() istiyordu.
+          <Button variant="outline" disabled={kapat.isPending} onClick={() => { if (confirm("Dönemin kilidi açılacak — bordro/puantaj/kesinti tekrar düzenlenebilir hale gelecek. Bu, ödemesi yapılmış bir dönemi yeniden değiştirilebilir yapabilir. Devam?")) kapat.mutate(true); }}>
+            <Unlock className="w-4 h-4 mr-1.5" /> Kilidi Aç (Geri Al)
+          </Button>
         ) : (
           <Button disabled={kapat.isPending || donem.durum !== "onayli"} onClick={() => { if (confirm("Dönem kilitlenecek — bordro/puantaj/kesinti değiştirilemez. Devam?")) kapat.mutate(false); }}>
             <Lock className="w-4 h-4 mr-1.5" /> Seçilen Ayı Kapat

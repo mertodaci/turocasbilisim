@@ -3,6 +3,68 @@
 const crypto = require('crypto');
 const _uuid = () => crypto.randomUUID();
 
+// Kümülatif dilimli gelir vergisi: verilen TOPLAM matrah üzerinden dilimlere göre
+// hesaplanan toplam vergiyi döndürür (tek başına "bu ayki vergi" değil — çağıran
+// taraf iki kümülatif toplam arasındaki FARKI alarak o ayın vergisini bulur).
+// dilimler alt_sinir'e göre artan sırada, bitişik (ust_sinir[i] = alt_sinir[i+1]) olmalı.
+function dilimliVergi(matrah, dilimler) {
+  if (!(matrah > 0) || !dilimler?.length) return 0;
+  let vergi = 0;
+  for (const d of dilimler) {
+    const alt = Number(d.alt_sinir) || 0;
+    const ust = d.ust_sinir == null ? Infinity : Number(d.ust_sinir);
+    if (matrah <= alt) break;
+    vergi += (Math.min(matrah, ust) - alt) * (Number(d.oran) || 0) / 100;
+  }
+  return vergi;
+}
+
+// SGK primi (işçi payı) + işsizlik sigortası (işçi payı) + kümülatif dilimli gelir
+// vergisi + damga vergisi. Asgari ücrete karşılık gelen gelir vergisi ve damga
+// vergisi tutarı istisna olarak düşülür (2022'den beri yürürlükte olan kural).
+//
+// ÖNEMLİ: kümülatif matrah, ayrı bir "durum" tablosunda TUTULMAZ — personelin o
+// yıl, BU AYDAN ÖNCEKİ aylara ait ik_bordro_satirlari kayıtlarından her seferinde
+// yeniden toplanır. Bu sayede "Zorla Yeniden Hesapla" aynı ay için tekrar tekrar
+// çalıştırılsa bile kümülatif tutar asla çift sayılmaz (bu ayın kendi satırı
+// sorguya hiç dahil edilmiyor).
+//
+// DEĞERLER: ik_vergi_ayarlari ve ik_gelir_vergisi_dilimleri tablolarındaki oranlar
+// örnek/placeholder olabilir — dogrulanmis_mi=0 iken çağıran taraf (UI) bunu
+// kullanıcıya göstermeli. Hesaplama mantığı (SGK tavanı, kümülatif dilim, asgari
+// ücret istisnası, damga vergisi ayrı satır) doğru sırayla uygulanır; sorumluluk
+// yalnızca rakamların güncelliğinde kalır.
+function ikVergiHesapla(db, { personelId, yil, ay, resmiToplam, vergiAyarlari, dilimler }) {
+  const va = vergiAyarlari || {};
+  const sgkTavan = Number(va.sgk_tavan) || Infinity;
+  const sgkMatrah = Math.min(Math.max(0, resmiToplam), sgkTavan);
+  const sgkIsci = +(sgkMatrah * (Number(va.sgk_isci_orani) || 0) / 100).toFixed(2);
+  const issizlikIsci = +(sgkMatrah * (Number(va.issizlik_isci_orani) || 0) / 100).toFixed(2);
+  const buAyMatrah = +(resmiToplam - sgkIsci - issizlikIsci).toFixed(2);
+
+  const oncekiMatrah = db.prepare(`SELECT COALESCE(SUM(s.gelir_vergisi_matrahi),0) m
+      FROM ik_bordro_satirlari s JOIN ik_bordro_donemleri d ON d.id = s.donem_id
+      WHERE s.personel_id=? AND d.yil=? AND d.ay<? AND (s.is_deleted=0 OR s.is_deleted IS NULL)`)
+    .get(personelId, yil, ay)?.m || 0;
+
+  const asgariUcretVergisi = dilimliVergi(Number(va.asgari_ucret_brut) || 0, dilimler);
+  const kumulatifSonrasiVergi = dilimliVergi(oncekiMatrah + buAyMatrah, dilimler);
+  const kumulatifOncesiVergi = dilimliVergi(oncekiMatrah, dilimler);
+  const gelirVergisi = +Math.max(0, kumulatifSonrasiVergi - kumulatifOncesiVergi - asgariUcretVergisi).toFixed(2);
+
+  const damgaOrani = Number(va.damga_vergisi_orani) || 0;
+  const damgaVergisiBrut = +(Math.max(0, resmiToplam) * damgaOrani / 100).toFixed(2);
+  const asgariUcretDamga = +((Number(va.asgari_ucret_brut) || 0) * damgaOrani / 100).toFixed(2);
+  const damgaVergisi = +Math.max(0, damgaVergisiBrut - asgariUcretDamga).toFixed(2);
+
+  return {
+    sgk_matrah: sgkMatrah, sgk_isci: sgkIsci, issizlik_isci: issizlikIsci,
+    gelir_vergisi_matrahi: buAyMatrah, gelir_vergisi: gelirVergisi, damga_vergisi: damgaVergisi,
+    kumulatif_matrah_oncesi: oncekiMatrah, kumulatif_matrah_sonrasi: oncekiMatrah + buAyMatrah,
+    net_kesinti_toplami: +(sgkIsci + issizlikIsci + gelirVergisi + damgaVergisi).toFixed(2),
+  };
+}
+
 // Dönem kaydını getir; yoksa taslak olarak oluştur.
 function ikDonemGetirYaOlustur(db, yil, ay, email) {
   let d = db.prepare('SELECT * FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(yil, ay);
@@ -94,7 +156,12 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
 
   const prim = Number(ctx.prim) || 0;
   const resmiToplam = +(resmiMaas + (mesai.bayram || 0) + (mesai.fazla || 0) + prim + hak.yol + hak.yemek + hak.ticket).toFixed(2);
-  const resmiNet = resmiToplam; // SGK/gelir vergisi tevkifatı yok
+
+  // SGK primi + işsizlik sigortası + kümülatif dilimli gelir vergisi + damga vergisi
+  // (bkz. ikVergiHesapla üstteki açıklama — daha önce burada hiçbir yasal kesinti
+  // hesaplanmıyordu, resmi_net doğrudan resmi_toplam'a eşitleniyordu).
+  const vergi = ikVergiHesapla(db, { personelId: emp.id, yil: Number(yil), ay: Number(ay), resmiToplam, vergiAyarlari: ctx.vergiAyarlari, dilimler: ctx.dilimler });
+  const resmiNet = +(resmiToplam - vergi.net_kesinti_toplami).toFixed(2);
 
   // Kesintiler (dönem — ik_kesintiler; kesinti/donem-uret ile üretilmiş olmalı)
   const kes = db.prepare(`SELECT
@@ -136,6 +203,9 @@ function ikBordroSatirHesapla(db, emp, yil, ay, ctx = {}) {
     yol: hak.yol, yemek: hak.yemek, ticket: hak.ticket,
     yol_hak_gun: hak.yol_hak_gun, yemek_hak_gun: hak.yemek_hak_gun, ticket_hak_gun: hak.ticket_hak_gun,
     resmi_toplam: resmiToplam, resmi_net: resmiNet,
+    sgk_matrah: vergi.sgk_matrah, sgk_isci: vergi.sgk_isci, issizlik_isci: vergi.issizlik_isci,
+    gelir_vergisi_matrahi: vergi.gelir_vergisi_matrahi, gelir_vergisi: vergi.gelir_vergisi, damga_vergisi: vergi.damga_vergisi,
+    kumulatif_matrah_oncesi: vergi.kumulatif_matrah_oncesi, kumulatif_matrah_sonrasi: vergi.kumulatif_matrah_sonrasi,
     avans: kes.avans || 0, icra: kes.icra || 0, bes: kes.bes || 0, diger_kesinti: kes.diger || 0,
     maas_puantaj_kes: maasPuantajKes, yol_kes: hak.yol_kes, yemek_kes: hak.yemek_kes, ticket_kes: hak.ticket_kes,
     personel_masrafi: personelMasrafi,
@@ -209,13 +279,22 @@ function ikKesintiDonemUret(db, { yil, ay, email }) {
 
 // Bir dönemin tüm (veya tek) personel bordro satırlarını hesaplayıp yaz.
 function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
-  const donem = ikDonemGetirYaOlustur(db, Number(yil), Number(ay), email);
+  yil = Number(yil); ay = Number(ay);
+  // Guvenlik/dogruluk: ay 1-12 disinda veya yil mantiksiz ise sessizce yanlis
+  // bir donem_id uretmek yerine acikca reddet (ornegin ay=13 JS Date ile bir
+  // sonraki yilin Ocak'ina "kayar", fark edilmeden yanlis doneme yazilirdi).
+  if (!Number.isInteger(ay) || ay < 1 || ay > 12) { const e = new Error('Ay 1-12 arasında olmalı'); e.code = 400; throw e; }
+  if (!Number.isInteger(yil) || yil < 2000 || yil > 2100) { const e = new Error('Geçersiz yıl'); e.code = 400; throw e; }
+
+  const donem = ikDonemGetirYaOlustur(db, yil, ay, email);
   if (donem.durum === 'kapali') { const e = new Error('Kapalı dönem yeniden hesaplanamaz'); e.code = 400; throw e; }
   // sync: bordrodan önce kesinti/plan/borç kayıtlarını döneme çek
   if (sync && !personel_id) { try { ikKesintiDonemUret(db, { yil, ay, email }); } catch (e) { console.error('[ikBordro] sync:', e.message); } }
 
   const genelAyar = db.prepare('SELECT * FROM ik_hakedis_genel_ayar WHERE id=1').get() || {};
-  const ctx = { varsayilanBazGun: genelAyar.varsayilan_baz_gun || 26, ticketAyar: genelAyar };
+  const vergiAyarlari = db.prepare('SELECT * FROM ik_vergi_ayarlari WHERE id=1').get() || {};
+  const dilimler = db.prepare('SELECT alt_sinir, ust_sinir, oran FROM ik_gelir_vergisi_dilimleri WHERE yil=? ORDER BY sira ASC, alt_sinir ASC').all(yil);
+  const ctx = { varsayilanBazGun: genelAyar.varsayilan_baz_gun || 26, ticketAyar: genelAyar, vergiAyarlari, dilimler };
 
   const cond = ["(is_deleted=0 OR is_deleted IS NULL)", "app_role != 'musteri'"];
   const params = [];
@@ -226,10 +305,12 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
   const ins = db.prepare(`INSERT INTO ik_bordro_satirlari
     (id, donem_id, personel_id, personel_adi, sube_id, tc, gorev, aylik_ucret, saatlik_ucret, dakikalik_ucret, calisilan_gun, eksik_gun,
      resmi_maas, bayram, fazla_mesai, prim, yol, yemek, ticket, yol_hak_gun, yemek_hak_gun, ticket_hak_gun, resmi_toplam, resmi_net,
+     sgk_matrah, sgk_isci, issizlik_isci, gelir_vergisi_matrahi, gelir_vergisi, damga_vergisi, kumulatif_matrah_oncesi, kumulatif_matrah_sonrasi,
      avans, icra, bes, diger_kesinti, maas_puantaj_kes, yol_kes, yemek_kes, ticket_kes, personel_masrafi, borc_maas, borc_yyt, borc_toplam,
      sahsi_hesap_net, genel_net, created_date, updated_date)
     VALUES (@id,@donem_id,@personel_id,@personel_adi,@sube_id,@tc,@gorev,@aylik_ucret,@saatlik_ucret,@dakikalik_ucret,@calisilan_gun,@eksik_gun,
      @resmi_maas,@bayram,@fazla_mesai,@prim,@yol,@yemek,@ticket,@yol_hak_gun,@yemek_hak_gun,@ticket_hak_gun,@resmi_toplam,@resmi_net,
+     @sgk_matrah,@sgk_isci,@issizlik_isci,@gelir_vergisi_matrahi,@gelir_vergisi,@damga_vergisi,@kumulatif_matrah_oncesi,@kumulatif_matrah_sonrasi,
      @avans,@icra,@bes,@diger_kesinti,@maas_puantaj_kes,@yol_kes,@yemek_kes,@ticket_kes,@personel_masrafi,@borc_maas,@borc_yyt,@borc_toplam,
      @sahsi_hesap_net,@genel_net,@now,@now)
     ON CONFLICT(donem_id, personel_id) DO UPDATE SET
@@ -237,7 +318,11 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
       calisilan_gun=excluded.calisilan_gun, eksik_gun=excluded.eksik_gun, resmi_maas=excluded.resmi_maas, bayram=excluded.bayram,
       fazla_mesai=excluded.fazla_mesai, yol=excluded.yol, yemek=excluded.yemek, ticket=excluded.ticket,
       yol_hak_gun=excluded.yol_hak_gun, yemek_hak_gun=excluded.yemek_hak_gun, ticket_hak_gun=excluded.ticket_hak_gun,
-      resmi_toplam=excluded.resmi_toplam, resmi_net=excluded.resmi_net, avans=excluded.avans, icra=excluded.icra, bes=excluded.bes,
+      resmi_toplam=excluded.resmi_toplam, resmi_net=excluded.resmi_net,
+      sgk_matrah=excluded.sgk_matrah, sgk_isci=excluded.sgk_isci, issizlik_isci=excluded.issizlik_isci,
+      gelir_vergisi_matrahi=excluded.gelir_vergisi_matrahi, gelir_vergisi=excluded.gelir_vergisi, damga_vergisi=excluded.damga_vergisi,
+      kumulatif_matrah_oncesi=excluded.kumulatif_matrah_oncesi, kumulatif_matrah_sonrasi=excluded.kumulatif_matrah_sonrasi,
+      avans=excluded.avans, icra=excluded.icra, bes=excluded.bes,
       diger_kesinti=excluded.diger_kesinti, maas_puantaj_kes=excluded.maas_puantaj_kes,
       yol_kes=excluded.yol_kes, yemek_kes=excluded.yemek_kes, ticket_kes=excluded.ticket_kes,
       personel_masrafi=excluded.personel_masrafi,
@@ -265,7 +350,10 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
           + (Number(mv.ozel_sigorta) || 0) + (Number(mv.ozel_sigorta_es_cocuk) || 0);
         row.prim = ekPrim;
         row.resmi_toplam = +(row.resmi_toplam + ekPrim).toFixed(2);
-        row.resmi_net = row.resmi_toplam;
+        // resmi_net'i resmi_toplam'a esitlemek (eski davranis) SGK/gelir
+        // vergisi kesintilerini silerdi -- artik mevcut (vergi dusulmus) net'e
+        // ekPrim ekleniyor, kesintiler korunuyor.
+        row.resmi_net = +(row.resmi_net + ekPrim).toFixed(2);
         row.genel_net = +(row.genel_net + ekPrim + taz).toFixed(2);
       }
       ins.run({ ...row, id: _uuid(), donem_id: donem.id, now });
@@ -275,4 +363,4 @@ function ikBordroHesapla(db, { yil, ay, personel_id, force, email, sync }) {
   return { ok: true, donem_id: donem.id, satir: n };
 }
 
-module.exports = { ikDonemGetirYaOlustur, ikBordroSatirHesapla, ikBordroHesapla, ikKesintiDonemUret };
+module.exports = { ikDonemGetirYaOlustur, ikBordroSatirHesapla, ikBordroHesapla, ikKesintiDonemUret, ikVergiHesapla, dilimliVergi };

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarClock, RefreshCw, Pencil, Layers } from "lucide-react";
 import { toast } from "sonner";
+import { ymd } from "@/lib/dateUtils";
 
 const DURUM = {
   N: { l: "Normal", c: "bg-emerald-100 text-emerald-700" },
@@ -25,7 +26,7 @@ const DURUM = {
 
 export default function IkPuantaj() {
   const qc = useQueryClient();
-  const [tarih, setTarih] = useState(new Date().toISOString().slice(0, 10));
+  const [tarih, setTarih] = useState(ymd(new Date()));
   const [sube, setSube] = useState("");
   const [edit, setEdit] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -51,8 +52,8 @@ export default function IkPuantaj() {
     mutationFn: () => {
       const d = new Date(tarih + "T00:00:00");
       const t1 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-      const sonGun = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
-      const bugun = new Date().toISOString().slice(0, 10);
+      const sonGun = ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+      const bugun = ymd(new Date());
       const t2 = sonGun > bugun ? bugun : sonGun;
       return flowApi.ik.puantajHesapla({ t1, t2, ...(sube ? { sube_id: sube } : {}) });
     },

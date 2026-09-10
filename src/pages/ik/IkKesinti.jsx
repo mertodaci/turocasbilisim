@@ -11,13 +11,15 @@ import { Scissors, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const now = new Date();
 const TUR_L = { avans: "Avans", icra: "İcra", bes: "BES", diger: "Diğer", gun_kes: "Gün Kesintisi" };
 
 export default function IkKesinti() {
   const qc = useQueryClient();
-  const [yil, setYil] = useState(now.getFullYear());
-  const [ay, setAy] = useState(now.getMonth() + 1);
+  // "now" module-scope sabit degil, component ilk render edildiginde hesaplanir --
+  // eskiden module ilk yuklendiginde bir kere hesaplanip donuyordu, uzun surebilen
+  // bir SPA oturumunda ay/yil degisse de varsayilan hep eski ayda kalirdi.
+  const [yil, setYil] = useState(() => new Date().getFullYear());
+  const [ay, setAy] = useState(() => new Date().getMonth() + 1);
   const [tab, setTab] = useState("ozet");
   const [dialog, setDialog] = useState(null); // 'avans' | 'diger' | 'plan'
   const [form, setForm] = useState({});

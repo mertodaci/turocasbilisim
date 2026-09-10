@@ -7,11 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { ymd } from "@/lib/dateUtils";
 
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const now = new Date();
-const ilkGun = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-const sonGun = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
 
 const COLS = [
   ["personel_adi", "Personel"], ["status", "Durum"],
@@ -24,8 +22,13 @@ const COLS = [
 ];
 
 export default function IkHareketRapor() {
-  const [bas, setBas] = useState(ilkGun);
-  const [bit, setBit] = useState(sonGun);
+  // "now" burada, sayfa ilk render edildigi anda BIR KERE hesaplanir (module-scope
+  // sabit degil) -- eskiden module yuklendiginde bir kere hesaplanip donuyordu,
+  // uzun surebilen bir SPA oturumunda ay/yil degisse de varsayilanlar donmus
+  // kalirdi. Ayrica toISOString() UTC donusumu (Turkiye +3) ay basi/sonunu bir
+  // gun kaydiriyordu -- ymd() yerel tarihi dogrudan formatlar.
+  const [bas, setBas] = useState(() => { const n = new Date(); return ymd(new Date(n.getFullYear(), n.getMonth(), 1)); });
+  const [bit, setBit] = useState(() => { const n = new Date(); return ymd(new Date(n.getFullYear(), n.getMonth() + 1, 0)); });
   const [sube, setSube] = useState("");
   const [personel, setPersonel] = useState("");
 

@@ -209,6 +209,8 @@ app.use('/api/entities/ik_puantaj',            createEntityRouter('ik_puantaj'))
 app.use('/api/entities/ik_puantaj_duzeltme_log', createEntityRouter('ik_puantaj_duzeltme_log'));
 app.use('/api/entities/ik_mesai_kayitlari',    createEntityRouter('ik_mesai_kayitlari'));
 app.use('/api/entities/ik_hakedis_genel_ayar', createEntityRouter('ik_hakedis_genel_ayar'));
+app.use('/api/entities/ik_vergi_ayarlari',     createEntityRouter('ik_vergi_ayarlari'));
+app.use('/api/entities/ik_gelir_vergisi_dilimleri', createEntityRouter('ik_gelir_vergisi_dilimleri'));
 app.use('/api/entities/ik_hakedis_tanim',      createEntityRouter('ik_hakedis_tanim'));
 app.use('/api/entities/ik_bordro_yemek_kural', createEntityRouter('ik_bordro_yemek_kural'));
 app.use('/api/entities/ik_kesinti_planlari',   createEntityRouter('ik_kesinti_planlari'));
@@ -2508,6 +2510,16 @@ function ikPerm(req, action, ...mods) {
   const list = mods.length ? mods : ['ikb_personel'];
   return list.some((m) => checkPermission(db, req.user?.role, m, action));
 }
+// GUVENLIK: 'sube_yoneticisi' rolu "kendi subesi" gorevi icin yetkilendirilmisti
+// (bkz. db.js rol tanimi: "Kendi şubesi: puantaj/izin/mesai görüntüleme ve onay")
+// ama bu sinirlama hicbir route'ta uygulanmiyordu -- bu rol sube_id filtresini
+// istedigi gibi (ya da hic) gonderip TUM sirketin verisini sorgulayabiliyordu.
+// Bu fonksiyon o kullanicinin kendi employees.sube_id'sini dondurur; cagiran
+// route bunu zorunlu filtre olarak kullanmalidir (caller-supplied sube_id'yi yok sayar).
+function ikKendiSubeId(req) {
+  const emp = db.prepare("SELECT sube_id FROM employees WHERE lower(email)=lower(?) AND (is_deleted=0 OR is_deleted IS NULL)").get(req.user?.email || '');
+  return emp?.sube_id || null;
+}
 // Bir dönemin (yıl/ay) durumu: 'taslak' | 'onayli' | 'kapali' | null (dönem yok)
 function ikDonemDurumu(yil, ay) {
   const d = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE yil=? AND ay=?').get(Number(yil), Number(ay));
@@ -2547,10 +2559,15 @@ app.post('/api/ik/zam-uygula', authMiddleware, (req, res) => {
   const list = db.prepare(`SELECT id, full_name, aylik_ucret, sahsi_hesap_tutar FROM employees WHERE ${cond.join(' AND ')}`).all(...params);
   if (!list.length) return res.status(400).json({ error: 'Kritere uyan personel yok' });
 
+  // GUVENLIK/DOGRULUK: deger negatif olabilirdi (or. islem='sabit', deger=-100000)
+  // ve sonuc aylik_ucret/sahsi_hesap_tutar'i negatife dusurebilirdi -- bordro
+  // motoru bu degerleri dogrudan hesaba kattigi icin negatif maas satirlarina yol
+  // acardi. Sonuc her zaman >= 0'a sabitlenir; negatif "yeni" degeri direkt reddedilir.
+  if (islem === 'yeni' && deger < 0) return res.status(400).json({ error: 'Yeni tutar negatif olamaz' });
   const yeniDeger = (mevcut) => {
     const m = Number(mevcut) || 0;
-    if (islem === 'yuzde') return +(m * (1 + deger / 100)).toFixed(2);
-    if (islem === 'sabit') return +(m + deger).toFixed(2);
+    if (islem === 'yuzde') return Math.max(0, +(m * (1 + deger / 100)).toFixed(2));
+    if (islem === 'sabit') return Math.max(0, +(m + deger).toFixed(2));
     return +deger.toFixed(2); // yeni
   };
   const now = new Date().toISOString();
@@ -2590,6 +2607,15 @@ app.post('/api/ik/personel/:id/cikis', authMiddleware, (req, res) => {
   try {
     db.prepare("UPDATE employees SET status='pasif', exit_date=?, exit_reason=?, exit_notes=?, updated_date=? WHERE id=?")
       .run(exit_date, exit_reason || null, exit_notes || null, new Date().toISOString(), emp.id);
+    // GUVENLIK: bu route employees.status'u dogrudan UPDATE ediyordu, genel
+    // employee PUT'taki employee->user status senkronunu (entityRouter.js)
+    // atliyordu -- isten cikarilan personelin giris hesabi hicbir zaman
+    // devre disi kalmiyordu, sisteme girmeye devam edebiliyordu.
+    if (emp.email) {
+      try {
+        db.prepare("UPDATE users SET status='pasif', updated_at=datetime('now') WHERE email=? AND role != 'musteri'").run(emp.email);
+      } catch (e) { console.error('cikis: employee->user status senkron hatasi:', e.message); }
+    }
     res.json({ ok: true, personel: db.prepare('SELECT id, full_name, status, exit_date FROM employees WHERE id=?').get(emp.id) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -3032,7 +3058,7 @@ app.get('/api/ik/kesinti/donem', authMiddleware, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 // İK Faz 9-10: Bordro motoru + Ay Kapanışı  (motor: ./ikBordro.js)
 // ═══════════════════════════════════════════════════════════════════
-const { ikBordroHesapla, ikKesintiDonemUret } = require('./ikBordro');
+const { ikBordroHesapla, ikKesintiDonemUret, ikVergiHesapla } = require('./ikBordro');
 
 app.post('/api/ik/bordro/hesapla', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
@@ -3070,7 +3096,7 @@ app.put('/api/ik/bordro/satir/:id', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_edit', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const row = db.prepare('SELECT * FROM ik_bordro_satirlari WHERE id=?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Satır bulunamadı' });
-  const donem = db.prepare('SELECT durum FROM ik_bordro_donemleri WHERE id=?').get(row.donem_id);
+  const donem = db.prepare('SELECT yil, ay, durum FROM ik_bordro_donemleri WHERE id=?').get(row.donem_id);
   if (donem?.durum === 'kapali') return res.status(400).json({ error: 'Kapalı dönem satırı düzenlenemez' });
   const b = req.body || {};
   const alanlar = ['resmi_maas', 'bayram', 'fazla_mesai', 'prim', 'yol', 'yemek', 'ticket', 'yol_hak_gun', 'yemek_hak_gun', 'ticket_hak_gun',
@@ -3079,9 +3105,20 @@ app.put('/api/ik/bordro/satir/:id', authMiddleware, (req, res) => {
   for (const a of alanlar) if (a in b) upd[a] = a === 'hesap_notu' ? b[a] : (Number(b[a]) || 0);
   const m = { ...row, ...upd };
   const resmiToplam = +(m.resmi_maas + m.bayram + m.fazla_mesai + m.prim + m.yol + m.yemek + m.ticket).toFixed(2);
-  const genelNet = +(resmiToplam + m.sahsi_hesap_net - m.avans - m.icra - m.bes - m.diger_kesinti - m.personel_masrafi - m.borc_toplam
+  // Elle duzenleme resmi_toplam'i degistirebilir (or. prim artirildi) -- SGK/gelir
+  // vergisi/damga vergisini de bu yeni tutara gore yeniden hesapla, yoksa resmi_net
+  // eski (artik yanlis) vergi tutarlariyla kalir. Ayni motor fonksiyonu kullanilir
+  // (bkz. ikBordro.js) ki iki yerde farkli/tutarsiz vergi mantigi olusmasin.
+  const vergiAyarlari = db.prepare('SELECT * FROM ik_vergi_ayarlari WHERE id=1').get() || {};
+  const dilimler = db.prepare('SELECT alt_sinir, ust_sinir, oran FROM ik_gelir_vergisi_dilimleri WHERE yil=? ORDER BY sira ASC, alt_sinir ASC').all(donem?.yil);
+  const vergi = ikVergiHesapla(db, { personelId: row.personel_id, yil: donem?.yil, ay: donem?.ay, resmiToplam, vergiAyarlari, dilimler });
+  const resmiNet = +(resmiToplam - vergi.net_kesinti_toplami).toFixed(2);
+  const genelNet = +(resmiNet + m.sahsi_hesap_net - m.avans - m.icra - m.bes - m.diger_kesinti - m.personel_masrafi - m.borc_toplam
     + m.fesih_tazminati + m.ihbar_tazminati + m.kasa_tazminati + m.ozel_sigorta + m.ozel_sigorta_es_cocuk).toFixed(2);
-  upd.resmi_toplam = resmiToplam; upd.resmi_net = resmiToplam; upd.genel_net = genelNet;
+  upd.resmi_toplam = resmiToplam; upd.resmi_net = resmiNet; upd.genel_net = genelNet;
+  upd.sgk_matrah = vergi.sgk_matrah; upd.sgk_isci = vergi.sgk_isci; upd.issizlik_isci = vergi.issizlik_isci;
+  upd.gelir_vergisi_matrahi = vergi.gelir_vergisi_matrahi; upd.gelir_vergisi = vergi.gelir_vergisi; upd.damga_vergisi = vergi.damga_vergisi;
+  upd.kumulatif_matrah_oncesi = vergi.kumulatif_matrah_oncesi; upd.kumulatif_matrah_sonrasi = vergi.kumulatif_matrah_sonrasi;
   upd.manuel_override = 1; upd.updated_date = new Date().toISOString();
   const setSql = Object.keys(upd).map((k) => `${k}=@${k}`).join(', ');
   db.prepare(`UPDATE ik_bordro_satirlari SET ${setSql} WHERE id=@id`).run({ ...upd, id: row.id });
@@ -3107,10 +3144,22 @@ app.post('/api/ik/bordro/kapat', authMiddleware, (req, res) => {
   if (!donem) return res.status(404).json({ error: 'Dönem yok' });
   const now = new Date().toISOString();
   if (geri_al) {
-    db.prepare("UPDATE ik_bordro_donemleri SET durum='onayli', kapatan=NULL, kapanis_tarihi=NULL, updated_date=? WHERE id=?").run(now, donem.id);
+    // DENETIM: "Geri Al" onceden kapatan/kapanis_tarihi'ni NULL'a cekip o bilgiyi
+    // kalici olarak yok ediyordu -- tam da bir ihtilafta lazim olacak kaydi
+    // siliyordu. Artik onceki_kapatan/onceki_kapanis_tarihi'ne tasiniyor (üzerine
+    // yazılsa bile en son kapanışı saklar) ve audit_log'a ayrica yaziliyor.
+    db.prepare("UPDATE ik_bordro_donemleri SET durum='onayli', onceki_kapatan=kapatan, onceki_kapanis_tarihi=kapanis_tarihi, kapatan=NULL, kapanis_tarihi=NULL, updated_date=? WHERE id=?").run(now, donem.id);
+    try {
+      db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+        .run(_stokUUID(), req.user.email, 'bordro_donem_geri_acildi', `${yil}-${String(ay).padStart(2,'0')}`, `kapatan: ${donem.kapatan}, tarih: ${donem.kapanis_tarihi}`, 'onayli');
+    } catch (e) {}
     return res.json({ ok: true, durum: 'onayli' });
   }
   db.prepare("UPDATE ik_bordro_donemleri SET durum='kapali', kapatan=?, kapanis_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
+  try {
+    db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+      .run(_stokUUID(), req.user.email, 'bordro_donem_kapatildi', `${yil}-${String(ay).padStart(2,'0')}`, donem.durum, 'kapali');
+  } catch (e) {}
   res.json({ ok: true, durum: 'kapali' });
 });
 
@@ -3224,7 +3273,15 @@ app.post('/api/ik/ozluk-evrak/toplu-uygula', authMiddleware, (req, res) => {
 // Personel Hareket Raporları — tek merkez (giriş-çıkış + avans + YYT + kesinti + masraf + izin + mesai + bordro)
 app.get('/api/ik/hareket-rapor', authMiddleware, (req, res) => {
   if (!ikPerm(req, 'can_view', 'ikb_hareket_rapor', 'ikb_maas_ozet')) return res.status(403).json({ error: 'Yetkiniz yok' });
-  const { personel_id, sube_id, bas, bit } = req.query;
+  const { personel_id, bas, bit } = req.query;
+  let { sube_id } = req.query;
+  // GUVENLIK: sube_yoneticisi sadece kendi subesini gorebilir -- istemcinin
+  // gonderdigi sube_id yok sayilir, kendi subesiyle degistirilir. Kendi subesi
+  // belirlenemiyorsa (employees kaydi yok/sube_id bos) hicbir sonuc donmez.
+  if (req.user?.role === 'sube_yoneticisi') {
+    sube_id = ikKendiSubeId(req);
+    if (!sube_id) return res.json({ personeller: [], ozet: { personel_sayisi: 0, toplam_avans: 0, toplam_icra: 0, toplam_bes: 0, toplam_diger: 0, toplam_masraf: 0, toplam_izin_gun: 0, toplam_mesai: 0, toplam_bordro_net: 0 } });
+  }
   const b1 = bas || '2000-01-01', b2 = bit || '2999-12-31';
   const empCond = ['(e.is_deleted IS NULL OR e.is_deleted=0)'], empParams = [];
   if (personel_id) { empCond.push('e.id=?'); empParams.push(personel_id); }

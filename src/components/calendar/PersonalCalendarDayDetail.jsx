@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarDays, CheckSquare, Umbrella, Activity, ClipboardList } from "lucide-react";
+import { CalendarDays, CheckSquare, Umbrella, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const activityTypeLabels = {
@@ -43,16 +43,8 @@ const todoPriorityColors = {
   dusuk: "text-green-600",
 };
 
-const workTaskStatusLabels = {
-  beklemede: "Beklemede",
-  devam_ediyor: "Devam Ediyor",
-  onay_bekliyor: "Onay Bekliyor",
-  tamamlandi: "Tamamlandı",
-  iptal: "İptal",
-};
-
-export default function PersonalCalendarDayDetail({ date, activities = [], todos = [], leaves = [], workTasks = [] }) {
-  const hasEvents = activities.length > 0 || todos.length > 0 || leaves.length > 0 || workTasks.length > 0;
+export default function PersonalCalendarDayDetail({ date, activities = [], todos = [], leaves = [] }) {
+  const hasEvents = activities.length > 0 || todos.length > 0 || leaves.length > 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5 space-y-4 h-fit">
@@ -143,25 +135,6 @@ export default function PersonalCalendarDayDetail({ date, activities = [], todos
         </div>
       )}
 
-      {/* İş Görevleri */}
-      {workTasks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-1.5 mb-2">
-            <ClipboardList className="w-3.5 h-3.5 text-purple-500" />
-            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">İş Görevleri</span>
-          </div>
-          <div className="space-y-2">
-            {workTasks.map((t) => (
-              <div key={t.id} className="rounded-xl bg-purple-50 border border-purple-100 px-3 py-2">
-                <p className={cn("text-sm font-medium text-foreground", t.status === "tamamlandi" && "line-through text-muted-foreground")}>
-                  {t.title}
-                </p>
-                <p className="text-xs text-muted-foreground">{workTaskStatusLabels[t.status] || t.status}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

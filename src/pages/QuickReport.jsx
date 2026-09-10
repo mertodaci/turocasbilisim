@@ -15,7 +15,6 @@ const FIELD_TO_CATEGORY = {
   department: "departman",
   position: "pozisyon",
   education_level: "egitim_seviyesi",
-  activity_type: "aktivite_tipi",
   location: "lokasyon",
   contract_type: "sozlesme_turu",
   type: "bilet_tipi",
@@ -69,40 +68,6 @@ const MODULES = [
           { key: "education_level", label: "Eğitim Seviyesi" },
           { key: "university", label: "Üniversite" },
           { key: "education_department", label: "Bölüm" },
-        ],
-      },
-    ],
-  },
-  {
-    key: "activities",
-    label: "Aktiviteler",
-    icon: "📋",
-    color: "bg-green-50 border-green-200 text-green-700",
-    activeColor: "bg-green-600 text-white border-green-600",
-    queryFn: () => flowApi.entities.Activity.list("-created_date", 500),
-    groups: [
-      {
-        label: "Aktivite Bilgileri",
-        fields: [
-          { key: "employee_name", label: "Çalışan" },
-          { key: "activity_type", label: "Aktivite Tipi" },
-          { key: "date", label: "Tarih" },
-          { key: "duration_minutes", label: "Süre (dk)" },
-          { key: "status", label: "Durum" },
-        ],
-      },
-      {
-        label: "Müşteri",
-        fields: [
-          { key: "customer_name", label: "Müşteri" },
-          { key: "contract_type", label: "Sözleşme Türü" },
-        ],
-      },
-      {
-        label: "Detay",
-        fields: [
-          { key: "notes", label: "Notlar" },
-          { key: "location", label: "Lokasyon" },
         ],
       },
     ],

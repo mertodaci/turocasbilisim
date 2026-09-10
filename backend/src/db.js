@@ -45,7 +45,6 @@ function migrateLegacyJobTrackingRename() {
   const columnRenames = [
     ['customers', 'use_taskqube', 'use_job_tracking'],
     ['employees', 'show_in_taskqube', 'show_in_job_tracking'],
-    ['activities', 'taskqube_id', 'job_ticket_id'],
   ];
   for (const [table, oldCol, newCol] of columnRenames) {
     if (columnExists(table, oldCol) && !columnExists(table, newCol)) {
@@ -54,10 +53,19 @@ function migrateLegacyJobTrackingRename() {
     }
   }
 
-  if (columnExists('activities', 'activity_type')) {
-    const r = db.prepare("UPDATE activities SET activity_type='is_takibi' WHERE activity_type='taskqube'").run();
-    if (r.changes > 0) console.log(`[migrate] activities.activity_type 'taskqube' -> 'is_takibi' (${r.changes} satır)`);
-  }
+  // Kaldırılan modüller (Aktiviteler / Fikirler / İş Takip) — tablo + yetki temizliği.
+  // Idempotent: her boot'ta çalışır, tablo yoksa no-op.
+  try {
+    db.exec(`
+      DROP TABLE IF EXISTS activities;
+      DROP TABLE IF EXISTS ideas;
+      DROP TABLE IF EXISTS work_tasks;
+      DROP TABLE IF EXISTS task_comments;
+    `);
+  } catch (e) { console.warn('[migrate] kaldırılan modül tablo temizliği:', e.message); }
+  try {
+    db.prepare("DELETE FROM role_permissions WHERE module IN ('activities','add_activity','ideas','work_tracking')").run();
+  } catch { /* role_permissions henüz yoksa sorun değil */ }
 }
 
 function initDb() {
@@ -84,13 +92,6 @@ function initDb() {
       sector TEXT, city TEXT, status TEXT DEFAULT 'aktif', notes TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
-    CREATE TABLE IF NOT EXISTS activities (
-      id TEXT PRIMARY KEY, employee_id TEXT, employee_name TEXT, activity_type TEXT,
-      location TEXT DEFAULT 'ofis', duration_minutes REAL, date TEXT, start_time TEXT,
-      end_time TEXT, customer_id TEXT, customer_name TEXT, notes TEXT, outcome TEXT,
-      parent_activity_id TEXT, job_ticket_id TEXT, created_by TEXT,
-      created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
-    );
     CREATE TABLE IF NOT EXISTS leave_requests (
       id TEXT PRIMARY KEY, employee_id TEXT, employee_email TEXT, employee_full_name TEXT,
       employee_department TEXT, leave_type TEXT, start_date TEXT, end_date TEXT,
@@ -101,11 +102,6 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS todos (
       id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, status TEXT DEFAULT 'beklemede',
       priority TEXT DEFAULT 'orta', due_date TEXT, owner_email TEXT, created_by TEXT,
-      created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS ideas (
-      id TEXT PRIMARY KEY, title TEXT, description TEXT, category TEXT, status TEXT DEFAULT 'yeni',
-      submitted_by_name TEXT, manager_note TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS customer_contacts (
@@ -140,13 +136,6 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY, conversation_id TEXT, sender_email TEXT, sender_name TEXT, content TEXT,
       message_type TEXT DEFAULT 'text', meet_link TEXT, created_by TEXT,
-      created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS work_tasks (
-      id TEXT PRIMARY KEY, title TEXT, description TEXT, status TEXT DEFAULT 'beklemede',
-      priority TEXT DEFAULT 'orta', assigned_to_id TEXT, assigned_to_name TEXT, assigned_by_id TEXT,
-      assigned_by_name TEXT, due_date TEXT, start_date TEXT, completed_date TEXT,
-      tags TEXT DEFAULT '[]', attachments TEXT DEFAULT '[]', notes TEXT, created_by TEXT,
       created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS leave_allowances (
@@ -187,11 +176,6 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS expense_items (
       id TEXT PRIMARY KEY, report_id TEXT, category TEXT, description TEXT,
       amount REAL, currency TEXT DEFAULT 'TRY', receipt_url TEXT, date TEXT,
-      created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS task_comments (
-      id TEXT PRIMARY KEY, task_id TEXT, content TEXT, author_id TEXT,
-      author_name TEXT, author_email TEXT, attachments TEXT DEFAULT '[]',
       created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS job_projects (
@@ -490,8 +474,8 @@ function initDb() {
   try {
     const allRoles = db.prepare('SELECT name FROM roles').all().map(r => r.name);
     const allModules = [
-      'dashboard','employees','customers','calendar','activities','add_activity','work_tracking',
-      'ideas','messages','todos','leave_requests','my_leave_requests','ik_leave_requests',
+      'dashboard','employees','customers',
+      'messages','todos','leave_requests','my_leave_requests','ik_leave_requests',
       // GUVENLIK/DUZELTME: 'personel_hareketleri' (PDKS/card_logs) burada hic
       // listede degildi -- checkPermission fail-closed oldugu icin admin
       // disinda HICBIR role bu modul hicbir zaman verilemiyordu, admin
@@ -499,9 +483,9 @@ function initDb() {
       'personel_hareketleri',
       'personal_calendar','reports','employee_report','users','app_version','definitions',
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
-      'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar','control_panel',
+      'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
-      'project_planning','satis','satis_firsatlari','satis_teklifleri','satis_raporlari',
+      'satis','satis_firsatlari','satis_teklifleri','satis_raporlari',
       'satis_masasi','satis_aktivite_ekle','hakedisler','sozlesmeler','oturum_yonetimi',
       // ── Stok / Depo Yönetimi modülü ──────────────────────────────
       // Faz 1: Tanımlar
@@ -1404,12 +1388,6 @@ function initDb() {
 
   // ===== PERFORMANS INDEXLERI =====
   const performanceIndexes = [
-    "CREATE INDEX IF NOT EXISTS idx_activities_customer ON activities(customer_id)",
-    "CREATE INDEX IF NOT EXISTS idx_activities_employee ON activities(employee_id)",
-    "CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(created_date)",
-    "CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(activity_type)",
-    "CREATE INDEX IF NOT EXISTS idx_activities_realdate ON activities(date)",
-    "CREATE INDEX IF NOT EXISTS idx_activities_parent ON activities(parent_activity_id)",
     "CREATE INDEX IF NOT EXISTS idx_tickets_customer ON job_tickets(customer_id)",
     "CREATE INDEX IF NOT EXISTS idx_tickets_project ON job_tickets(project_id)",
     "CREATE INDEX IF NOT EXISTS idx_tickets_status ON job_tickets(status)",
@@ -1420,9 +1398,6 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_tqcomments_ticket ON job_comments(ticket_id)",
     "CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)",
     "CREATE INDEX IF NOT EXISTS idx_messages_date ON messages(created_date)",
-    "CREATE INDEX IF NOT EXISTS idx_worktasks_assigned ON work_tasks(assigned_to_id)",
-    "CREATE INDEX IF NOT EXISTS idx_worktasks_status ON work_tasks(status)",
-    "CREATE INDEX IF NOT EXISTS idx_taskcomments_task ON task_comments(task_id)",
     "CREATE INDEX IF NOT EXISTS idx_leave_employee ON leave_requests(employee_id)",
     "CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status)",
     "CREATE INDEX IF NOT EXISTS idx_leaveallow_employee ON leave_allowances(employee_id)",
@@ -1442,7 +1417,6 @@ function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_employees_customer ON employees(customer_id)",
     "CREATE INDEX IF NOT EXISTS idx_roleperms_lookup ON role_permissions(role_name, module)",
     "CREATE INDEX IF NOT EXISTS idx_todos_employee ON todos(employee_id)",
-    "CREATE INDEX IF NOT EXISTS idx_ideas_employee ON ideas(employee_id)",
     "CREATE INDEX IF NOT EXISTS idx_tqprojects_customer ON job_projects(customer_id)",
   ];
   for (const idx of performanceIndexes) {

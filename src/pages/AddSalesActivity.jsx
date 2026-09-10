@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +48,6 @@ function minutesBetween(start, end) {
 
 export default function AddSalesActivity() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -202,7 +200,6 @@ export default function AddSalesActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales_activities"] });
       toast.success("Aktivite kaydedildi");
-      if (parentId) { navigate(`/aktivite/${parentId}`); return; }
       closeForm();
     },
   });

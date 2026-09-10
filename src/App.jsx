@@ -19,15 +19,12 @@ import { NotificationProvider } from './lib/NotificationContext';
 const Employees = lazy(() => import('./pages/Employees'));
 const PersonnelMovements = lazy(() => import('./pages/PersonnelMovements'));
 const CardManagement = lazy(() => import('./pages/CardManagement'));
-const AddActivity = lazy(() => import('./pages/AddActivity'));
 const AddSalesActivity = lazy(() => import('./pages/AddSalesActivity'));
 const EmployeeDetail = lazy(() => import('./pages/EmployeeDetail'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Customers = lazy(() => import('./pages/Customers'));
 const CustomerMap = lazy(() => import('./pages/CustomerMap'));
-const Activities = lazy(() => import('./pages/Activities'));
 const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
-const ActivityDetail = lazy(() => import('./pages/ActivityDetail'));
 const Todos = lazy(() => import('./pages/Todos'));
 const Messages = lazy(() => import('./pages/Messages'));
 const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
@@ -36,7 +33,6 @@ const OrgChart = lazy(() => import('./pages/OrgChart'));
 const QuickReport = lazy(() => import('./pages/QuickReport'));
 const Users = lazy(() => import('./pages/Users'));
 const RolePermissions = lazy(() => import('./pages/RolePermissions'));
-const WorkTasks = lazy(() => import('./pages/WorkTasks'));
 const AppVersion = lazy(() => import('./pages/AppVersion'));
 const Definitions = lazy(() => import('./pages/Definitions'));
 const EmployeeDefinitions = lazy(() => import('./pages/Definitions').then(m => ({ default: m.EmployeeDefinitions })));
@@ -188,14 +184,11 @@ const AuthenticatedApp = () => {
       <Route path="/landing" element={<Navigate to="/" replace />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={guard("dashboard", <Dashboard />)} />
-        <Route path="/aktivite-ekle" element={guard("add_activity", <AddActivity />)} />
         <Route path="/satis-aktivite-ekle" element={guard("satis_aktivite_ekle", <AddSalesActivity />)} />
         <Route path="/profil" element={<Profile />} />
         <Route path="/musteriler" element={guard("customers", <Customers />)} />
         <Route path="/musteriler-haritasi" element={guard("customer_map", <CustomerMap />)} />
-        <Route path="/aktiviteler" element={guard("activities", <Activities />)} />
         <Route path="/musteri/:id" element={guard("customers", <CustomerDetail />)} />
-        <Route path="/aktivite/:id" element={guard("activities", <ActivityDetail />)} />
         <Route path="/yapilacaklar" element={guard("todos", <Todos />)} />
         <Route path="/mesajlar" element={guard("messages", <Messages />)} />
         <Route path="/izin-talepleri" element={<Navigate to="/ik-izin-yonetimi" replace />} />
@@ -229,7 +222,6 @@ const AuthenticatedApp = () => {
         <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />
         <Route path="/musteri-kullanicilari" element={guard("musteri_kullanicilari", <CustomerUsers />)} />
         <Route path="/duyurular" element={guard("announcements", <Announcements />)} />
-        <Route path="/is-takip" element={guard("work_tracking", <WorkTasks />)} />
         <Route path="/is-takibi" element={guard("is_takibi_projeler", <JobTrackingV3 />)} />
         <Route path="/is-takibi/dashboard" element={guard("is_takibi_dashboard", <JobTrackingDashboard />)} />
         <Route path="/is-takibi/tickets" element={guard("is_takibi_biletler", <JobTrackingTickets />)} />

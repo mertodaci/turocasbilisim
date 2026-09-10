@@ -122,7 +122,7 @@ export default function AdminDashboard() {
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bugün</span>
         {[
           { label: "açılan bilet", value: summary.todayOpened || 0, color: "text-blue-600" },
-          { label: "aktivite", value: summary.todayActivities || 0, color: "text-purple-600" },
+          { label: "kapanan bilet", value: summary.todayClosed || 0, color: "text-emerald-600" },
           { label: "izinli", value: summary.onLeaveToday || 0, color: "text-amber-600" },
         ].map((item, i) => (
           <div key={i} className="flex items-center gap-1.5">

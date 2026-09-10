@@ -4,7 +4,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Plus, Pencil, Trash2, Phone, Mail,
   Star, AlertCircle, Shield, Wrench, User, Puzzle,
   Briefcase, HardDrive, FileText, ExternalLink, FileCheck,
-  Building2, Users2, Tag, Layers, Clock, ChevronDown, MapPin, Wallet
+  Building2, Users2, Tag, Layers, ChevronDown, MapPin, Wallet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -562,11 +562,6 @@ export default function CustomerDetail() {
     }
   };
 
-  const { data: activities = [] } = useQuery({
-    queryKey: ["activities", customerId],
-    queryFn: () => flowApi.entities.Activity.filter({ customer_id: customerId }),
-  });
-
   const { data: salesActivities = [] } = useQuery({
     queryKey: ["sales_activities", customerId],
     queryFn: () => flowApi.entities.SalesActivity.filter({ customer_id: customerId }),
@@ -590,10 +585,6 @@ export default function CustomerDetail() {
     queryKey: ["definitions", "sehir"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }),
   });
-
-  const totalDurationMinutes = activities.reduce((sum, a) => sum + (a.duration_minutes || 0), 0);
-  const totalHours = Math.floor(totalDurationMinutes / 60);
-  const totalMins = totalDurationMinutes % 60;
 
   const updateCustomerMutation = useMutation({
     mutationFn: (data) => flowApi.entities.Customer.update(customerId, data),
@@ -790,12 +781,6 @@ export default function CustomerDetail() {
                   <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg">
                     <Users2 className="w-3.5 h-3.5" />
                     {populationLabels[customer.population] || customer.population}
-                  </span>
-                )}
-                {totalDurationMinutes > 0 && (
-                  <span className="inline-flex items-center gap-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg">
-                    <Clock className="w-3.5 h-3.5" />
-                    {totalHours > 0 ? `${totalHours}s ${totalMins}d` : `${totalMins}d`}
                   </span>
                 )}
               </div>

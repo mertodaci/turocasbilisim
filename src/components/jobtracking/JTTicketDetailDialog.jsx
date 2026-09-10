@@ -315,11 +315,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
     return { label: s.name, color: COLOR_BADGE[s.color] || "bg-slate-100 text-slate-700" };
   };
 
-  const { data: ticketActivities = [] } = useQuery({
-    queryKey: ["activities-by-ticket", ticket?.id],
-    queryFn: () => flowApi.entities.Activity.filter({ job_ticket_id: ticket?.id }),
-    enabled: !!ticket?.id,
-  });
   const { data: comments = [] } = useQuery({
     queryKey: ["tq-comments", ticket?.id],
     queryFn: () => flowApi.entities.JTComment.filter({ ticket_id: ticket?.id }),
@@ -942,7 +937,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
                       </span>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="activities" className="flex-1"><Calendar className="w-4 h-4 mr-1.5" />Aktiviteler {ticketActivities.length > 0 && <span className="ml-1.5 bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{ticketActivities.length}</span>}</TabsTrigger>
                   <TabsTrigger value="flow" className="flex-1">
                     <Workflow className="w-4 h-4 mr-1.5" />
                     İş Akışı
@@ -1171,25 +1165,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
                     </div>
                   </div>
                 </TabsContent>
-                <TabsContent value="activities" className="mt-3">
-                  <div className="space-y-2">
-                    {ticketActivities.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Henüz aktivite yok</p>
-                    ) : (
-                      ticketActivities.map((a) => (
-                        <div key={a.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{a.employee_name}</p>
-                            <p className="text-xs text-muted-foreground">{a.activity_type} — {a.duration_minutes} dk</p>
-                            <p className="text-xs text-muted-foreground">{a.date}</p>
-                            {a.notes && <p className="text-xs mt-1">{a.notes}</p>}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </TabsContent>
-
                 {/* İş Akışı Sekmesi */}
                 <TabsContent value="flow" className="mt-3">
                   {statusesForBoard.length === 0 ? (

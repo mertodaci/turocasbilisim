@@ -14,7 +14,7 @@ import PersonalCalendarDayDetail from "@/components/calendar/PersonalCalendarDay
 
 export default function PersonalCalendar() {
   const { user } = useAuth();
-  // Satis rolunde kisisel aktiviteler sales_activities tablosunda tutuluyor.
+  // Kişisel aktiviteler yalnız satış rolünde tutulur (sales_activities tablosu).
   const isSatis = user?.role === "satis";
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date());
@@ -30,12 +30,11 @@ export default function PersonalCalendar() {
     select: (data) => data[0],
   });
 
-  // Kişisel aktiviteler (employee_id ile) — satış rolünde sales_activities
+  // Kişisel satış aktiviteleri (yalnız satış rolü)
   const { data: activities = [] } = useQuery({
-    queryKey: [isSatis ? "personal-sales-activities" : "personal-activities", employeeRecord?.id],
-    queryFn: () => (isSatis ? flowApi.entities.SalesActivity : flowApi.entities.Activity)
-      .filter({ employee_id: employeeRecord.id }),
-    enabled: !!employeeRecord?.id,
+    queryKey: ["personal-sales-activities", employeeRecord?.id],
+    queryFn: () => flowApi.entities.SalesActivity.filter({ employee_id: employeeRecord.id }),
+    enabled: isSatis && !!employeeRecord?.id,
   });
 
   // Yapılacaklar
@@ -50,13 +49,6 @@ export default function PersonalCalendar() {
     queryKey: ["personal-leaves", user?.email],
     queryFn: () => flowApi.entities.LeaveRequest.filter({ employee_email: user.email, status: "onaylandi" }),
     enabled: !!user?.email,
-  });
-
-  // Bana atanan iş görevleri
-  const { data: workTasks = [] } = useQuery({
-    queryKey: ["personal-work-tasks", user?.id],
-    queryFn: () => flowApi.entities.WorkTask.filter({ assigned_to_id: user.id }),
-    enabled: !!user?.id,
   });
 
   // Takvim grid oluştur
@@ -74,8 +66,7 @@ export default function PersonalCalendar() {
     const dayActivities = activities.filter((a) => a.date === dateStr);
     const dayTodos = todos.filter((t) => t.due_date === dateStr);
     const dayLeaves = leaveRequests.filter((l) => dateStr >= l.start_date && dateStr <= l.end_date);
-    const dayWorkTasks = workTasks.filter((t) => t.due_date === dateStr || t.start_date === dateStr);
-    return { activities: dayActivities, todos: dayTodos, leaves: dayLeaves, workTasks: dayWorkTasks };
+    return { activities: dayActivities, todos: dayTodos, leaves: dayLeaves };
   };
 
   const selectedDayEvents = getEventsForDay(selectedDay);
@@ -91,7 +82,7 @@ export default function PersonalCalendar() {
             Kişisel Takvim
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Yapılacaklar, aktiviteler ve izinlerinizi tek bir takvimde görün
+            Yapılacaklar ve izinlerinizi tek bir takvimde görün
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -114,10 +105,9 @@ export default function PersonalCalendar() {
 
       {/* Renk Açıklamaları */}
       <div className="flex flex-wrap gap-4 text-xs">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500" />Aktivite</span>
+        {isSatis && <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500" />Aktivite</span>}
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500" />Yapılacak</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500" />Onaylı İzin</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-purple-500" />İş Görevi</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -132,8 +122,8 @@ export default function PersonalCalendar() {
           </div>
           <div className="grid grid-cols-7">
             {days.map((day, i) => {
-              const { activities: da, todos: dt, leaves: dl, workTasks: dw } = getEventsForDay(day);
-              const totalEvents = da.length + dt.length + dl.length + dw.length;
+              const { activities: da, todos: dt, leaves: dl } = getEventsForDay(day);
+              const totalEvents = da.length + dt.length + dl.length;
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isSelected = isSameDay(day, selectedDay);
               const isTodayDate = isToday(day);
@@ -172,9 +162,6 @@ export default function PersonalCalendar() {
                     {dl.slice(0, 1).map((_, li) => (
                       <div key={`l-${li}`} className="h-1.5 w-full rounded-full bg-green-500 opacity-80" />
                     ))}
-                    {dw.slice(0, 1).map((_, wi) => (
-                      <div key={`w-${wi}`} className="h-1.5 w-full rounded-full bg-purple-500 opacity-80" />
-                    ))}
                     {totalEvents > 3 && (
                       <span className="text-[9px] text-muted-foreground pl-1">+{totalEvents - 3} daha</span>
                     )}
@@ -191,7 +178,6 @@ export default function PersonalCalendar() {
           activities={selectedDayEvents.activities}
           todos={selectedDayEvents.todos}
           leaves={selectedDayEvents.leaves}
-          workTasks={selectedDayEvents.workTasks || []}
         />
       </div>
     </div>

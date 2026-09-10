@@ -120,24 +120,20 @@ app.use('/api/auth', authRoutes);
 // Entity route'ları (base44.entities.X karşılıkları)
 app.use('/api/entities/employees',         createEntityRouter('employees'));
 app.use('/api/entities/customers',         createEntityRouter('customers'));
-app.use('/api/entities/activities',        createEntityRouter('activities'));
 app.use('/api/entities/leave_requests',    createEntityRouter('leave_requests'));
 app.use('/api/entities/todos',             createEntityRouter('todos'));
-app.use('/api/entities/ideas',             createEntityRouter('ideas'));
 app.use('/api/entities/customer_contacts', createEntityRouter('customer_contacts'));
 app.use('/api/entities/customer_contracts',createEntityRouter('customer_contracts'));
 app.use('/api/entities/customer_modules',  createEntityRouter('customer_modules'));
 app.use('/api/entities/correspondences',   createEntityRouter('correspondences'));
 app.use('/api/entities/conversations',     createEntityRouter('conversations'));
 app.use('/api/entities/messages',          createEntityRouter('messages'));
-app.use('/api/entities/work_tasks',        createEntityRouter('work_tasks'));
 app.use('/api/entities/leave_allowances',  createEntityRouter('leave_allowances'));
 app.use('/api/entities/leave_types',       createEntityRouter('leave_types'));
 app.use('/api/entities/definitions',       createEntityRouter('definitions'));
 app.use('/api/entities/expense_reports',   createEntityRouter('expense_reports'));
 app.use('/api/entities/expense_items',     createEntityRouter('expense_items'));
 app.use('/api/entities/sales_activities',   createEntityRouter('sales_activities'));
-app.use('/api/entities/task_comments',     createEntityRouter('task_comments'));
 app.use('/api/entities/announcements',     createEntityRouter('announcements'));
 app.use('/api/entities/hakedisler',        createEntityRouter('hakedisler'));
 
@@ -554,7 +550,6 @@ function pollDB() {
       job_tickets: db.prepare("SELECT COUNT(*) as c FROM job_tickets").get()?.c || 0,
       messages: db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0,
       todos: db.prepare("SELECT COUNT(*) as c FROM todos").get()?.c || 0,
-      work_tasks: db.prepare("SELECT COUNT(*) as c FROM work_tasks").get()?.c || 0,
       stok_uyari: (() => {
         try {
           return db.prepare(`SELECT
@@ -618,7 +613,6 @@ app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yo
     // Bugun ozeti
     const todayOpened = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE substr(datetime(created_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
     const todayClosed = db.prepare("SELECT COUNT(*) as c FROM job_tickets WHERE status='sonuclanan' AND substr(datetime(updated_date,'+3 hours'),1,10)=? AND (is_deleted=0 OR is_deleted IS NULL)").get(today).c;
-    const todayActivities = db.prepare("SELECT COUNT(*) as c FROM activities WHERE substr(date,1,10)=?").get(today).c;
     const onLeaveToday = db.prepare("SELECT COUNT(*) as c FROM leave_requests WHERE status='onaylandi' AND start_date <= ? AND end_date >= ?").get(today, today).c;
 
     // Bekleyen onaylar (yonetici aksiyonu)
@@ -648,7 +642,7 @@ app.get('/api/dashboard/admin-summary', authMiddleware, requireRoles('admin','yo
     const byAssignee = db.prepare("SELECT COALESCE(assigned_to_name,'Atanmamış') as name, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND (assigned_to_name IS NULL OR assigned_to_name NOT LIKE '%@%') GROUP BY assigned_to_name ORDER BY c DESC LIMIT 15").all();
 
     res.json({ openTickets, openCount, byCustomer, byStatus, thisMonthOpened, thisMonthClosed, projectCount,
-      todayOpened, todayClosed, todayActivities, onLeaveToday,
+      todayOpened, todayClosed, onLeaveToday,
       pendingLeaves, pendingExpenses, overdueTickets, byPriority, dailyTrend, byAssignee });
   } catch(err) { res.status(500).json({ error: err.message }); }
 });
@@ -768,10 +762,7 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
     `).all();
     const ticketByCustomer = db.prepare("SELECT customer_name, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND customer_name IS NOT NULL GROUP BY customer_name ORDER BY c DESC LIMIT 8").all();
 
-    // === AKTİVİTELER ===
-    const thisMonthActivities = db.prepare("SELECT COUNT(*) as c FROM activities WHERE substr(date,1,7)=?").get(thisMonth).c;
-    const lastMonthActivities = db.prepare("SELECT COUNT(*) as c FROM activities WHERE substr(date,1,7)=?").get(lastMonth).c;
-    const activitiesByType = db.prepare("SELECT activity_type, COUNT(*) as c FROM activities WHERE substr(date,1,4)=? GROUP BY activity_type ORDER BY c DESC LIMIT 6").all(thisYear);
+    // === SATIŞ ZİYARETLERİ ===
     const upcomingVisits = db.prepare(`SELECT COUNT(*) as c FROM sales_activities WHERE next_visit_date >= ? AND next_visit_date <= date(?, '+30 days') AND ${ND}`).get(today, today).c;
 
     // === HARCAMA TREND (son 6 ay) ===
@@ -803,13 +794,6 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
       JOIN expense_reports er ON er.id = ei.report_id
       WHERE er.status = 'onaylandi'
     `).get();
-
-    // === AKTİVİTE TREND (son 6 ay) ===
-    const activityTrend = db.prepare(`
-      SELECT substr(date,1,7) as month, COUNT(*) as total
-      FROM activities WHERE date >= date('now','-6 months')
-      GROUP BY month ORDER BY month
-    `).all();
 
     // === TEKLİF TREND (son 6 ay) ===
     const offerTrend = db.prepare(`
@@ -872,9 +856,6 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
        FROM hakedisler WHERE year=? GROUP BY anlasma ORDER BY gerceklesen DESC`
     ).all(hakedisYear);
 
-    // === SON AKTİVİTELER ===
-    const recentActivities = db.prepare("SELECT employee_name, activity_type, customer_name, date, outcome FROM activities ORDER BY created_date DESC LIMIT 8").all();
-
     // === SATIS AKTIVITELERI (teklif haric) ===
     const NOT_OFFER = "activity_type != 'teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL)";
     const salesActByType = db.prepare("SELECT activity_type as type, COUNT(*) as c FROM sales_activities WHERE " + NOT_OFFER + " GROUP BY activity_type ORDER BY c DESC").all();
@@ -889,9 +870,9 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
       hr: { totalEmployees, onLeaveToday, onLeaveTodayList, pendingLeaves, thisMonthExpenses, pendingExpenses },
       sales: { totalCustomers, potentialCustomers, thisMonthOffers, lastMonthOffers, acceptedOffers, offersByStatus, wonCount, lostCount, winRate, pipeline },
       is_takibi: { totalProjects, jobTrackingCustomers, activeProjects, ticketsByStatus, overdueTickets, thisMonthTickets, openTickets, resolvedThisMonth, execTodayOpened, execTodayClosed, ticketByStatusOpen, ticketByCustomer },
-      activities: { thisMonthActivities, lastMonthActivities, activitiesByType, upcomingVisits },
-      trends: { expenses: expenseTrend, expensesPending: expenseTrendPending, activities: activityTrend, offers: offerTrend, offersWonLost: offerWonLostTrend, expenseByCategory },
-      recent: { activities: recentActivities, offers: recentOffers },
+      activities: { upcomingVisits },
+      trends: { expenses: expenseTrend, expensesPending: expenseTrendPending, offers: offerTrend, offersWonLost: offerWonLostTrend, expenseByCategory },
+      recent: { offers: recentOffers },
       salesActivities: { byType: salesActByType, thisMonth: salesActThisMonth, lastMonth: salesActLastMonth, recent: salesActRecent },
       contracts: { stats: contractStats, active: activeContracts, expiring: expiringContracts, byType: contractByType, valueActive: contractValueActive },
       hakedis: { year: hakedisYear, years: hakedisYears, monthly: hakedisMonthly, totals: hakedisTotals, bySektor: hakedisBySektor, byAnlasma: hakedisByAnlasma },

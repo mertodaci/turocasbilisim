@@ -274,7 +274,7 @@ export default function FisForm({ tip }) {
               <div className="md:col-span-4">
                 <Label className="mb-1 block text-xs">Ürün *</Label>
                 <SearchableSelect value={l.urun_id} onChange={(v) => onPickUrun(i, v)}
-                  options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}` }))}
+                  options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: u.barkod || "" }))}
                   placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
               </div>
               {tip !== "giris" && (

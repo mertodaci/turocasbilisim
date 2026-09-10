@@ -32,7 +32,7 @@ const CATEGORIES = [
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
   { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_iade", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },
   { label: "Stok — Raporlar", keys: ["stok_raporlar"] },
-  { label: "Stok — Satın Alma", keys: ["stok_satinalma", "stok_fiyat_arastir"] },
+  { label: "Stok — Satın Alma", keys: ["stok_satinalma"] },
   { label: "Stok — Zimmet", keys: ["stok_zimmet"] },
   { label: "Stok — e-Belge", keys: ["stok_qnb"] },
   { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler", "ikb_vardiyalar", "ikb_vardiya_planlari", "ikb_tatil_sihirbazi", "ikb_hakedis_ayar", "ikb_bordro_yemek", "ikb_sirket"] },

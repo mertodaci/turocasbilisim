@@ -73,7 +73,6 @@ export const MODULES = [
   { key: "stok_etiket",         label: "Etiket Bas",             path: "/stok/etiket" },
   { key: "stok_excel",          label: "Excel Stok Yükleme",     path: "/stok/excel" },
   { key: "stok_qnb",            label: "QNB e-Belge",            path: "/stok/qnb" },
-  { key: "stok_fiyat_arastir",  label: "Fiyat Araştır",          path: "/stok/fiyat-arastir" },
   // ── İK / Özlük / Bordro (önek ikb_) — Faz 1 ──
   { key: "ikb_subeler",         label: "Şubeler / Lokasyonlar",  path: "/ik/subeler" },
   { key: "ikb_bolumler",        label: "Bölümler",               path: "/ik/bolumler" },

@@ -3,15 +3,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { Tags, Plus, Trash2, Printer } from "lucide-react";
+import { Tags, Plus, Trash2, Printer, ListPlus } from "lucide-react";
 import { toast } from "sonner";
+
+const ETIKET_BOYUTLARI = {
+  standart: { label: "Standart (220×120px, A4 yazıcı)" },
+  termal: { label: "Termal Etiket (40×30mm rulo)" },
+};
 
 export default function StokEtiket() {
   const qc = useQueryClient();
   const [sepet, setSepet] = useState([]);
   const [sel, setSel] = useState("");
   const [adet, setAdet] = useState(1);
+  const [boyut, setBoyut] = useState("standart");
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000) });
   const { data: fisler = [] } = useQuery({ queryKey: ["stok_etiket_fisleri"], queryFn: () => flowApi.entities.StokEtiketFis.list("-created_date", 500) });
@@ -25,6 +32,17 @@ export default function StokEtiket() {
       return [...s, { urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, barkod: u.barkod, adet: adet || 1 }];
     });
     setSel(""); setAdet(1);
+  };
+
+  const topluEkle = (filtreFn, uyariMetin) => {
+    const adaylar = urunler.filter((u) => u.is_deleted !== 1 && u.aktif !== 0 && filtreFn(u));
+    if (!adaylar.length) { toast.error(uyariMetin); return; }
+    setSepet((s) => {
+      const mevcut = new Set(s.map((x) => x.urun_id));
+      const yeni = adaylar.filter((u) => !mevcut.has(u.id)).map((u) => ({ urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, barkod: u.barkod, adet: 1 }));
+      return [...s, ...yeni];
+    });
+    toast.success(`${adaylar.length} ürün sepete eklendi`);
   };
 
   const kaydetM = useMutation({
@@ -43,15 +61,16 @@ export default function StokEtiket() {
     const w = window.open("", "_blank", "width=720,height=900");
     if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
     const labels = sepet.flatMap((s) => Array.from({ length: s.adet }, () => s));
+    const isTermal = boyut === "termal";
     w.document.write(`<html><head><title>Etiketler</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
-      body{margin:0;padding:8px;display:flex;flex-wrap:wrap;gap:6px}
-      .lbl{width:220px;height:120px;border:1px solid #000;padding:8px;display:flex;flex-direction:column;justify-content:space-between}
-      .ad{font-size:12px;font-weight:600;line-height:1.2;overflow:hidden}
-      .kod{font-size:11px;color:#333}
-      .bar{font-family:'Libre Barcode 128',monospace;font-size:34px;letter-spacing:0;text-align:center;border-top:1px solid #ccc;padding-top:2px}
-      .barnum{font-size:11px;text-align:center;letter-spacing:2px}
-      @media print{.lbl{page-break-inside:avoid}}
+      body{margin:0;padding:${isTermal ? 0 : "8px"};display:flex;flex-wrap:wrap;gap:${isTermal ? 0 : "6px"}}
+      .lbl{width:${isTermal ? "40mm" : "220px"};height:${isTermal ? "30mm" : "120px"};border:1px solid #000;padding:${isTermal ? "2mm" : "8px"};display:flex;flex-direction:column;justify-content:space-between}
+      .ad{font-size:${isTermal ? "9px" : "12px"};font-weight:600;line-height:1.2;overflow:hidden}
+      .kod{font-size:${isTermal ? "8px" : "11px"};color:#333}
+      .bar{font-family:'Libre Barcode 128',monospace;font-size:${isTermal ? "22px" : "34px"};letter-spacing:0;text-align:center;border-top:1px solid #ccc;padding-top:2px}
+      .barnum{font-size:${isTermal ? "8px" : "11px"};text-align:center;letter-spacing:2px}
+      @media print{.lbl{page-break-inside:avoid}${isTermal ? "@page{size:40mm 30mm;margin:0;}" : ""}}
     </style></head><body>${labels.map((l) => `
       <div class="lbl"><div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="kod">${l.urun_kodu || ""}</div></div>
       <div><div class="barnum">${l.barkod || l.urun_kodu || "-"}</div></div></div>`).join("")}</body></html>`);
@@ -67,9 +86,21 @@ export default function StokEtiket() {
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">
         <div className="flex flex-wrap gap-2 items-end">
-          <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}` }))} placeholder="Ürün ara / okut" /></div>
+          <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: u.barkod || "" }))} placeholder="Ürün ara / okut" /></div>
           <Input type="number" className="w-24" value={adet} onChange={(e) => setAdet(parseInt(e.target.value) || 1)} />
           <Button onClick={ekle} disabled={!sel}><Plus className="w-4 h-4 mr-1.5" /> Sepete Ekle</Button>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1 border-t">
+          <Button variant="outline" size="sm" onClick={() => topluEkle((u) => !u.barkod, "Barkodu olmayan ürün yok")}>
+            <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Barkodu Olmayan Tüm Ürünleri Ekle
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => topluEkle(() => true, "Ürün yok")}>
+            <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Tüm Aktif Ürünleri Ekle
+          </Button>
+          <Select value={boyut} onValueChange={setBoyut}>
+            <SelectTrigger className="w-64 ml-auto"><SelectValue /></SelectTrigger>
+            <SelectContent>{Object.entries(ETIKET_BOYUTLARI).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+          </Select>
         </div>
         {sepet.length > 0 && (
           <table className="w-full text-sm">

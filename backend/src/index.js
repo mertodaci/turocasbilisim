@@ -2246,7 +2246,7 @@ app.post('/api/stok/qnb/taslak', authMiddleware, (req, res) => {
 //  nedeniyle bilinçli olarak dahil edilmedi; workflow manuel/yarı-otomatik.)
 // ═══════════════════════════════════════════════════════════════════
 app.post('/api/stok/fiyat-arastir/uygula', authMiddleware, (req, res) => {
-  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_fiyat_arastir', 'can_edit') || checkPermission(db, req.user?.role, 'stok_urunler', 'can_edit')))
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_satinalma', 'can_edit') || checkPermission(db, req.user?.role, 'stok_urunler', 'can_edit')))
     return res.status(403).json({ error: 'Yetkiniz yok' });
   const { urun_id, fiyat, hedef = 'satis', not: notu } = req.body || {};
   const f = Number(fiyat);

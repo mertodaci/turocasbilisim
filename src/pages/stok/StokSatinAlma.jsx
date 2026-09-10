@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { ShoppingCart, Plus, Pencil, Trash2, Download } from "lucide-react";
+import { ShoppingCart, Plus, Pencil, Trash2, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 const TABS = [
@@ -32,6 +32,8 @@ export default function StokSatinAlma() {
   const [kf, setKf] = useState({ urun_id: "", cari_id: "", marka: "", minf: "", maxf: "", maxteslim: "", q: "" });
   const [rtip, setRtip] = useState("volume");
   const [gf, setGf] = useState({ urun_id: "", cari_id: "", q: "" });
+  const [mq, setMq] = useState("");
+  const [arastirilan, setArastirilan] = useState({});
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 5000) });
   const { data: cariler = [] } = useQuery({ queryKey: ["customers-all"], queryFn: () => flowApi.entities.Customer.list("company_name", 5000) });
@@ -53,6 +55,11 @@ export default function StokSatinAlma() {
     onError: (e) => toast.error(String(e?.message || "Kaydedilemedi")),
   });
   const delM = useMutation({ mutationFn: (id) => flowApi.entities.StokUrunTedarikci.delete(id), onSuccess: () => { inv(); toast.success("Silindi"); } });
+  const uygulaM = useMutation({
+    mutationFn: ({ urun_id, hedef }) => flowApi.stok.fiyatArastirUygula({ urun_id, fiyat: arastirilan[urun_id], hedef }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["stok_urunler-min"] }); toast.success("Fiyat yazıldı"); },
+    onError: (e) => toast.error(String(e?.message)),
+  });
 
   const openEdit = (it) => { setForm({ ...empty, ...it }); setDlg({ open: true, item: it }); };
   const Th = ({ children, r }) => <th className={`px-3 py-2 font-semibold text-muted-foreground ${r ? "text-right" : "text-left"}`}>{children}</th>;
@@ -75,20 +82,55 @@ export default function StokSatinAlma() {
               <div key={l} className="bg-card border rounded-xl p-4"><p className="text-xs text-muted-foreground">{l}</p><p className="text-2xl font-bold mt-1">{v ?? 0}</p></div>
             ))}
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-card border rounded-xl p-4">
-              <p className="text-sm font-semibold mb-2">Ürün Bazlı En Uygun</p>
-              <table className="w-full text-xs"><tbody>
-                {(m.en_uygun || []).map((r) => <tr key={r.urun_id} className="border-b last:border-0"><td className="py-1">{r.urun_adi}</td><td className="py-1 text-muted-foreground">{r.en_ucuz_cari}</td><td className="py-1 text-right">{r.en_dusuk} – {r.en_yuksek}</td></tr>)}
-                {!(m.en_uygun || []).length && <tr><td className="py-3 text-muted-foreground text-center">Kayıt yok</td></tr>}
-              </tbody></table>
+          <div className="bg-card border rounded-xl p-4">
+            <p className="text-sm font-semibold mb-2">Son Fiyat Hareketleri</p>
+            <table className="w-full text-xs"><tbody>
+              {(m.son_fiyat || []).map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1">{r.urun_adi}</td><td className="py-1 text-muted-foreground">{r.cari_adi}</td><td className="py-1 text-right">{r.alis_fiyati} ({r.kaynak})</td></tr>)}
+              {!(m.son_fiyat || []).length && <tr><td className="py-3 text-muted-foreground text-center">Kayıt yok</td></tr>}
+            </tbody></table>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-sm font-semibold">Ürün Bazlı Fiyat — İç Veri + Piyasa Araştırması</p>
+              <Input className="max-w-xs" placeholder="Ürün adı / kod / barkod / marka ara" value={mq} onChange={(e) => setMq(e.target.value)} />
             </div>
-            <div className="bg-card border rounded-xl p-4">
-              <p className="text-sm font-semibold mb-2">Son Fiyat Hareketleri</p>
-              <table className="w-full text-xs"><tbody>
-                {(m.son_fiyat || []).map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1">{r.urun_adi}</td><td className="py-1 text-muted-foreground">{r.cari_adi}</td><td className="py-1 text-right">{r.alis_fiyati} ({r.kaynak})</td></tr>)}
-                {!(m.son_fiyat || []).length && <tr><td className="py-3 text-muted-foreground text-center">Kayıt yok</td></tr>}
-              </tbody></table>
+            <div className="bg-card border rounded-2xl overflow-x-auto">
+              <table className="w-full text-sm min-w-[880px]">
+                <thead className="bg-muted/40 border-b"><tr>
+                  <Th>Ürün</Th><Th r>Kart Alış</Th><Th r>Kart Satış</Th>
+                  <Th>En Ucuz Tedarikçi</Th><Th r>Tedarikçi Fiyat Aralığı</Th>
+                  <Th>Piyasa Araştırması</Th><Th></Th>
+                </tr></thead>
+                <tbody>
+                  {urunler.filter((u) => u.is_deleted !== 1 && (!mq || `${u.kod} ${u.ad} ${u.barkod} ${u.marka}`.toLowerCase().includes(mq.toLowerCase()))).slice(0, 300).map((u) => {
+                    const en = (m.en_uygun || []).find((r) => r.urun_id === u.id);
+                    return (
+                      <tr key={u.id} className="border-b last:border-0">
+                        <td className="px-3 py-2">
+                          <p className="font-medium">{u.ad}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">{u.kod} · {u.barkod || "—"}
+                            <a className="text-primary inline-flex items-center gap-0.5" target="_blank" rel="noreferrer"
+                              href={`https://www.cimri.com/arama?q=${encodeURIComponent(u.barkod || u.ad)}`}>Cimri'de ara <ExternalLink className="w-3 h-3" /></a>
+                          </p>
+                        </td>
+                        <Td r>{(u.alis_fiyati ?? 0).toFixed(2)}</Td>
+                        <Td r>{(u.satis_fiyati ?? 0).toFixed(2)}</Td>
+                        <Td>{en?.en_ucuz_cari || "—"}</Td>
+                        <Td r>{en ? `${en.en_dusuk} – ${en.en_yuksek}` : "—"}</Td>
+                        <td className="px-3 py-2">
+                          <Input type="number" className="h-8 w-28" value={arastirilan[u.id] ?? ""} onChange={(e) => setArastirilan({ ...arastirilan, [u.id]: e.target.value })} placeholder="0,00" />
+                        </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <Button size="sm" variant="outline" className="h-8" disabled={!arastirilan[u.id] || uygulaM.isPending} onClick={() => uygulaM.mutate({ urun_id: u.id, hedef: "alis" })}>Alışa</Button>
+                          <Button size="sm" className="h-8 ml-1.5" disabled={!arastirilan[u.id] || uygulaM.isPending} onClick={() => uygulaM.mutate({ urun_id: u.id, hedef: "satis" })}>Satışa Yaz</Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!urunler.length && <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">Ürün yok.</td></tr>}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

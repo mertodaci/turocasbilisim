@@ -10,7 +10,9 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
  * Props:
  *   value: secili deger
  *   onChange: (value) => void
- *   options: [{ value, label }]
+ *   options: [{ value, label, keywords }] -- keywords: aramaya dahil olsun ama
+ *     etikette gorunmesin diye ek metin (orn. barkod). cmdk filtresi label +
+ *     keywords birlesimine bakar, ekranda hala sadece label gosterilir.
  *   placeholder: tetikleyici metni
  *   searchPlaceholder: arama kutusu metni
  *   emptyText: sonuc yoksa
@@ -70,7 +72,7 @@ export function SearchableSelect({
               {list.map((opt) => (
                 <CommandItem
                   key={opt.value}
-                  value={opt.label}
+                  value={opt.keywords ? `${opt.label} ${opt.keywords}` : opt.label}
                   onSelect={() => {
                     onChange(opt.value);
                     setOpen(false);

@@ -319,8 +319,11 @@ export default function FisForm({ tip }) {
             {l.urun_id && isSerili(l.urun_id) && (
               <div className="flex items-center gap-2">
                 <Label className="text-xs shrink-0 text-amber-600">Seri No *</Label>
-                <Input placeholder="Bu ürün seri no takipli — 1 adet / satır" value={l.seri_no}
+                <Input placeholder="Elle yazın, barkod okutun ya da otomatik üretin" value={l.seri_no}
                   onChange={(e) => setLine(i, { seri_no: e.target.value })} />
+                <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setLine(i, { seri_no: `${l.urun_kodu || "SN"}-${Date.now().toString().slice(-6)}` })}>
+                  Otomatik Üret
+                </Button>
               </div>
             )}
             {tip === "cikis" && (

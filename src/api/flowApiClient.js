@@ -89,9 +89,7 @@ const ENTITY_MAP = {
   StokSayimSatir:    'stok_sayim_satirlari',
   StokUrunTedarikci: 'stok_urun_tedarikci',
   StokFiyatGecmisi:  'stok_fiyat_gecmisi',
-  StokPersonel:      'stok_personeller',
-  StokDemirbas:      'stok_demirbaslar',
-  StokZimmet:        'stok_zimmetler',
+  StokZimmetYeri:    'stok_zimmet_yerleri',
   StokEtiketFis:     'stok_etiket_fisleri',
   StokExcelYukleme:  'stok_excel_yuklemeler',
   StokQnbAyar:       'stok_qnb_ayarlar',
@@ -331,9 +329,11 @@ export const stok = {
   async zimmetle(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet`, _sjson('POST', body))); },
   async zimmetIade(id, body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/${id}/iade`, _sjson('POST', body || {}))); },
   async zimmetOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet-ozet`, { credentials: 'include' })); },
+  async zimmetGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/${id}`, { credentials: 'include' })); },
+  async zimmetSeriNoListesi(urun_id, depo_id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/seri-no-listesi?urun_id=${urun_id}&depo_id=${depo_id}`, { credentials: 'include' })); },
   async zimmetList(filtre = {}) {
     const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
-    return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmetler?${p}`, { credentials: 'include' }));
+    return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet?${p}`, { credentials: 'include' }));
   },
   async excelYukle(body) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle`, _sjson('POST', body))); },
   async excelGeriAl(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/excel-yukle/${id}/geri-al`, _sjson('POST'))); },

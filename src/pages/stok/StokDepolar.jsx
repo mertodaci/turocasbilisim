@@ -8,21 +8,16 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Warehouse, Truck, Wrench } from "lucide-react";
+import { Plus, Pencil, Trash2, Warehouse, Truck } from "lucide-react";
 import { toast } from "sonner";
 
 const TURLER = [
   { value: "fiziksel", label: "Fiziksel Depo", icon: Warehouse },
   { value: "arac", label: "Araç (Mobil Depo)", icon: Truck },
-  { value: "el_aleti", label: "El Aletleri / Demirbaş", icon: Wrench },
-];
-const MODLAR = [
-  { value: "normal", label: "Normal Stok" },
-  { value: "el_aleti", label: "El Aletleri / Demirbaş" },
 ];
 
 const empty = {
-  kod: "", ad: "", turu: "fiziksel", adres: "", plaka: "", isletim_modu: "normal",
+  kod: "", ad: "", turu: "fiziksel", adres: "", plaka: "",
   aktif: 1, kural_giris: 1, kural_cikis: 1, kural_transfer: 1, sira: 0, notlar: "",
 };
 
@@ -58,7 +53,7 @@ export default function StokDepolar() {
   const openEdit = (d) => {
     setForm({
       kod: d.kod || "", ad: d.ad || "", turu: d.turu || "fiziksel", adres: d.adres || "",
-      plaka: d.plaka || "", isletim_modu: d.isletim_modu || "normal", aktif: d.aktif ?? 1,
+      plaka: d.plaka || "", aktif: d.aktif ?? 1,
       kural_giris: d.kural_giris ?? 1, kural_cikis: d.kural_cikis ?? 1, kural_transfer: d.kural_transfer ?? 1,
       sira: d.sira || 0, notlar: d.notlar || "",
     });
@@ -88,7 +83,7 @@ export default function StokDepolar() {
             <Warehouse className="w-6 h-6 text-primary" /> Depolar
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Stok tutan yerler (fiziksel depo / araç / el aletleri deposu). Şantiye ve müşteri
+            Stok tutan yerler (fiziksel depo / araç). Şantiye ve müşteri
             teslim noktaları için <b>Sahalar / Projeler</b> ekranını kullanın.
           </p>
         </div>
@@ -133,7 +128,6 @@ export default function StokDepolar() {
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Depo</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tür</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">İşletim Modu</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">İşlem Kuralları</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Durum</th>
                 <th className="px-4 py-3"></th>
@@ -150,7 +144,6 @@ export default function StokDepolar() {
                       <p className="text-xs text-muted-foreground">{[d.kod, d.plaka].filter(Boolean).join(" · ") || "—"}</p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{tcfg.label}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{d.isletim_modu === "el_aleti" ? "El Aletleri / Demirbaş" : "Normal Stok"}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 text-[11px]">
                         <span className={d.kural_giris ? "text-emerald-600" : "text-muted-foreground line-through"}>Giriş</span>
@@ -193,21 +186,12 @@ export default function StokDepolar() {
                 <Input value={form.kod} onChange={(e) => setForm({ ...form, kod: e.target.value })} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block">Tür</Label>
-                <Select value={form.turu} onValueChange={(v) => setForm({ ...form, turu: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{TURLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block">İşletim Modu</Label>
-                <Select value={form.isletim_modu} onValueChange={(v) => setForm({ ...form, isletim_modu: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{MODLAR.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="mb-1.5 block">Tür</Label>
+              <Select value={form.turu} onValueChange={(v) => setForm({ ...form, turu: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{TURLER.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             {form.turu === "arac" && (
               <div>
@@ -221,10 +205,7 @@ export default function StokDepolar() {
             </div>
             <div className="border rounded-xl p-3 space-y-2 bg-muted/20">
               <p className="text-xs font-semibold text-muted-foreground">Depo İşlem Kuralları</p>
-              <p className="text-[11px] text-muted-foreground">
-                Pasif depo tüm işlemleri engeller. El Aletleri modunda normal çıkış ve transfer kapalı tutulur;
-                teslim yalnızca zimmet modülünden yapılır.
-              </p>
+              <p className="text-[11px] text-muted-foreground">Pasif depo tüm işlemleri engeller.</p>
               <div className="flex flex-wrap gap-4 pt-1">
                 {[
                   ["kural_giris", "Stok Giriş"],

@@ -456,6 +456,16 @@ function initDb() {
     // kapanışı da saklıyoruz ki dönem tekrar kapanmadan önceki durum kaybolmasın.
     "ALTER TABLE ik_bordro_donemleri ADD COLUMN onceki_kapatan TEXT",
     "ALTER TABLE ik_bordro_donemleri ADD COLUMN onceki_kapanis_tarihi TEXT",
+    // Zimmet yeniden yapılandırma: tekil demirbaş yerine miktar bazlı malzeme
+    // zimmetleme + kişi/yer hedefi. Rezervasyon satırı zimmetten doğduysa iz sürmek
+    // için (kullanılabilir stok hesabı ve çıkış engeli zaten stok_rezervasyonlar'ı okuyor).
+    "ALTER TABLE stok_rezervasyonlar ADD COLUMN zimmet_satir_id TEXT",
+    "ALTER TABLE stok_rezervasyonlar ADD COLUMN seri_no TEXT",
+    "ALTER TABLE stok_zimmetler ADD COLUMN yer_id TEXT",
+    "ALTER TABLE stok_zimmetler ADD COLUMN yer_adi TEXT",
+    "ALTER TABLE stok_zimmetler ADD COLUMN depo_id TEXT",
+    "ALTER TABLE stok_zimmetler ADD COLUMN depo_adi TEXT",
+    "ALTER TABLE stok_zimmetler ADD COLUMN is_deleted INTEGER DEFAULT 0",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme
@@ -495,7 +505,7 @@ function initDb() {
       // Faz 7: Satın Alma
       'stok_satinalma',
       // Faz 8: Zimmet / El Aletleri
-      'stok_zimmet',
+      'stok_zimmet', 'stok_zimmet_yerleri',
       // Faz 9-11: Mobil, Etiket, Excel, Dashboard
       'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
       // Faz 13: QNB e-Belge
@@ -844,6 +854,27 @@ function initDb() {
       CREATE INDEX IF NOT EXISTS idx_stok_zimmet_durum ON stok_zimmetler(durum);
     `);
   } catch(e) { console.error('stok faz8 tablolari:', e.message); }
+
+  // ── Stok Faz 15: Zimmet yeniden yapılandırma — miktar bazlı çoklu malzeme,
+  // kişi ve/veya yer hedefi, kısmi iade. stok_demirbaslar/stok_personeller artık
+  // kullanılmıyor (dokunulmadı, eski veri kalsın). ──
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS stok_zimmet_yerleri (
+        id TEXT PRIMARY KEY, ad TEXT NOT NULL, aciklama TEXT, aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0, created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS stok_zimmet_satirlari (
+        id TEXT PRIMARY KEY, zimmet_id TEXT NOT NULL,
+        urun_id TEXT, urun_adi TEXT, seri_no TEXT, birim TEXT,
+        miktar REAL DEFAULT 0, iade_miktar REAL DEFAULT 0,
+        rezervasyon_id TEXT,
+        created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_stok_zimmet_satir_zimmet ON stok_zimmet_satirlari(zimmet_id);
+    `);
+  } catch(e) { console.error('stok faz15 tablolari:', e.message); }
 
   // ── Stok Faz 10: etiket baskı + Excel stok yükleme ──
   try {

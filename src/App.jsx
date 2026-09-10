@@ -72,6 +72,7 @@ const StokSayim = lazy(() => import('./pages/stok/StokSayim'));
 const StokRaporlar = lazy(() => import('./pages/stok/StokRaporlar'));
 const StokSatinAlma = lazy(() => import('./pages/stok/StokSatinAlma'));
 const StokZimmet = lazy(() => import('./pages/stok/StokZimmet'));
+const StokZimmetYerleri = lazy(() => import('./pages/stok/StokZimmetYerleri'));
 const StokDashboard = lazy(() => import('./pages/stok/StokDashboard'));
 const StokMobil = lazy(() => import('./pages/stok/StokMobil'));
 const StokEtiket = lazy(() => import('./pages/stok/StokEtiket'));
@@ -244,6 +245,7 @@ const AuthenticatedApp = () => {
         <Route path="/stok/satin-alma" element={guard("stok_satinalma", <StokSatinAlma />)} />
         {/* Faz 8: Zimmet */}
         <Route path="/stok/zimmet" element={guard("stok_zimmet", <StokZimmet />)} />
+        <Route path="/stok/zimmet-yerleri" element={guard("stok_zimmet_yerleri", <StokZimmetYerleri />)} />
         {/* Faz 9-11: Mobil, Etiket, Excel, Dashboard */}
         <Route path="/stok" element={guard("stok_dashboard", <StokDashboard />)} />
         <Route path="/stok/mobil" element={guard("stok_mobil", <StokMobil />)} />

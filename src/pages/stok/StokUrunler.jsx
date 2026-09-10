@@ -15,7 +15,7 @@ import { toast } from "sonner";
 const emptyForm = {
   kod: "", ad: "", barkod: "", grup_id: "", uretici_kodu: "", uretici: "", urun_tipi: "",
   marka: "", model: "", ana_birim: "ADET", kdv: 20, alis_fiyati: 0, satis_fiyati: 0,
-  varsayilan_raf_omru_ay: 0, skt_uyari_gun: 30, el_aleti_takip: 0, seri_no_takip: 0,
+  varsayilan_raf_omru_ay: 0, skt_uyari_gun: 30, seri_no_takip: 0,
   gorsel_url: "", aktif: 1, notlar: "",
 };
 
@@ -85,7 +85,7 @@ export default function StokUrunler() {
         marka: it.marka || "", model: it.model || "", ana_birim: it.ana_birim || "ADET",
         kdv: it.kdv ?? 20, alis_fiyati: it.alis_fiyati ?? 0, satis_fiyati: it.satis_fiyati ?? 0,
         varsayilan_raf_omru_ay: it.varsayilan_raf_omru_ay ?? 0, skt_uyari_gun: it.skt_uyari_gun ?? 30,
-        el_aleti_takip: it.el_aleti_takip ?? 0, seri_no_takip: it.seri_no_takip ?? 0,
+        seri_no_takip: it.seri_no_takip ?? 0,
         gorsel_url: it.gorsel_url || "", aktif: it.aktif ?? 1, notlar: it.notlar || "",
       });
     }
@@ -252,10 +252,6 @@ export default function StokUrunler() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch checked={form.el_aleti_takip === 1} onCheckedChange={(v) => setForm({ ...form, el_aleti_takip: v ? 1 : 0 })} />
-                  <Label>El Aleti / Demirbaş Takibi</Label>
-                </div>
                 <div className="flex items-center gap-2">
                   <Switch checked={form.seri_no_takip === 1} onCheckedChange={(v) => setForm({ ...form, seri_no_takip: v ? 1 : 0 })} />
                   <Label>Seri No Takibi</Label>

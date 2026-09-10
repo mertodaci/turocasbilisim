@@ -727,6 +727,11 @@ function createEntityRouter(tableName) {
       const validationErrors = validateData(tableName, req.body, false);
       if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join(', ') });
       if (ikDonemKilitliMi(db, tableName, req.body)) return res.status(400).json({ error: 'Kapatılmış bordro dönemi — kayıt eklenemez. Önce "Ay Kapanışı → Kilidi Aç".' });
+      // Barkod tekillik: ayni barkod iki farkli urune atanamaz.
+      if (tableName === 'stok_urunler' && req.body.barkod && String(req.body.barkod).trim()) {
+        const dup = db.prepare("SELECT id, ad FROM stok_urunler WHERE barkod=? AND (is_deleted=0 OR is_deleted IS NULL)").get(String(req.body.barkod).trim());
+        if (dup) return res.status(400).json({ error: `Bu barkod zaten "${dup.ad}" ürününde kayıtlı` });
+      }
       const data = stringifyJsonColumns(tableName, req.body);
       // GUVENLIK: admin disindaki roller yeni calisan olustururken de
       // ayricalik/kimlik alanlarini set edemez (bkz. PUT)
@@ -891,6 +896,11 @@ function createEntityRouter(tableName) {
       }
       if (!ownCommentEdit && !ownEffortLogEdit && !checkPermission(db, req.user?.role, tableName, 'can_edit')) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+      }
+      // Barkod tekillik: ayni barkod baska bir urunde kayitliysa reddet.
+      if (tableName === 'stok_urunler' && req.body.barkod && String(req.body.barkod).trim()) {
+        const dup = db.prepare("SELECT id, ad FROM stok_urunler WHERE barkod=? AND id<>? AND (is_deleted=0 OR is_deleted IS NULL)").get(String(req.body.barkod).trim(), req.params.id);
+        if (dup) return res.status(400).json({ error: `Bu barkod zaten "${dup.ad}" ürününde kayıtlı` });
       }
       if (tableName === 'job_comments') {
         for (const f of ['is_internal', 'comment_type', 'author_id', 'author_name', 'author_email', 'ticket_id']) delete req.body[f];

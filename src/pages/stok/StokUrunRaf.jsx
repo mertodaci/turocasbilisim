@@ -4,13 +4,12 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Plus, Pencil, Trash2, PackageSearch } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { urun_id: "", depo_id: "", raf_id: "", min_seviye: 0, max_seviye: 0, varsayilan: 0, notlar: "" };
+const empty = { urun_id: "", depo_id: "", min_seviye: 0, max_seviye: 0, notlar: "" };
 
 export default function StokUrunRaf() {
   const queryClient = useQueryClient();
@@ -30,15 +29,10 @@ export default function StokUrunRaf() {
     queryKey: ["stok_depolar"],
     queryFn: () => flowApi.entities.StokDepo.list("ad", 2000),
   });
-  const { data: raflar = [] } = useQuery({
-    queryKey: ["stok_raflar"],
-    queryFn: () => flowApi.entities.StokRaf.list("depo_adi", 5000),
-  });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["stok_urun_raf"] });
   const urunAdi = (id) => urunler.find((u) => u.id === id)?.ad || "";
   const depoAdi = (id) => depolar.find((d) => d.id === id)?.ad || "";
-  const rafAdi = (id) => { const r = raflar.find((x) => x.id === id); return r ? (r.ad || r.kod) : ""; };
 
   const createMutation = useMutation({
     mutationFn: (data) => flowApi.entities.StokUrunRaf.create(data),
@@ -58,18 +52,17 @@ export default function StokUrunRaf() {
 
   const openCreate = () => { setForm(empty); setDialog({ open: true, item: null }); };
   const openEdit = (a) => {
-    setForm({ urun_id: a.urun_id || "", depo_id: a.depo_id || "", raf_id: a.raf_id || "", min_seviye: a.min_seviye || 0, max_seviye: a.max_seviye || 0, varsayilan: a.varsayilan ?? 0, notlar: a.notlar || "" });
+    setForm({ urun_id: a.urun_id || "", depo_id: a.depo_id || "", min_seviye: a.min_seviye || 0, max_seviye: a.max_seviye || 0, notlar: a.notlar || "" });
     setDialog({ open: true, item: a });
   };
   const handleSubmit = () => {
     if (!form.urun_id || !form.depo_id) { toast.error("Ürün ve depo zorunlu"); return; }
-    const data = { ...form, urun_adi: urunAdi(form.urun_id), depo_adi: depoAdi(form.depo_id), raf_adi: rafAdi(form.raf_id) };
+    const data = { ...form, urun_adi: urunAdi(form.urun_id), depo_adi: depoAdi(form.depo_id) };
     if (dialog.item) updateMutation.mutate({ id: dialog.item.id, data });
     else createMutation.mutate(data);
   };
 
-  const rafOptions = raflar.filter((r) => !form.depo_id || r.depo_id === form.depo_id).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));
-  const filtered = atamalar.filter((a) => !q || `${a.urun_adi} ${a.depo_adi} ${a.raf_adi}`.toLowerCase().includes(q.toLowerCase()));
+  const filtered = atamalar.filter((a) => !q || `${a.urun_adi} ${a.depo_adi}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -78,7 +71,7 @@ export default function StokUrunRaf() {
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <PackageSearch className="w-6 h-6 text-primary" /> Ürün - Raf Atama
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Ürün hangi depoda hangi rafta duracak, minimum / maksimum seviyesi nedir. Kritik stok uyarıları minimum seviyeye göre üretilir.</p>
+          <p className="text-sm text-muted-foreground mt-1">Ürünün depo bazında minimum / maksimum stok seviyesi. Kritik stok uyarıları minimum seviyeye göre üretilir.</p>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Atama</Button>
       </div>
@@ -98,10 +91,8 @@ export default function StokUrunRaf() {
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Ürün</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Depo</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Raf</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Min</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Max</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Varsayılan</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -110,13 +101,8 @@ export default function StokUrunRaf() {
                 <tr key={a.id} className={`border-b last:border-0 hover:bg-muted/20 ${i % 2 ? "bg-muted/10" : ""}`}>
                   <td className="px-4 py-3 font-medium">{a.urun_adi || urunAdi(a.urun_id)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.depo_adi || depoAdi(a.depo_id)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{a.raf_adi || rafAdi(a.raf_id) || "GENEL RAF"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.min_seviye || 0}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.max_seviye || 0}</td>
-                  <td className="px-4 py-3">
-                    <Switch checked={a.varsayilan === 1 || a.varsayilan === true}
-                      onCheckedChange={(v) => updateMutation.mutate({ id: a.id, data: { varsayilan: v ? 1 : 0 } })} />
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -145,15 +131,9 @@ export default function StokUrunRaf() {
             </div>
             <div>
               <Label className="mb-1.5 block">Depo *</Label>
-              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v, raf_id: "" })}
+              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v })}
                 options={depolar.map((d) => ({ value: d.id, label: d.ad }))}
                 placeholder="Depo seçin" fixDialogWheelScroll />
-            </div>
-            <div>
-              <Label className="mb-1.5 block">Raf</Label>
-              <SearchableSelect value={form.raf_id} onChange={(v) => setForm({ ...form, raf_id: v })}
-                options={[{ value: "", label: "GENEL RAF (otomatik)" }, ...rafOptions]}
-                placeholder="Raf seçin" fixDialogWheelScroll />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -168,10 +148,6 @@ export default function StokUrunRaf() {
             <div>
               <Label className="mb-1.5 block">Not</Label>
               <Input value={form.notlar} onChange={(e) => setForm({ ...form, notlar: e.target.value })} />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={form.varsayilan === 1} onCheckedChange={(v) => setForm({ ...form, varsayilan: v ? 1 : 0 })} />
-              <Label>Bu ürün/depo için varsayılan raf</Label>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" onClick={() => setDialog({ open: false, item: null })}>İptal</Button>

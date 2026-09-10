@@ -49,8 +49,8 @@ export default function Customers() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { can } = useRolePermissions();
-  const canAddCustomer = user?.role === "admin" || user?.role === "yonetici" || user?.role === "satis" || can(user?.role, "customers", "add");
-  const canEditCustomer = user?.role === "admin" || user?.role === "yonetici" || user?.role === "satis" || can(user?.role, "customers", "edit");
+  const canAddCustomer = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "customers", "add");
+  const canEditCustomer = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "customers", "edit");
   const isPrivileged = canAddCustomer || canEditCustomer;
 
   const { data: customersRaw = [], isLoading } = useQuery({

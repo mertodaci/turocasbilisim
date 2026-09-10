@@ -87,351 +87,6 @@ const populationLabels = {
   "1m_ustu": "1M+",
 };
 
-const PARTIES = ["AK PARTİ","CHP","MHP","İYİ PARTİ","DEM PARTİ","YRP","DEVA","SAADET","DP","DSP","TİP","TRP","BAĞIMSIZ"];
-const FOLLOW_OPTIONS = [
-  { value: "musteri", label: "Müşteri" },
-  { value: "sicak_takip", label: "Sıcak Takip" },
-  { value: "rutin_takip", label: "Rutin Takip" },
-  { value: "satis_ekibi", label: "Satış Ekibi" },
-  { value: "teknik_ekip", label: "Teknik Ekip" },
-  { value: "yonetim", label: "Yönetim" },
-  { value: "genel", label: "Genel" },
-];
-
-// ── SalesInfoTab ─────────────────────────────────────────────────────────────
-function SalesInfoTab({ customer, onUpdate, salesActivities = [] }) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingActivity, setEditingActivity] = useState(null);
-  const [form, setForm] = useState({
-    activity_type: "",
-    contact_person: "",
-    date: new Date().toISOString().slice(0, 10),
-    start_time: "",
-    end_time: "",
-    notes: "",
-    outcome: "",
-    next_visit_date: "",
-  });
-
-  const { data: activityTypes = [] } = useQuery({
-    queryKey: ["def-satis-aktivite-tipi"],
-    queryFn: () => flowApi.entities.Definition.filter({ category: "satis_aktivite_tipi" }),
-  });
-
-  const activityTypeLabel = (t) =>
-    activityTypes.find((d) => d.value === t)?.label || (t || "").replace(/_/g, " ");
-
-  const outcomeColor = (o) => {
-    const map = {
-      basarili: "bg-green-100 text-green-700",
-      basarisiz: "bg-red-100 text-red-700",
-      takip_gerekli: "bg-amber-100 text-amber-700",
-      iptal: "bg-gray-100 text-gray-500",
-      belirsiz: "bg-blue-100 text-blue-700",
-    };
-    return map[o] || "bg-gray-100 text-gray-600";
-  };
-
-  const outcomeLabel = (o) =>
-    ({ basarili: "Basarili", basarisiz: "Basarisiz", takip_gerekli: "Takip Gerekli", iptal: "Iptal", belirsiz: "Belirsiz" }[o] || o || "");
-
-  const activityIcon = (t) => {
-    if (!t) return "·";
-    if (t.includes("telefon")) return "T";
-    if (t.includes("ziyaret")) return "Z";
-    if (t.includes("demo") || t.includes("sunum")) return "S";
-    if (t.includes("email") || t.includes("yazisma")) return "E";
-    if (t.includes("teklif")) return "TK";
-    return "·";
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editingActivity
-        ? flowApi.entities.SalesActivity.update(editingActivity.id, data)
-        : flowApi.entities.SalesActivity.create({
-            ...data,
-            customer_id: customer.id,
-            customer_name: customer.company_name,
-            created_by: user?.email,
-          }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["sales_activities", customer.id]);
-      setShowDialog(false);
-      setEditingActivity(null);
-      resetForm();
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => flowApi.entities.SalesActivity.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(["sales_activities", customer.id]),
-  });
-
-  const resetForm = () =>
-    setForm({
-      activity_type: "",
-      contact_person: "",
-      date: new Date().toISOString().slice(0, 10),
-      start_time: "",
-      end_time: "",
-      notes: "",
-      outcome: "",
-      next_visit_date: "",
-    });
-
-  const openNew = () => { resetForm(); setEditingActivity(null); setShowDialog(true); };
-  const openEdit = (a) => {
-    setForm({
-      activity_type: a.activity_type || "",
-      contact_person: a.contact_person || "",
-      date: a.date || "",
-      start_time: a.start_time || "",
-      end_time: a.end_time || "",
-      notes: a.notes || "",
-      outcome: a.outcome || "",
-      next_visit_date: a.next_visit_date || "",
-    });
-    setEditingActivity(a);
-    setShowDialog(true);
-  };
-
-  const sorted = [...salesActivities].sort(
-    (a, b) => new Date(b.date || b.created_date) - new Date(a.date || a.created_date)
-  );
-  const nextVisit = salesActivities
-    .filter((a) => a.next_visit_date)
-    .sort((a, b) => new Date(a.next_visit_date) - new Date(b.next_visit_date))[0];
-
-  return (
-    <div className="space-y-5">
-
-      {/* Istatistikler */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900">
-          <div className="text-2xl font-bold text-blue-600">{salesActivities.length}</div>
-          <div className="text-xs text-blue-500 mt-0.5">Toplam Aktivite</div>
-        </div>
-        <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-3 text-center border border-green-100 dark:border-green-900">
-          <div className="text-2xl font-bold text-green-600">
-            {salesActivities.filter((a) => a.outcome === "basarili").length}
-          </div>
-          <div className="text-xs text-green-500 mt-0.5">Olumlu Görüşme</div>
-        </div>
-        <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 text-center border border-amber-100 dark:border-amber-900">
-          <div className="text-2xl font-bold text-amber-600">
-            {salesActivities.filter((a) => a.outcome === "takip_gerekli").length}
-          </div>
-          <div className="text-xs text-amber-500 mt-0.5">Takip Gerekli</div>
-        </div>
-      </div>
-
-      {/* Aktivite Listesi */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            Satış Aktiviteleri
-            <span className="text-xs text-muted-foreground font-normal">({salesActivities.length} kayıt)</span>
-          </h3>
-          <a
-            href={`/satis-aktivite-ekle?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.company_name)}`}
-            className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
-          >
-            + Aktivite Ekle
-          </a>
-        </div>
-        {sorted.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm bg-muted/20 rounded-xl">
-            Henüz satış aktivitesi yok
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {sorted.map((a) => (
-              <div
-                key={a.id}
-                className="p-4 bg-muted/20 rounded-xl hover:bg-muted/30 transition-colors border border-border/30"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
-                    {activityIcon(a.activity_type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold">{activityTypeLabel(a.activity_type)}</p>
-                        {a.outcome && (
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${outcomeColor(a.outcome)}`}>
-                            {outcomeLabel(a.outcome)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-muted-foreground font-medium">{a.date}</span>
-                        <button
-                          onClick={() => openEdit(a)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          onClick={() => { if (window.confirm("Silinsin mi?")) deleteMutation.mutate(a.id); }}
-                          className="text-xs text-red-400 hover:text-red-600 transition-colors px-1"
-                        >
-                          Sil
-                        </button>
-                      </div>
-                    </div>
-                    {a.contact_person && (
-                      <p className="text-xs text-muted-foreground mb-1">{a.contact_person}</p>
-                    )}
-                    {a.notes && (
-                      <p className="text-xs text-muted-foreground mb-1 leading-relaxed">{a.notes}</p>
-                    )}
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {a.start_time && (
-                        <span className="text-xs text-muted-foreground">
-                          {a.start_time}{a.end_time ? " - " + a.end_time : ""}
-                        </span>
-                      )}
-                      {a.next_visit_date && (
-                        <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                          Sonraki: {a.next_visit_date}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dialog */}
-      {showDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setShowDialog(false)}
-        >
-          <div
-            className="bg-background rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold">
-              {editingActivity ? "Aktivite Düzenle" : "Yeni Satış Aktivitesi"}
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Aktivite Tipi</label>
-                <select
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                  value={form.activity_type}
-                  onChange={(e) => setForm((f) => ({ ...f, activity_type: e.target.value }))}
-                >
-                  <option value="">Seçin</option>
-                  {activityTypes.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Görüşülen Kişi</label>
-                <input
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                  placeholder="Ad Soyad / Unvan"
-                  value={form.contact_person}
-                  onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Tarih</label>
-                  <input
-                    type="date"
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                    value={form.date}
-                    onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Sonuç</label>
-                  <select
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                    value={form.outcome}
-                    onChange={(e) => setForm((f) => ({ ...f, outcome: e.target.value }))}
-                  >
-                    <option value="">Seçin</option>
-                    <option value="basarili">Başarılı</option>
-                    <option value="takip_gerekli">Takip Gerekli</option>
-                    <option value="basarisiz">Başarısız</option>
-                    <option value="iptal">İptal</option>
-                    <option value="belirsiz">Belirsiz</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Başlangıç Saati</label>
-                  <input
-                    type="time"
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                    value={form.start_time}
-                    onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Bitiş Saati</label>
-                  <input
-                    type="time"
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                    value={form.end_time}
-                    onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Notlar</label>
-                <textarea
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none"
-                  rows={3}
-                  placeholder="Görüşme notları..."
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Sonraki Ziyaret Tarihi</label>
-                <input
-                  type="date"
-                  className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-                  value={form.next_visit_date}
-                  onChange={(e) => setForm((f) => ({ ...f, next_visit_date: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => { setShowDialog(false); setEditingActivity(null); }}
-                className="flex-1 border border-border rounded-lg py-2 text-sm hover:bg-muted/30 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => saveMutation.mutate(form)}
-                disabled={saveMutation.isPending || !form.activity_type || !form.date}
-                className="flex-1 bg-primary text-primary-foreground rounded-lg py-2 text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {saveMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── ContactFormDialog (inline) ────────────────────────────────────────────────
 const emptyContact = { full_name: "", title: "", phone: "", email: "", contact_type: "diger", notes: "" };
@@ -493,7 +148,7 @@ function ContactFormDialogInline({ open, onClose, onSubmit, isLoading, contact }
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const TABS = ["Kişiler", "Satış Faaliyetleri", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
+const TABS = ["Kişiler", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
 
 export default function CustomerDetail() {
   const customerId = window.location.pathname.split("/").pop();
@@ -505,7 +160,6 @@ export default function CustomerDetail() {
   const canEdit =
     user?.role === "admin" ||
     user?.role === "yonetici" ||
-    user?.role === "satis" ||
     can(user?.role, "customers", "edit") ||
     can(user?.role, "customers", "add");
 
@@ -561,11 +215,6 @@ export default function CustomerDetail() {
       setHakedisBusy(false);
     }
   };
-
-  const { data: salesActivities = [] } = useQuery({
-    queryKey: ["sales_activities", customerId],
-    queryFn: () => flowApi.entities.SalesActivity.filter({ customer_id: customerId }),
-  });
 
   const { data: jtProjects = [] } = useQuery({
     queryKey: ["tq-projects-customer", customerId],
@@ -794,8 +443,6 @@ export default function CustomerDetail() {
                 {[
                   { label: "Adres", value: customer.address, icon: MapPin },
                   { label: "Parti", value: customer.party, icon: Tag },
-                  { label: "Mevcut Firma", value: customer.current_firm, icon: Building2 },
-                  { label: "Satis Sorumlusu", value: customer.assigned_sales, icon: User },
                 ]
                   .filter((x) => x.value)
                   .map((x, i) => {
@@ -1179,14 +826,6 @@ export default function CustomerDetail() {
             />
           )}
 
-          {/* Satış Faaliyetleri */}
-          {activeTab === "Satış Faaliyetleri" && (
-            <SalesInfoTab
-              customer={customer}
-              onUpdate={(data) => updateCustomerMutation.mutate(data)}
-              salesActivities={salesActivities}
-            />
-          )}
         </div>
       </div>
 

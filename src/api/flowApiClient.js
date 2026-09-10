@@ -44,7 +44,6 @@ async function handleResponse(res) {
 const ENTITY_MAP = {
   Employee:         'employees',
   Customer:         'customers',
-  SalesActivity:    'sales_activities',
   LeaveRequest:     'leave_requests',
   Todo:             'todos',
   CustomerContact:  'customer_contacts',

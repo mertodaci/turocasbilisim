@@ -53,19 +53,26 @@ function migrateLegacyJobTrackingRename() {
     }
   }
 
-  // Kaldırılan modüller (Aktiviteler / Fikirler / İş Takip) — tablo + yetki temizliği.
-  // Idempotent: her boot'ta çalışır, tablo yoksa no-op.
+  // Kaldırılan modüller (Aktiviteler / Fikirler / İş Takip / Satış-Teklifler) —
+  // tablo + yetki + rol temizliği. Idempotent: her boot'ta çalışır, yoksa no-op.
   try {
     db.exec(`
       DROP TABLE IF EXISTS activities;
       DROP TABLE IF EXISTS ideas;
       DROP TABLE IF EXISTS work_tasks;
       DROP TABLE IF EXISTS task_comments;
+      DROP TABLE IF EXISTS sales_activities;
     `);
   } catch (e) { console.warn('[migrate] kaldırılan modül tablo temizliği:', e.message); }
   try {
-    db.prepare("DELETE FROM role_permissions WHERE module IN ('activities','add_activity','ideas','work_tracking')").run();
+    db.prepare(`DELETE FROM role_permissions WHERE module IN
+      ('activities','add_activity','ideas','work_tracking',
+       'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle')`).run();
   } catch { /* role_permissions henüz yoksa sorun değil */ }
+  // 'satis' rolü kaldırıldı — mevcut kullanıcılar 'kullanici'ye taşınır.
+  try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
+  try { db.prepare("DELETE FROM roles WHERE name='satis'").run(); } catch {}
+  try { db.prepare("DELETE FROM role_permissions WHERE role_name='satis'").run(); } catch {}
 }
 
 function initDb() {
@@ -341,9 +348,7 @@ function initDb() {
     "ALTER TABLE customers ADD COLUMN party TEXT",
     "ALTER TABLE customers ADD COLUMN top_manager TEXT",
     "ALTER TABLE customers ADD COLUMN contact_title TEXT",
-    "ALTER TABLE customers ADD COLUMN current_firm TEXT",
     "ALTER TABLE customers ADD COLUMN follow_status TEXT DEFAULT 'rutin_takip'",
-    "ALTER TABLE customers ADD COLUMN assigned_sales TEXT",
     "ALTER TABLE customers ADD COLUMN is_potential INTEGER DEFAULT 0",
     "ALTER TABLE customers ADD COLUMN next_visit_date TEXT",
     "ALTER TABLE definitions ADD COLUMN color TEXT DEFAULT 'blue'",
@@ -363,24 +368,7 @@ function initDb() {
     "ALTER TABLE customer_contracts ADD COLUMN currency TEXT DEFAULT 'TRY'",
     "ALTER TABLE customer_contracts ADD COLUMN special_terms TEXT",
     "ALTER TABLE employees ADD COLUMN is_deleted INTEGER DEFAULT 0",
-    "ALTER TABLE sales_activities ADD COLUMN is_deleted INTEGER DEFAULT 0",
     "ALTER TABLE leave_requests ADD COLUMN half_day_period TEXT",
-    `CREATE TABLE IF NOT EXISTS sales_activities (id TEXT PRIMARY KEY, customer_id TEXT, customer_name TEXT, activity_type TEXT, contact_person TEXT, date TEXT, start_time TEXT, end_time TEXT, notes TEXT, outcome TEXT, next_visit_date TEXT, opportunity_id TEXT, created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')))`,
-    "CREATE INDEX IF NOT EXISTS idx_sales_act_customer ON sales_activities(customer_id)",
-    "CREATE INDEX IF NOT EXISTS idx_sales_act_date ON sales_activities(date)",
-    "CREATE INDEX IF NOT EXISTS idx_sales_act_type ON sales_activities(activity_type)",
-    "ALTER TABLE sales_activities ADD COLUMN employee_id TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN employee_name TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN duration_minutes REAL",
-    "ALTER TABLE sales_activities ADD COLUMN location TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN parent_activity_id TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN note_type TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN title TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN valid_until TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN deal_status TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN products TEXT",
-    "ALTER TABLE sales_activities ADD COLUMN amount REAL",
-    "ALTER TABLE sales_activities ADD COLUMN currency TEXT DEFAULT 'TRY'",
     "ALTER TABLE employees ADD COLUMN card_uid TEXT",
     "ALTER TABLE leave_requests ADD COLUMN is_signed INTEGER DEFAULT 0",
     "ALTER TABLE definitions ADD COLUMN board_id TEXT",
@@ -485,8 +473,7 @@ function initDb() {
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
-      'satis','satis_firsatlari','satis_teklifleri','satis_raporlari',
-      'satis_masasi','satis_aktivite_ekle','hakedisler','sozlesmeler','oturum_yonetimi',
+      'hakedisler','sozlesmeler','oturum_yonetimi',
       // ── Stok / Depo Yönetimi modülü ──────────────────────────────
       // Faz 1: Tanımlar
       'stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf',

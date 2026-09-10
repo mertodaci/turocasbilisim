@@ -7,7 +7,7 @@ const { ensureUserForEmployee } = require('./userProvision');
 const { CUSTOMER_APPROVAL_STATUSES } = require('./constants');
 
 // Soft delete uygulanan tablolar (gercekten silme yerine is_deleted=1)
-const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees','sales_activities',
+const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees',
   'stok_urunler','stok_depolar','stok_raflar','stok_sahalar','stok_fisler','stok_sayimlar',
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
@@ -113,7 +113,6 @@ const TABLE_TO_MODULE = {
   job_effort_plans: 'is_takibi_biletler',
   job_effort_logs: 'is_takibi_biletler',
   job_kanban_boards: 'is_takibi_kanban',
-  sales_activities: 'satis',
   hakedisler: 'hakedisler',
   // ── Stok / Depo Yönetimi ──
   stok_urunler: 'stok_urunler',
@@ -281,7 +280,7 @@ function effortLogOwnedBy(row, user) {
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
   employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking','sube_id','bolum_id','meslek_kodu','kanun_no','emekli_mi','personel_adresi','aylik_ucret','saatlik_ucret','dakikalik_ucret','ticket_aylik','sahsi_hesap_aktif','sahsi_hesap_tutar','sahsi_hesap_banka','sahsi_hesap_iban','sahsi_hesap_aciklama','vip_mi','vardiya_id'],
-  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_job_tracking','district','party','top_manager','contact_title','current_firm','follow_status','assigned_sales','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
+  customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_job_tracking','district','party','top_manager','contact_title','follow_status','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
   leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],
   leave_types: ['name','description','max_days','is_active'],
@@ -305,7 +304,6 @@ const ALLOWED_COLUMNS = {
   job_effort_plans: ['ticket_id','team','planned_hours','planned_start','assignee_id','assignee_name','end_at','note'],
   job_effort_logs: ['ticket_id','team','person_id','person_name','hours','work_date','note'],
   job_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
-  sales_activities: ['customer_id','customer_name','activity_type','contact_person','date','start_time','end_time','notes','outcome','next_visit_date','opportunity_id','created_by','employee_id','employee_name','duration_minutes','location','parent_activity_id','note_type','title','valid_until','deal_status','products','amount','currency','is_deleted'],
   hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
   // ── Stok / Depo Yönetimi — Faz 1 ──
   stok_urun_gruplari: ['ad','ust_grup_id','ust_grup_adi','sira','aktif'],

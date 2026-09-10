@@ -61,7 +61,6 @@ export default function AdminDashboard() {
     { label: "Aktif Personel", value: ik.aktif_personel ?? exec?.hr?.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
     { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
     { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, color: "from-emerald-500 to-emerald-700", icon: Building2, path: "/musteriler" },
-    { label: "Bu Ay Teklif", value: sales.thisMonthOffers?.c || 0, sub: sales.winRate != null ? `%${sales.winRate} kazanma oranı` : "teklif sunumu", color: "from-amber-400 to-orange-500", icon: TrendingUp, path: "/musteriler" },
     { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${yaklasanSozlesme} yaklaşan bitiş`, color: "from-blue-500 to-blue-700", icon: ScrollText, path: "/sozlesmeler" },
     { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
   ];

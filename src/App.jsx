@@ -19,7 +19,6 @@ import { NotificationProvider } from './lib/NotificationContext';
 const Employees = lazy(() => import('./pages/Employees'));
 const PersonnelMovements = lazy(() => import('./pages/PersonnelMovements'));
 const CardManagement = lazy(() => import('./pages/CardManagement'));
-const AddSalesActivity = lazy(() => import('./pages/AddSalesActivity'));
 const EmployeeDetail = lazy(() => import('./pages/EmployeeDetail'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Customers = lazy(() => import('./pages/Customers'));
@@ -46,8 +45,6 @@ const MyLeaveRequests = lazy(() => import('./pages/MyLeaveRequests'));
 const IKLeaveRequests = lazy(() => import('./pages/IKLeaveRequests'));
 const IKExpenseRequests = lazy(() => import('./pages/IKExpenseRequests'));
 const LeaveAllowances = lazy(() => import('./pages/LeaveAllowances'));
-const OffersPage = lazy(() => import('./pages/OffersPage'));
-const SalesReportPage = lazy(() => import('./pages/SalesReportPage'));
 const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
@@ -184,7 +181,6 @@ const AuthenticatedApp = () => {
       <Route path="/landing" element={<Navigate to="/" replace />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={guard("dashboard", <Dashboard />)} />
-        <Route path="/satis-aktivite-ekle" element={guard("satis_aktivite_ekle", <AddSalesActivity />)} />
         <Route path="/profil" element={<Profile />} />
         <Route path="/musteriler" element={guard("customers", <Customers />)} />
         <Route path="/musteriler-haritasi" element={guard("customer_map", <CustomerMap />)} />
@@ -196,8 +192,6 @@ const AuthenticatedApp = () => {
         <Route path="/ik-izin-yonetimi" element={guard("ik_leave_requests", <IKLeaveRequests />)} />
         <Route path="/ik-harcama-yonetimi" element={guard("ik_expense_requests", <IKExpenseRequests />)} />
         <Route path="/izin-haklari" element={guard("leave_allowances", <LeaveAllowances />)} />
-        <Route path="/satis-teklifleri" element={guard("satis_teklifleri", <OffersPage />)} />
-        <Route path="/satis-raporlari" element={guard("satis_raporlari", <SalesReportPage />)} />
         <Route path="/izin-turleri" element={guard("leave_types", <LeaveTypes />)} />
         <Route path="/harcamalar" element={guard("expenses", <Expenses />)} />
         <Route path="/kisisel-takvim" element={guard("personal_calendar", <PersonalCalendar />)} />

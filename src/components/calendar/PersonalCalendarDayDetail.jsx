@@ -1,22 +1,7 @@
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarDays, CheckSquare, Umbrella, Activity } from "lucide-react";
+import { CalendarDays, CheckSquare, Umbrella } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const activityTypeLabels = {
-  telefon_gorusmesi: "Telefon Görüşmesi",
-  ofis_toplantisi: "Ofis Toplantısı",
-  musteri_toplantisi: "Müşteri Toplantısı",
-  saha_ziyareti: "Saha Ziyareti",
-  rapor_yazimi: "Rapor Yazımı",
-  email_yazisma: "E-posta Yazışma",
-  egitim: "Eğitim",
-  sunum: "Sunum",
-  is_takibi: "İş Takibi",
-  test: "Test",
-  analiz: "Analiz",
-  diger: "Diğer",
-};
 
 const leaveTypeLabels = {
   yillik_izin: "Yıllık İzin",
@@ -43,8 +28,8 @@ const todoPriorityColors = {
   dusuk: "text-green-600",
 };
 
-export default function PersonalCalendarDayDetail({ date, activities = [], todos = [], leaves = [] }) {
-  const hasEvents = activities.length > 0 || todos.length > 0 || leaves.length > 0;
+export default function PersonalCalendarDayDetail({ date, todos = [], leaves = [] }) {
+  const hasEvents = todos.length > 0 || leaves.length > 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5 space-y-4 h-fit">
@@ -59,31 +44,6 @@ export default function PersonalCalendarDayDetail({ date, activities = [], todos
         <p className="text-sm text-muted-foreground text-center py-6">
           Bu gün için etkinlik bulunmuyor.
         </p>
-      )}
-
-      {/* Aktiviteler */}
-      {activities.length > 0 && (
-        <div>
-          <div className="flex items-center gap-1.5 mb-2">
-            <Activity className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Aktiviteler</span>
-          </div>
-          <div className="space-y-2">
-            {activities.map((a) => (
-              <div key={a.id} className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2">
-                <p className="text-sm font-medium text-foreground">
-                  {activityTypeLabels[a.activity_type] || a.activity_type}
-                </p>
-                {a.duration_minutes && (
-                  <p className="text-xs text-muted-foreground">{a.duration_minutes} dk</p>
-                )}
-                {a.notes && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.notes}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Yapılacaklar */}

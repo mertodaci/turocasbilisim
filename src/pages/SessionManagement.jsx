@@ -11,7 +11,6 @@ const ROLE_LABELS = {
   yonetici: "Yönetici",
   ik: "IK",
   kullanici: "Kullanıcı",
-  satis: "Satış",
   stajer: "Stajer",
   musteri: "Müşteri",
 };

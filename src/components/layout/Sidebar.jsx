@@ -16,7 +16,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { useQuery } from "@tanstack/react-query";
 
 export const allNavItems = [
-{ labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici", "satis"] },
+{ labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici"] },
 
 {
   labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
@@ -34,12 +34,12 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "support_center", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"],
+  labelKey: "support_center", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"],
   children: [
-    { labelKey: "messages", path: "/mesajlar", icon: MessageCircle, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
-    { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici", "satis"] },
-    { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik", "satis"] },
-    { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
+    { labelKey: "messages", path: "/mesajlar", icon: MessageCircle, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
+    { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] },
+    { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
   ]
 },
 {
@@ -113,9 +113,9 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici", "satis"],
+  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
   children: [
-    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici", "satis"] },
+    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
     { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
   ]
 },

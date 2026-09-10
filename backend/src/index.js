@@ -133,7 +133,6 @@ app.use('/api/entities/leave_types',       createEntityRouter('leave_types'));
 app.use('/api/entities/definitions',       createEntityRouter('definitions'));
 app.use('/api/entities/expense_reports',   createEntityRouter('expense_reports'));
 app.use('/api/entities/expense_items',     createEntityRouter('expense_items'));
-app.use('/api/entities/sales_activities',   createEntityRouter('sales_activities'));
 app.use('/api/entities/announcements',     createEntityRouter('announcements'));
 app.use('/api/entities/hakedisler',        createEntityRouter('hakedisler'));
 
@@ -717,18 +716,9 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
     const thisMonthExpenses = db.prepare("SELECT COALESCE(SUM(ei.accommodation + ei.transport + ei.fuel + ei.meal + ei.other),0) as s FROM expense_reports er LEFT JOIN expense_items ei ON ei.report_id = er.id WHERE er.status='onaylandi' AND substr(datetime(er.created_date,'+3 hours'),1,7)=?").get(thisMonth).s;
     const pendingExpenses = db.prepare("SELECT COUNT(*) as c FROM expense_reports WHERE status IN ('yonetici_onayi_bekliyor','ik_onayi_bekliyor')").get().c;
 
-    // === MÜŞTERİLER & SATIŞ ===
+    // === MÜŞTERİLER ===
     const totalCustomers = db.prepare("SELECT COUNT(*) as c FROM customers WHERE status='aktif' AND (is_deleted=0 OR is_deleted IS NULL) AND (is_potential=0 OR is_potential IS NULL)").get().c;
     const potentialCustomers = db.prepare("SELECT COUNT(*) as c FROM customers WHERE is_potential=1 AND (is_deleted=0 OR is_deleted IS NULL)").get().c;
-    const thisMonthOffers = db.prepare("SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as s FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND substr(datetime(created_date,'+3 hours'),1,7)=?").get(thisMonth);
-    const lastMonthOffers = db.prepare("SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as s FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND substr(datetime(created_date,'+3 hours'),1,7)=?").get(lastMonth);
-    const acceptedOffers = db.prepare("SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as s FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND deal_status='kazanildi' AND substr(datetime(created_date,'+3 hours'),1,4)=?").get(thisYear);
-    const offersByStatus = db.prepare("SELECT deal_status as status, COUNT(*) as c FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY deal_status").all();
-    // Kazanma orani + pipeline (masadaki acik teklif tutari)
-    const wonCount = db.prepare("SELECT COUNT(*) as c FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND deal_status='kazanildi'").get().c;
-    const lostCount = db.prepare("SELECT COUNT(*) as c FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND deal_status='kaybedildi'").get().c;
-    const winRate = (wonCount + lostCount) > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : null;
-    const pipeline = db.prepare("SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as s FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND (deal_status='gorusulmede' OR deal_status='taslak' OR deal_status IS NULL)").get();
 
     // === IS TAKIBI ===
     const totalProjects = db.prepare(`SELECT COUNT(*) as c FROM job_projects WHERE is_active=1 AND ${ND}`).get().c;
@@ -762,9 +752,6 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
     `).all();
     const ticketByCustomer = db.prepare("SELECT customer_name, COUNT(*) as c FROM job_tickets WHERE status NOT IN ('sonuclanan','iptal','arsivlendi') AND (is_deleted=0 OR is_deleted IS NULL) AND customer_name IS NOT NULL GROUP BY customer_name ORDER BY c DESC LIMIT 8").all();
 
-    // === SATIŞ ZİYARETLERİ ===
-    const upcomingVisits = db.prepare(`SELECT COUNT(*) as c FROM sales_activities WHERE next_visit_date >= ? AND next_visit_date <= date(?, '+30 days') AND ${ND}`).get(today, today).c;
-
     // === HARCAMA TREND (son 6 ay) ===
     const expenseTrend = db.prepare(`
       SELECT substr(er.created_date,1,7) as month,
@@ -794,24 +781,6 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
       JOIN expense_reports er ON er.id = ei.report_id
       WHERE er.status = 'onaylandi'
     `).get();
-
-    // === TEKLİF TREND (son 6 ay) ===
-    const offerTrend = db.prepare(`
-      SELECT substr(created_date,1,7) as month, COUNT(*) as c, COALESCE(SUM(amount),0) as s
-      FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) AND created_date >= date('now','-6 months')
-      GROUP BY month ORDER BY month
-    `).all();
-
-    // === TEKLİF KAZAN/KAYBET TREND (son 6 ay) ===
-    const offerWonLostTrend = db.prepare(`
-      SELECT substr(created_date,1,7) as month,
-             SUM(CASE WHEN deal_status='kazanildi' THEN 1 ELSE 0 END) as won,
-             SUM(CASE WHEN deal_status='kaybedildi' THEN 1 ELSE 0 END) as lost
-      FROM sales_activities
-      WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL)
-        AND created_date >= date('now','-6 months')
-      GROUP BY month ORDER BY month
-    `).all();
 
     // === SOZLESMELER ===
     const contractStats = db.prepare('SELECT status, COUNT(*) as c FROM customer_contracts GROUP BY status').all();
@@ -856,24 +825,11 @@ app.get('/api/dashboard/executive', authMiddleware, requireRoles('admin','yoneti
        FROM hakedisler WHERE year=? GROUP BY anlasma ORDER BY gerceklesen DESC`
     ).all(hakedisYear);
 
-    // === SATIS AKTIVITELERI (teklif haric) ===
-    const NOT_OFFER = "activity_type != 'teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL)";
-    const salesActByType = db.prepare("SELECT activity_type as type, COUNT(*) as c FROM sales_activities WHERE " + NOT_OFFER + " GROUP BY activity_type ORDER BY c DESC").all();
-    const salesActThisMonth = db.prepare("SELECT COUNT(*) as c FROM sales_activities WHERE " + NOT_OFFER + " AND substr(date,1,7)=?").get(thisMonth).c;
-    const salesActLastMonth = db.prepare("SELECT COUNT(*) as c FROM sales_activities WHERE " + NOT_OFFER + " AND substr(date,1,7)=?").get(lastMonth).c;
-    const salesActRecent = db.prepare("SELECT id, customer_name, activity_type, date, contact_person, employee_name FROM sales_activities WHERE " + NOT_OFFER + " ORDER BY date DESC, created_date DESC LIMIT 5").all();
-
-    // === SON TEKLİFLER ===
-    const recentOffers = db.prepare("SELECT customer_name, title, amount as total_amount, currency, deal_status as status, created_date FROM sales_activities WHERE activity_type='teklif_sunumu' AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date DESC LIMIT 6").all();
-
     res.json({
       hr: { totalEmployees, onLeaveToday, onLeaveTodayList, pendingLeaves, thisMonthExpenses, pendingExpenses },
-      sales: { totalCustomers, potentialCustomers, thisMonthOffers, lastMonthOffers, acceptedOffers, offersByStatus, wonCount, lostCount, winRate, pipeline },
+      sales: { totalCustomers, potentialCustomers },
       is_takibi: { totalProjects, jobTrackingCustomers, activeProjects, ticketsByStatus, overdueTickets, thisMonthTickets, openTickets, resolvedThisMonth, execTodayOpened, execTodayClosed, ticketByStatusOpen, ticketByCustomer },
-      activities: { upcomingVisits },
-      trends: { expenses: expenseTrend, expensesPending: expenseTrendPending, offers: offerTrend, offersWonLost: offerWonLostTrend, expenseByCategory },
-      recent: { offers: recentOffers },
-      salesActivities: { byType: salesActByType, thisMonth: salesActThisMonth, lastMonth: salesActLastMonth, recent: salesActRecent },
+      trends: { expenses: expenseTrend, expensesPending: expenseTrendPending, expenseByCategory },
       contracts: { stats: contractStats, active: activeContracts, expiring: expiringContracts, byType: contractByType, valueActive: contractValueActive },
       hakedis: { year: hakedisYear, years: hakedisYears, monthly: hakedisMonthly, totals: hakedisTotals, bySektor: hakedisBySektor, byAnlasma: hakedisByAnlasma },
       generatedAt: new Date().toISOString()

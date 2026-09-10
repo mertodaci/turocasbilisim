@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck, Shield, User, Users, Briefcase, GraduationCap, TrendingUp } from "lucide-react";
+import { ShieldCheck, Shield, User, Users, Briefcase, GraduationCap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useRolePermissions, MODULES } from "@/lib/RolePermissionsContext";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -15,7 +15,6 @@ const ROLE_ICONS = {
   kullanici:{ icon: User,        color: "text-blue-600",   bg: "bg-blue-500",   light: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800" },
   stajer:   { icon: GraduationCap,color:"text-green-600",  bg: "bg-green-500",  light: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" },
   musteri:  { icon: Users,       color: "text-orange-600", bg: "bg-orange-500", light: "bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800" },
-  satis:    { icon: TrendingUp,  color: "text-teal-600",   bg: "bg-teal-500",   light: "bg-teal-50 border-teal-200 dark:bg-teal-950/30 dark:border-teal-800" },
 };
 
 const CATEGORIES = [
@@ -25,7 +24,6 @@ const CATEGORIES = [
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map"] },
   { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler"] },
-  { label: "Satış",            keys: ["satis", "satis_aktivite_ekle", "satis_teklifleri", "satis_raporlari"] },
   { label: "Raporlar",         keys: ["quick_report"] },
   { label: "Sistem Yönetimi",  keys: ["users", "app_version", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
   { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_excel"] },

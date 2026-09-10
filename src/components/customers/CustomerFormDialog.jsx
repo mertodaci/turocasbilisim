@@ -8,14 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const PARTIES = ["AK PARTİ","CHP","MHP","İYİ PARTİ","DEM PARTİ","YRP","DEVA","SAADET","DP","DSP","TİP","TRP","BAĞIMSIZ"];
-
 const empty = {
   company_name: "", customer_type: "", municipality_type: "", customer_detail: "",
   population: "", project_manager: "", deploy_responsible: "", city: "",
   status: "aktif", notes: "", use_job_tracking: false,
-  district: "", party: "", top_manager: "", contact_title: "",
-  current_firm: "", assigned_sales: "", address: "", is_potential: 0,
+  district: "", party: "", top_manager: "", address: "", is_potential: 0,
 };
 
 export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading, customer }) {
@@ -160,19 +157,8 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Satış Sorumlusu</Label>
-                <Select value={form.assigned_sales} onValueChange={(v) => set("assigned_sales", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
                 <Label>Parti</Label>
                 <Input value={form.party} onChange={(e) => set("party", e.target.value)} placeholder="Parti" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Mevcut Firma</Label>
-                <Input value={form.current_firm} onChange={(e) => set("current_firm", e.target.value)} placeholder="Mevcut firma" />
               </div>
             </div>
           </div>

@@ -14,28 +14,11 @@ import PersonalCalendarDayDetail from "@/components/calendar/PersonalCalendarDay
 
 export default function PersonalCalendar() {
   const { user } = useAuth();
-  // Kişisel aktiviteler yalnız satış rolünde tutulur (sales_activities tablosu).
-  const isSatis = user?.role === "satis";
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-
-  // Kullanıcının Employee kaydını bul
-  const { data: employeeRecord } = useQuery({
-    queryKey: ["my-employee", user?.email],
-    queryFn: () => flowApi.entities.Employee.filter({ email: user.email }),
-    enabled: !!user?.email,
-    select: (data) => data[0],
-  });
-
-  // Kişisel satış aktiviteleri (yalnız satış rolü)
-  const { data: activities = [] } = useQuery({
-    queryKey: ["personal-sales-activities", employeeRecord?.id],
-    queryFn: () => flowApi.entities.SalesActivity.filter({ employee_id: employeeRecord.id }),
-    enabled: isSatis && !!employeeRecord?.id,
-  });
 
   // Yapılacaklar
   const { data: todos = [] } = useQuery({
@@ -44,7 +27,7 @@ export default function PersonalCalendar() {
     enabled: !!user,
   });
 
-  // Onaylanmış izin talepleri (employee_id veya email ile)
+  // Onaylanmış izin talepleri
   const { data: leaveRequests = [] } = useQuery({
     queryKey: ["personal-leaves", user?.email],
     queryFn: () => flowApi.entities.LeaveRequest.filter({ employee_email: user.email, status: "onaylandi" }),
@@ -63,10 +46,9 @@ export default function PersonalCalendar() {
 
   const getEventsForDay = (date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    const dayActivities = activities.filter((a) => a.date === dateStr);
     const dayTodos = todos.filter((t) => t.due_date === dateStr);
     const dayLeaves = leaveRequests.filter((l) => dateStr >= l.start_date && dateStr <= l.end_date);
-    return { activities: dayActivities, todos: dayTodos, leaves: dayLeaves };
+    return { todos: dayTodos, leaves: dayLeaves };
   };
 
   const selectedDayEvents = getEventsForDay(selectedDay);
@@ -105,7 +87,6 @@ export default function PersonalCalendar() {
 
       {/* Renk Açıklamaları */}
       <div className="flex flex-wrap gap-4 text-xs">
-        {isSatis && <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500" />Aktivite</span>}
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500" />Yapılacak</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500" />Onaylı İzin</span>
       </div>
@@ -122,8 +103,8 @@ export default function PersonalCalendar() {
           </div>
           <div className="grid grid-cols-7">
             {days.map((day, i) => {
-              const { activities: da, todos: dt, leaves: dl } = getEventsForDay(day);
-              const totalEvents = da.length + dt.length + dl.length;
+              const { todos: dt, leaves: dl } = getEventsForDay(day);
+              const totalEvents = dt.length + dl.length;
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isSelected = isSameDay(day, selectedDay);
               const isTodayDate = isToday(day);
@@ -153,9 +134,6 @@ export default function PersonalCalendar() {
                     </span>
                   </div>
                   <div className="space-y-0.5">
-                    {da.slice(0, 1).map((_, ai) => (
-                      <div key={`a-${ai}`} className="h-1.5 w-full rounded-full bg-blue-500 opacity-80" />
-                    ))}
                     {dt.slice(0, 1).map((_, ti) => (
                       <div key={`t-${ti}`} className="h-1.5 w-full rounded-full bg-amber-500 opacity-80" />
                     ))}
@@ -175,7 +153,6 @@ export default function PersonalCalendar() {
         {/* Gün Detay Paneli */}
         <PersonalCalendarDayDetail
           date={selectedDay}
-          activities={selectedDayEvents.activities}
           todos={selectedDayEvents.todos}
           leaves={selectedDayEvents.leaves}
         />

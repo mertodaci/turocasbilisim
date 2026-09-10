@@ -38,11 +38,6 @@ export const MODULES = [
   { key: "support_center",      label: "Destek Merkezi",         path: "/destek-merkezi" },
   { key: "org_chart",           label: "Organizasyon Semasi",    path: "/org-sema" },
   { key: "quick_report",        label: "Hizli Raporlama",        path: "/hizli-rapor" },
-  { key: "satis",               label: "Satış",                  path: null },
-  { key: "satis_masasi",        label: "Satış Masası",           path: "/satis-raporlari" },
-  { key: "satis_aktivite_ekle", label: "Satış Aktivite Ekle",     path: "/satis-aktivite-ekle" },
-  { key: "satis_teklifleri",    label: "Teklifler",              path: "/satis-teklifleri" },
-  { key: "satis_raporlari",     label: "Satış Raporları",        path: "/satis-raporlari" },
   { key: "sozlesmeler",         label: "Sözleşmeler",            path: "/sozlesmeler" },
   { key: "hakedisler",          label: "Hakediş",                path: "/hakedisler" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
@@ -109,7 +104,6 @@ export const DEFAULT_PERMISSIONS = {
   kullanici: { ...none(), dashboard:{view:true,add:false,edit:false,delete:false}, customers:{view:true,add:false,edit:false,delete:false}, messages:{view:true,add:true,edit:true,delete:true}, todos:{view:true,add:true,edit:true,delete:true}, my_leave_requests:{view:true,add:true,edit:false,delete:true}, personal_calendar:{view:true,add:false,edit:false,delete:false}, customer_map:{view:true,add:false,edit:false,delete:false}, expenses:{view:true,add:true,edit:true,delete:false}, is_takibi:{view:true,add:true,edit:true,delete:false}, is_takibi_dashboard:{view:true,add:false,edit:false,delete:false}, is_takibi_projeler:{view:true,add:false,edit:false,delete:false}, is_takibi_biletler:{view:true,add:true,edit:true,delete:false}, is_takibi_kanban:{view:true,add:false,edit:false,delete:false} },
   stajer: { ...none(), dashboard:{view:true,add:false,edit:false,delete:false}, my_leave_requests:{view:true,add:true,edit:false,delete:false}, messages:{view:true,add:true,edit:false,delete:false}, todos:{view:true,add:true,edit:false,delete:false} },
   musteri: { ...none(), is_takibi:{view:true,add:false,edit:false,delete:false}, is_takibi_dashboard:{view:true,add:false,edit:false,delete:false}, is_takibi_projeler:{view:true,add:false,edit:false,delete:false}, is_takibi_biletler:{view:true,add:true,edit:true,delete:false}, is_takibi_kanban:{view:true,add:false,edit:false,delete:false} },
-  satis: { ...none(), dashboard:{view:true,add:false,edit:false,delete:false}, customers:{view:true,add:true,edit:true,delete:false}, messages:{view:true,add:true,edit:true,delete:false}, todos:{view:true,add:true,edit:true,delete:true}, expenses:{view:true,add:true,edit:true,delete:false}, my_leave_requests:{view:true,add:true,edit:false,delete:false}, users:{view:true,add:false,edit:false,delete:false}, app_version:{view:true,add:false,edit:false,delete:false}, satis:{view:true,add:true,edit:true,delete:false}, satis_masasi:{view:true,add:false,edit:false,delete:false}, satis_aktivite_ekle:{view:true,add:true,edit:true,delete:false}, satis_teklifleri:{view:true,add:true,edit:true,delete:false}, satis_raporlari:{view:true,add:false,edit:false,delete:false} },
 };
 
 const RolePermissionsContext = createContext({ MODULES, DEFAULT_PERMISSIONS });

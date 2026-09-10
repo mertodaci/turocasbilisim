@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, TrendingUp, X, ToggleLeft, ToggleRight } from "lucide-react";
+import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, X, ToggleLeft, ToggleRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -15,7 +15,6 @@ const ROLE_CONFIG = {
   yonetici: { label:"Yönetici",  bg:"bg-purple-500", light:"bg-purple-50 border-purple-200 text-purple-700", icon: Shield },
   ik:       { label:"IK",        bg:"bg-pink-500",   light:"bg-pink-50 border-pink-200 text-pink-700",   icon: Briefcase },
   kullanici:{ label:"Kullanıcı", bg:"bg-blue-500",   light:"bg-blue-50 border-blue-200 text-blue-700",   icon: User },
-  satis:    { label:"Satış",     bg:"bg-teal-500",   light:"bg-teal-50 border-teal-200 text-teal-700",   icon: TrendingUp },
   stajer:   { label:"Stajer",    bg:"bg-green-500",  light:"bg-green-50 border-green-200 text-green-700", icon: GraduationCap },
   musteri:  { label:"Müşteri",   bg:"bg-orange-500", light:"bg-orange-50 border-orange-200 text-orange-700", icon: UsersIcon },
 };

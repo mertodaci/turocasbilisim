@@ -2,11 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { departmentLabels } from "@/lib/activityHelpers";
 import { FileDown, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
+
+const departmentLabels = {
+  satis: "Satış", pazarlama: "Pazarlama", musteri_hizmetleri: "Müşteri Hizmetleri",
+  teknik: "Teknik", yonetim: "Yönetim", insan_kaynaklari: "İnsan Kaynakları", finans: "Finans",
+};
 
 const educationLabels = {
   ilkokul: "İlkokul",

@@ -3015,8 +3015,20 @@ app.post('/api/ik/kesinti/plan', authMiddleware, (req, res) => {
   const bay = Number(b.baslangic_ay) || (bd.getMonth() + 1);
   let aylik, taksitSayisi, refMaas = 0;
   if (b.tur === 'icra') {
+    // GUVENLIK/DOGRULUK: icra kesintisi kanunen NET ucret uzerinden hesaplanir,
+    // brut degil. SGK/gelir vergisi motoru eklenmeden once resmi_net ~ resmi_toplam
+    // (brut) oldugu icin brut/4 kabul edilebilir bir yakinsamaydi -- artik net
+    // gercekten dusuk ciktigi icin brut/4 kullanmak, gercek net'in 1/4'unden FAZLA
+    // aylik kesinti onerip yasal siniri asabilirdi. Referans olarak, ayni vergi
+    // motoruyla (SGK/issizlik/gelir vergisi/damga vergisi) TAHMINI net hesaplanir
+    // (mesai/prim/yol-yemek haric, sadece aylik_ucret uzerinden -- plan olusturma
+    // aninda o veriler bilinmiyor; kesin rakam degil ama brut'ten cok daha yakin).
     refMaas = Number(emp.aylik_ucret) || 0;
-    aylik = +(refMaas / 4).toFixed(2);                    // ayda max maaşın 1/4'ü
+    const vergiAyarlari = db.prepare('SELECT * FROM ik_vergi_ayarlari WHERE id=1').get() || {};
+    const dilimler = db.prepare('SELECT alt_sinir, ust_sinir, oran FROM ik_gelir_vergisi_dilimleri WHERE yil=? ORDER BY sira ASC, alt_sinir ASC').all(byil);
+    const vergiTahmini = ikVergiHesapla(db, { personelId: emp.id, yil: byil, ay: bay, resmiToplam: refMaas, vergiAyarlari, dilimler });
+    const tahminiNet = Math.max(0, +(refMaas - vergiTahmini.net_kesinti_toplami).toFixed(2));
+    aylik = +(tahminiNet / 4).toFixed(2);                 // ayda max (tahmini) net'in 1/4'u
     taksitSayisi = aylik > 0 ? Math.ceil(toplam / aylik) : 1;
   } else {
     taksitSayisi = Math.max(1, Number(b.taksit_sayisi) || 1);

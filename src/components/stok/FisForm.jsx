@@ -40,6 +40,8 @@ export default function FisForm({ tip }) {
   const [lines, setLines] = useState([bosSatir()]);
   const [durum, setDurum] = useState("taslak");
   const [saving, setSaving] = useState(false);
+  const [depoKullanilabilir, setDepoKullanilabilir] = useState({}); // { [urun_id]: miktar }
+  const [depoFifoMaliyet, setDepoFifoMaliyet] = useState({}); // { [urun_id]: en eski açık partinin alış maliyeti }
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 5000) });
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
@@ -70,6 +72,26 @@ export default function FisForm({ tip }) {
     }).catch((e) => toast.error("Fiş açılamadı: " + (e?.message || "hata")));
   }, [editId]); // eslint-disable-line
 
+  // Çıkış/Transfer/İade'de kaynak depo seçilince, o depodaki tüm ürünlerin
+  // kullanılabilir miktarı + en eski açık partinin gerçek maliyeti tek seferde çekilir.
+  useEffect(() => {
+    if (tip === "giris" || !header.kaynak_depo_id) { setDepoKullanilabilir({}); setDepoFifoMaliyet({}); return; }
+    let iptal = false;
+    flowApi.stok.rapor("durum", { depo_id: header.kaynak_depo_id }).then((r) => {
+      if (iptal) return;
+      const m = {};
+      (r?.rows || []).forEach((row) => { m[row.urun_id] = (m[row.urun_id] || 0) + (row.kullanilabilir || 0); });
+      setDepoKullanilabilir(m);
+    }).catch(() => {});
+    flowApi.stok.partiler({ depo_id: header.kaynak_depo_id, durum: "acik" }).then((rows) => {
+      if (iptal) return;
+      const m = {};
+      (rows || []).forEach((p) => { if (!(p.urun_id in m)) m[p.urun_id] = p.alis_maliyeti; }); // liste zaten FIFO sıralı, ilk görülen = en eski
+      setDepoFifoMaliyet(m);
+    }).catch(() => {});
+    return () => { iptal = true; };
+  }, [tip, header.kaynak_depo_id]);
+
   const depoAdi = (id) => depolar.find((d) => d.id === id)?.ad || "";
   const urunById = (id) => urunler.find((u) => u.id === id);
   const isSerili = (id) => { const u = urunById(id); return u?.seri_no_takip === 1 || u?.seri_no_takip === true; };
@@ -82,10 +104,13 @@ export default function FisForm({ tip }) {
 
   const onPickUrun = (i, urunId) => {
     const u = urunler.find((x) => x.id === urunId);
+    // Çıkış/Transfer/İade'de o depodaki en eski açık partinin gerçek maliyeti
+    // varsa onu öner (ürün kartının sabit satış fiyatı yerine); yoksa eskisi gibi.
+    const fifoMaliyet = tip !== "giris" ? depoFifoMaliyet[urunId] : undefined;
     setLine(i, {
       urun_id: urunId, urun_adi: u?.ad || "", urun_kodu: u?.kod || "", barkod: u?.barkod || "",
       birim: u?.ana_birim || "ADET", carpan: 1, miktar: 1, seri_no: "",
-      birim_fiyat: tip === "giris" ? (u?.alis_fiyati || 0) : (u?.satis_fiyati || 0),
+      birim_fiyat: tip === "giris" ? (u?.alis_fiyati || 0) : (fifoMaliyet ?? (u?.satis_fiyati || 0)),
       raf_omru_ay: tip === "giris" ? (u?.varsayilan_raf_omru_ay || "") : "",
     });
   };
@@ -267,7 +292,12 @@ export default function FisForm({ tip }) {
                 </div>
               )}
               <div className="md:col-span-1">
-                <Label className="mb-1 block text-xs">Birim</Label>
+                <Label className="mb-1 block text-xs">
+                  Birim
+                  {tip !== "giris" && l.urun_id && header.kaynak_depo_id && (
+                    <span className="ml-1 font-normal text-muted-foreground">· çıkabilir: {depoKullanilabilir[l.urun_id] ?? 0}</span>
+                  )}
+                </Label>
                 <Input value={l.birim} onChange={(e) => setLine(i, { birim: e.target.value })} />
               </div>
               <div className="md:col-span-1">

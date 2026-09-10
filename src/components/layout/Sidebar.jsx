@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, Search, BookmarkCheck, CalendarClock, Calculator, Lock } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, Search, CalendarClock, Calculator, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -170,8 +170,6 @@ export const allNavItems = [
       labelKey: "stok_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "kullanici"],
       children: [
         { labelKey: "stok_mobil", path: "/stok/mobil", icon: Smartphone, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_talep", path: "/stok/talep", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "stok_rezervasyon", path: "/stok/rezervasyon", icon: BookmarkCheck, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_fisler", path: "/stok/fisler", icon: FileText, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_sayim", path: "/stok/sayim", icon: ClipboardCheck, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_satinalma", path: "/stok/satin-alma", icon: ShoppingCart, roles: ["admin", "yonetici", "kullanici"] },

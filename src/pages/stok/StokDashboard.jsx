@@ -42,7 +42,6 @@ export default function StokDashboard() {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">İş Kuyruğu</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <Kart icon={FileText} lbl="Bekleyen Fiş" val={k.bekleyen_fis} alt="taslak / onay bekleyen" to="/stok/fisler" cls="text-amber-500" />
-              <Kart icon={ClipboardCheck} lbl="Açık Talep" val={k.bekleyen_talep} alt="onay / sevk bekleyen" to="/stok/talep" cls="text-amber-500" />
               <Kart icon={ClipboardCheck} lbl="Sayım Görevi" val={k.sayim_gorevi} alt="devam eden sayım" to="/stok/sayim" cls="text-amber-500" />
               <Kart icon={Undo2} lbl="Geciken Zimmet" val={k.geciken_zimmet} alt="termin geçti" to="/stok/zimmet" cls="text-red-500" />
               <Kart icon={CalendarClock} lbl="SKT Geçen Parti" val={k.skt_gecen} alt="bakiyeli" to="/stok/partiler" cls="text-red-500" />

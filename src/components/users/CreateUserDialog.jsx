@@ -9,7 +9,6 @@ const ROLES = [
   { value: "kullanici", label: "Kullanıcı" },
   { value: "yonetici", label: "Yönetici" },
   { value: "ik", label: "İK" },
-  { value: "satis", label: "Satış" },
   { value: "stajer", label: "Stajer" },
   { value: "musteri", label: "Müşteri" },
   { value: "admin", label: "Admin" },

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 
 
 
-import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useJTNotifications, useStokAlerts } from '@/lib/NotificationContext';
+import { useMessages, useTodos, useLeave, useExpense, useJTNotifications, useStokAlerts } from '@/lib/NotificationContext';
 
 import { useLanguage } from "@/lib/LanguageContext";
 
@@ -16,7 +16,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { useQuery } from "@tanstack/react-query";
 
 export const allNavItems = [
-{ labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici", "satis"] },
+{ labelKey: "dashboard", path: "/", icon: LayoutDashboard, roles: ["admin", "yonetici", "kullanici"] },
 
 {
   labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
@@ -34,12 +34,12 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "support_center", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"],
+  labelKey: "support_center", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"],
   children: [
-    { labelKey: "messages", path: "/mesajlar", icon: MessageCircle, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
-    { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici", "satis"] },
-    { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik", "satis"] },
-    { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "satis", "stajer"] },
+    { labelKey: "messages", path: "/mesajlar", icon: MessageCircle, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
+    { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] },
+    { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
   ]
 },
 {
@@ -113,9 +113,9 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici", "satis"],
+  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
   children: [
-    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici", "satis"] },
+    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
     { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
   ]
 },
@@ -302,7 +302,6 @@ export default function Sidebar() {
   const { pendingLeaveCount } = useLeave();
   const { pendingExpenseCount, pendingExpenseIKCount } = useExpense();
   const { assignedTicketCount } = useJTNotifications();
-  const { pendingWorkTaskCount } = useWorkTasks();
   const { stokUyariCount } = useStokAlerts();
   const { t } = useLanguage();
   const { hasPermission } = useRolePermissions();
@@ -372,7 +371,6 @@ export default function Sidebar() {
     const childShowJTBadge = child.labelKey === "is_takibi_biletler" && assignedTicketCount > 0;
     const childShowMessageBadge = child.labelKey === "messages" && unreadMessageCount > 0;
     const childShowTodoBadge = child.labelKey === "todos" && unreadTodoCount > 0;
-    const childShowWorkTaskBadge = child.labelKey === "work_tracking" && pendingWorkTaskCount > 0;
     const childShowStokBadge = child.labelKey === "stok_dashboard" && stokUyariCount > 0;
     const isFav = favorites.includes(child.labelKey);
 
@@ -392,7 +390,6 @@ export default function Sidebar() {
         {childShowJTBadge && <span className="flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
         {childShowMessageBadge && <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadMessageCount}</span>}
         {childShowTodoBadge && <span className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">{unreadTodoCount}</span>}
-        {childShowWorkTaskBadge && <span className="flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{pendingWorkTaskCount}</span>}
         {childShowStokBadge && <span className="flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
         {!collapsed && (
           <button
@@ -509,7 +506,7 @@ export default function Sidebar() {
             const showTodoBadge = item.labelKey === "my_workspace" && myWorkspaceTotal > 0;
             const showHrBadge = item.labelKey === "hr" && (pendingLeaveCount > 0 || pendingExpenseIKCount > 0);
             const showMyLeaveBadge = false;
-            const supportTotal = pendingWorkTaskCount + unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount;
+            const supportTotal = unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount;
             const showSupportBadge = item.labelKey === "support_center" && supportTotal > 0;
             const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
             const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;

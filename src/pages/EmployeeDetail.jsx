@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Navigate } from "react-router-dom";
 import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature } from "lucide-react";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, differenceInYears, addYears } from "date-fns";
+import { format, differenceInYears, addYears } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,18 +96,6 @@ export default function EmployeeDetail() {
   const seniority = employee?.hire_date ? differenceInYears(new Date(), new Date(employee.hire_date)) : null;
   const entitledDays = entitledTotal;
 
-  const { data: activities = [], isLoading: loadingActivities } = useQuery({
-    queryKey: ["activities", employeeId],
-    queryFn: async () => {
-      // Calisan: sadece kendi aktivitelerini gör
-      if (!isPrivileged && employee?.email !== user?.email) {
-        return [];
-      }
-      return flowApi.entities.Activity.filter({ employee_id: employeeId }, "-date", 100);
-    },
-    enabled: !!employee,
-  });
-
   const { data: leaveMovements = [], isLoading: loadingLeaveMovements } = useQuery({
     queryKey: ["employee-leave-movements", employeeId],
     queryFn: () => flowApi.entities.LeaveRequest.filter({ employee_id: employeeId, status: "onaylandi" }, "-start_date"),
@@ -130,21 +118,6 @@ export default function EmployeeDetail() {
   if (!isPrivileged && employee?.email !== user?.email) {
     return <Navigate to="/calisanlar" replace />;
   }
-
-  const today = format(new Date(), "yyyy-MM-dd");
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-  const monthStart = startOfMonth(new Date());
-  const monthEnd = endOfMonth(new Date());
-
-  const todayActs = activities.filter((a) => a.date === today);
-  const weekActs = activities.filter((a) => isWithinInterval(new Date(a.date), { start: weekStart, end: weekEnd }));
-  const monthActs = activities.filter((a) => isWithinInterval(new Date(a.date), { start: monthStart, end: monthEnd }));
-
-  const todayMin = todayActs.reduce((s, a) => s + (a.duration_minutes || 0), 0);
-  const weekMin = weekActs.reduce((s, a) => s + (a.duration_minutes || 0), 0);
-  const phoneMin = monthActs.filter(a => a.activity_type === "telefon_gorusmesi").reduce((s, a) => s + (a.duration_minutes || 0), 0);
-  const meetingCount = monthActs.filter(a => a.activity_type === "ofis_toplantisi" || a.activity_type === "musteri_toplantisi").length;
 
   return (
     <div className="space-y-6 max-w-5xl">

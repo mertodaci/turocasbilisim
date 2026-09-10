@@ -18,7 +18,7 @@ import {
 
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { useMessages, useTodos, useLeave, useExpense, useWorkTasks, useJTNotifications } from "@/lib/NotificationContext";
+import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from "@/lib/NotificationContext";
 import { useQuery } from "@tanstack/react-query";
 
 const themes = [
@@ -32,12 +32,11 @@ function NotificationBell() {
   const { unreadTodoCount } = useTodos();
   const { pendingLeaveCount } = useLeave();
   const { pendingExpenseCount, pendingExpenseIKCount } = useExpense();
-  const { pendingWorkTaskCount } = useWorkTasks();
   const { assignedTicketCount } = useJTNotifications();
   const { user } = useAuth();
 
   const isPrivileged = user?.role === "admin" || user?.role === "yonetici";
-  const total = unreadMessageCount + unreadTodoCount + (isPrivileged ? pendingLeaveCount : 0) + pendingWorkTaskCount + assignedTicketCount + (isPrivileged ? pendingExpenseIKCount : pendingExpenseCount);
+  const total = unreadMessageCount + unreadTodoCount + (isPrivileged ? pendingLeaveCount : 0) + assignedTicketCount + (isPrivileged ? pendingExpenseIKCount : pendingExpenseCount);
 
   // Yeni bir bildirim gelince zil birkac saniyeligine "sallaniyor" -- boylece
   // uygulama icindeyken de (baska sekmeye gecmeden) yeni bir sey geldigini
@@ -66,7 +65,6 @@ function NotificationBell() {
     unreadMessageCount > 0 && { label: "Okunmamış mesaj", count: unreadMessageCount, path: "/mesajlar", icon: MessageCircle, color: "text-red-500" },
     unreadTodoCount > 0 && { label: "Bekleyen görev", count: unreadTodoCount, path: "/yapilacaklar", icon: CheckSquare, color: "text-blue-500" },
     isPrivileged && pendingLeaveCount > 0 && { label: "Bekleyen izin talebi", count: pendingLeaveCount, path: "/izin-talepleri", icon: Umbrella, color: "text-orange-500" },
-    pendingWorkTaskCount > 0 && { label: "Bekleyen iş görevi", count: pendingWorkTaskCount, path: "/is-takip", icon: ClipboardList, color: "text-purple-500" },
     assignedTicketCount > 0 && { label: "Atanan İş Takibi bileti", count: assignedTicketCount, path: "/is-takibi/tickets", icon: ClipboardList, color: "text-teal-500" },
     isPrivileged && pendingExpenseIKCount > 0 && { label: "Bekleyen harcama onayı", count: pendingExpenseIKCount, path: "/ik-harcama-yonetimi", icon: ClipboardList, color: "text-amber-500" },
     !isPrivileged && pendingExpenseCount > 0 && { label: "Bekleyen harcamam", count: pendingExpenseCount, path: "/harcamalar", icon: ClipboardList, color: "text-amber-500" },

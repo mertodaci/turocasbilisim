@@ -37,7 +37,6 @@ export const NotificationProvider = ({ children }) => {
             queryClient.invalidateQueries({ queryKey: ['notif-messages'] });
             queryClient.invalidateQueries({ queryKey: ['notif-leave'] });
             queryClient.invalidateQueries({ queryKey: ['notif-expense'] });
-            queryClient.invalidateQueries({ queryKey: ['notif-worktask'] });
             queryClient.invalidateQueries({ queryKey: ['notif-jt'] });
             queryClient.invalidateQueries({ queryKey: ['notif-stok-uyari'] });
             queryClient.invalidateQueries({ queryKey: ['messages'] });
@@ -212,18 +211,6 @@ export const NotificationProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [user?.email, isPrivileged]);
 
-  // ── Work tasks ───────────────────────────────────────────────────
-  const { data: workTasks = [] } = useQuery({
-    queryKey: ['notif-worktask'],
-    queryFn: () => flowApi.entities.WorkTask.list(),
-    enabled: !!user && user?.role !== 'musteri',
-    refetchInterval: 3000,
-  });
-  const pendingWorkTaskCount = useMemo(() =>
-    workTasks.filter(t => t.status === 'beklemede' || t.status === 'onay_bekliyor').length,
-    [workTasks]
-  );
-
   // ── JT assigned tickets ──────────────────────────────────────────
   const { data: assignedTickets = [] } = useQuery({
     queryKey: ['notif-jt-tickets', employeeRecord?.id],
@@ -264,7 +251,6 @@ export const NotificationProvider = ({ children }) => {
       flowApi.entities.Todo.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-todos'] })),
       flowApi.entities.Message.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-conversations'] })),
       flowApi.entities.Conversation.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-conversations'] })),
-      flowApi.entities.WorkTask.subscribe(() => queryClient.invalidateQueries({ queryKey: ['notif-worktask'] })),
     ];
     return () => unsubs.forEach(u => u?.());
   }, [user?.email]);
@@ -276,7 +262,6 @@ export const NotificationProvider = ({ children }) => {
       pendingLeaveCount,
       pendingExpenseCount,
       pendingExpenseIKCount,
-      pendingWorkTaskCount,
       assignedTicketCount,
       assignedTickets,
       stokUyariCount,
@@ -305,10 +290,6 @@ export const useLeave = () => {
 export const useExpense = () => {
   const { pendingExpenseCount, pendingExpenseIKCount, fetchExpenseCount } = useNotifications();
   return { pendingExpenseCount, pendingExpenseIKCount, fetchPendingCount: fetchExpenseCount };
-};
-export const useWorkTasks = () => {
-  const { pendingWorkTaskCount } = useNotifications();
-  return { pendingWorkTaskCount };
 };
 export const useTodos = () => {
   const { unreadTodoCount } = useNotifications();

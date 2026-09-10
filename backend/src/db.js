@@ -68,7 +68,7 @@ function migrateLegacyJobTrackingRename() {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
        'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle',
-       'ikb_vip','ikb_dashboard')`).run();
+       'ikb_vip','ikb_dashboard','app_version')`).run();
   } catch { /* role_permissions henüz yoksa sorun değil */ }
   // 'satis' rolü kaldırıldı — mevcut kullanıcılar 'kullanici'ye taşınır.
   try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
@@ -482,7 +482,7 @@ function initDb() {
       // disinda HICBIR role bu modul hicbir zaman verilemiyordu, admin
       // ekranindan izin verilse bile etkisizdi.
       'personel_hareketleri',
-      'personal_calendar','reports','employee_report','users','app_version','definitions',
+      'personal_calendar','reports','employee_report','users','definitions',
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',

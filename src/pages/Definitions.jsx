@@ -4,7 +4,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Check, X, ToggleLeft, ToggleRight, Settings, Users, Building2, Activity, FileText, Package, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, ToggleLeft, ToggleRight, Settings, Users, Building2, FileText, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 const CATEGORIES = [
@@ -17,9 +17,6 @@ const CATEGORIES = [
   { key: "belediye_tipi",  label: "Belediye Tipleri",  group: "Müşteri" },
   { key: "nufus_araligi",  label: "Nüfus Aralıkları",  group: "Müşteri" },
   { key: "sehir",          label: "Şehirler",           group: "Müşteri" },
-  { key: "aktivite_tipi",  label: "Aktivite Tipleri",  group: "Aktivite" },
-  { key: "satis_aktivite_tipi",  label: "Satış Aktivite Tipleri",  group: "Satış" },
-  { key: "lokasyon",       label: "Lokasyonlar",        group: "Aktivite" },
   { key: "sozlesme_turu",  label: "Sözleşme Türleri",  group: "Sözleşme" },
   { key: "modul",          label: "Modüller",           group: "Ürün-Modül" },
   { key: "urun",           label: "Ürünler",            group: "Ürün-Modül" },
@@ -31,7 +28,6 @@ const GROUPS = [
   { key: "Aktivite",   icon: Activity,   color: "text-green-500",  bg: "bg-green-50 dark:bg-green-950/30",  border: "border-green-200 dark:border-green-800" },
   { key: "Sözleşme",   icon: FileText,   color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800" },
   { key: "Ürün-Modül", icon: Package,    color: "text-teal-500",   bg: "bg-teal-50 dark:bg-teal-950/30",   border: "border-teal-200 dark:border-teal-800" },
-  { key: "Satış",      icon: Activity,   color: "text-rose-500",   bg: "bg-rose-50 dark:bg-rose-950/30",   border: "border-rose-200 dark:border-rose-800" },
 ];
 
 const COLOR_OPTIONS = [
@@ -323,33 +319,16 @@ function DefinitionsScreen({ groups, categories, title, subtitle }) {
   );
 }
 
-// Sistem Yönetimi > Tanım Ekranları: İK ile ilgili "Çalışan" grubu buradan
-// çıkarıldı, İnsan Kaynakları menüsündeki Tanım alt menüsüne taşındı
-// (bkz. EmployeeDefinitions).
-const SYSTEM_GROUPS = GROUPS.filter(g => g.key !== "Çalışan");
-const SYSTEM_CATEGORIES = CATEGORIES.filter(c => c.group !== "Çalışan");
-
+// Tek "Genel Tanımlar" ekranı: çalışan + müşteri + sözleşme + ürün/modül
+// parametrik tanımları. (Eski "Tanım Ekranları" hub'ı kaldırıldı; içeriği buraya
+// katlandı.) İnsan Kaynakları › Tanımlar altında, /ik-tanimlar yolunda.
 export default function Definitions() {
   return (
     <DefinitionsScreen
-      groups={SYSTEM_GROUPS}
-      categories={SYSTEM_CATEGORIES}
-      title="Tanım Ekranları"
-      subtitle="Sistem genelinde kullanılan parametrik tanımları yönetin"
-    />
-  );
-}
-
-const EMPLOYEE_GROUPS = GROUPS.filter(g => g.key === "Çalışan");
-const EMPLOYEE_CATEGORIES = CATEGORIES.filter(c => c.group === "Çalışan");
-
-export function EmployeeDefinitions() {
-  return (
-    <DefinitionsScreen
-      groups={EMPLOYEE_GROUPS}
-      categories={EMPLOYEE_CATEGORIES}
-      title="Çalışan Tanımları"
-      subtitle="Departman, pozisyon ve diğer çalışan tanımlarını yönetin"
+      groups={GROUPS}
+      categories={CATEGORIES}
+      title="Genel Tanımlar"
+      subtitle="Çalışan, müşteri, sözleşme ve ürün tanımlarını yönetin"
     />
   );
 }

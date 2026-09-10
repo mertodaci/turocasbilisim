@@ -32,9 +32,7 @@ const OrgChart = lazy(() => import('./pages/OrgChart'));
 const QuickReport = lazy(() => import('./pages/QuickReport'));
 const Users = lazy(() => import('./pages/Users'));
 const RolePermissions = lazy(() => import('./pages/RolePermissions'));
-const AppVersion = lazy(() => import('./pages/AppVersion'));
 const Definitions = lazy(() => import('./pages/Definitions'));
-const EmployeeDefinitions = lazy(() => import('./pages/Definitions').then(m => ({ default: m.EmployeeDefinitions })));
 const TrashBin = lazy(() => import('./pages/TrashBin'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const SessionManagement = lazy(() => import('./pages/SessionManagement'));
@@ -206,9 +204,7 @@ const AuthenticatedApp = () => {
         <Route path="/hizli-rapor" element={guard("reports", <QuickReport />)} />
         <Route path="/kullanicilar" element={guard("users", <Users />)} />
         <Route path="/yetkilendirme" element={guard("role_permissions", <RolePermissions />)} />
-        <Route path="/versiyon" element={guard("app_version", <AppVersion />)} />
-        <Route path="/tanimlar" element={guard("definitions", <Definitions />)} />
-        <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <EmployeeDefinitions />)} />
+        <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <Definitions />)} />
         <Route path="/cop-kutusu" element={guard("cop_kutusu", <TrashBin />)} />
         <Route path="/denetim-kaydi" element={guard("denetim_kaydi", <AuditLog />)} />
         <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />

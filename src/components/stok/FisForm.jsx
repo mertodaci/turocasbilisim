@@ -45,6 +45,9 @@ export default function FisForm({ tip }) {
   const [saving, setSaving] = useState(false);
   const [depoKullanilabilir, setDepoKullanilabilir] = useState({}); // { [urun_id]: miktar }
   const [depoFifoMaliyet, setDepoFifoMaliyet] = useState({}); // { [urun_id]: en eski açık partinin alış maliyeti }
+  // { [urun_id]: [seri_no,...] } -- Çıkış(hurda)/Transfer/İade'de "hangi fiziksel
+  // birim" secimi icin: o depoda su an mevcut olan demirbas sicillerinin listesi.
+  const [depoSicilListeleri, setDepoSicilListeleri] = useState({});
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 5000) });
   const ekBarkodMap = useUrunEkBarkodMap();
@@ -103,14 +106,37 @@ export default function FisForm({ tip }) {
   // Demirbaş, Çıkış fişine giremez — kişiye/yere teslim edilecekse Zimmet kullanılmalı.
   // Tek istisna: sebep "Hurdaya Ayırma" / "Kayıp-Çalıntı" ise demirbaş da seçilebilir
   // (backend ayrıca o demirbaşın zimmetsiz — önce İade Alınmış — olmasını zorunlu kılar).
-  // Giriş/Transfer/İade'de demirbaş dahil tüm ürünler seçilebilir.
+  // Sebebe göre ayrıca karışık fiş kısıtı var: "Hurdaya Ayırma" SADECE demirbaş
+  // içerebilir (tüketim malzemesi hurdaya ayrılmaz, sarf edilir); "Kayıp/Çalıntı"
+  // hem demirbaşta hem tüketimde olabileceği için kısıtlanmaz; diğer (normal
+  // sarf) sebeplerde demirbaş hiç giremez. Giriş/Transfer/İade'de demirbaş
+  // dahil tüm ürünler seçilebilir.
   const hurdaIstisnasi = tip === "cikis" && ["hurdaya_ayirma", "kayip_calinti"].includes(header.sebep_kodu);
-  const urunlerForTip = useMemo(
-    () => (tip === "cikis" && !hurdaIstisnasi ? urunler.filter((u) => u.urun_tipi !== "demirbas") : urunler),
-    [urunler, tip, hurdaIstisnasi]
-  );
+  const urunlerForTip = useMemo(() => {
+    if (tip !== "cikis") return urunler;
+    if (header.sebep_kodu === "hurdaya_ayirma") return urunler.filter((u) => u.urun_tipi === "demirbas");
+    if (header.sebep_kodu === "kayip_calinti") return urunler;
+    return urunler.filter((u) => u.urun_tipi !== "demirbas");
+  }, [urunler, tip, header.sebep_kodu]);
   const rafById = (id) => raflar.find((r) => r.id === id);
   const rafOptions = (depoId) => raflar.filter((r) => r.depo_id === depoId).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));
+
+  // Çıkış(hurda)/Transfer/İade'de sicil no artık elle yazılmıyor/üretilmiyor --
+  // kaynak depoda o an fiilen mevcut demirbaş sicillerinden seçiliyor. Çıkış-
+  // hurda için zimmetli olanlar hariç (backend de bunu zorunlu kılıyor);
+  // Transfer/İade'de zimmet durumu aranmaz.
+  useEffect(() => {
+    const ihtiyacVar = (tip === "cikis" && hurdaIstisnasi) || tip === "transfer" || tip === "iade";
+    if (!ihtiyacVar || !header.kaynak_depo_id) { setDepoSicilListeleri({}); return; }
+    const serililer = [...new Set(lines.filter((l) => l.urun_id && isSerili(l.urun_id)).map((l) => l.urun_id))];
+    if (!serililer.length) { setDepoSicilListeleri({}); return; }
+    let iptal = false;
+    const istek = tip === "cikis" ? flowApi.stok.zimmetSeriNoListesi : flowApi.stok.demirbasDepoSicilListesi;
+    Promise.all(serililer.map((uid) => istek(uid, header.kaynak_depo_id).then((liste) => [uid, liste]).catch(() => [uid, []])))
+      .then((sonuclar) => { if (!iptal) setDepoSicilListeleri(Object.fromEntries(sonuclar)); });
+    return () => { iptal = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tip, hurdaIstisnasi, header.kaynak_depo_id, lines.map((l) => l.urun_id).join(",")]);
 
   const setLine = (i, patch) => setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   const addLine = () => setLines((ls) => [...ls, bosSatir()]);
@@ -176,6 +202,13 @@ export default function FisForm({ tip }) {
     // Çıkışta hedef saha opsiyonel; depo hedefi yok (Depo Transfer fişi kullanılır).
     if (tip === "giris" && !header.fatura_no && !header.irsaliye_no && !header.belge_no) return "Fatura / İrsaliye / Fiş No alanlarından en az biri gerekli";
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";
+    if (tip === "cikis") {
+      const secililer = lines.filter((l) => l.urun_id && Number(l.miktar) > 0);
+      if (header.sebep_kodu === "hurdaya_ayirma" && secililer.some((l) => urunById(l.urun_id)?.urun_tipi !== "demirbas"))
+        return "Hurdaya Ayırma sebebiyle açılan bir Çıkış fişi sadece demirbaş içerebilir";
+      if (!hurdaIstisnasi && secililer.some((l) => urunById(l.urun_id)?.urun_tipi === "demirbas"))
+        return "Bu sebeple demirbaş Çıkış fişine giremez — Zimmet kullanın";
+    }
     for (const l of lines) {
       if (!l.urun_id || !isSerili(l.urun_id)) continue;
       if (tip === "giris") continue; // miktar birden fazla olabilir, sicil no'lar otomatik üretilir
@@ -362,11 +395,10 @@ export default function FisForm({ tip }) {
               ) : (
                 <div className="flex items-center gap-2">
                   <Label className="text-xs shrink-0 text-amber-600">Sicil No *</Label>
-                  <Input placeholder="Elle yazın, barkod okutun ya da otomatik üretin" value={l.seri_no}
-                    onChange={(e) => setLine(i, { seri_no: e.target.value })} />
-                  <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setLine(i, { seri_no: `${l.urun_kodu || "SN"}-${Date.now().toString().slice(-6)}` })}>
-                    Otomatik Üret
-                  </Button>
+                  <SearchableSelect value={l.seri_no} onChange={(v) => setLine(i, { seri_no: v })}
+                    options={(depoSicilListeleri[l.urun_id] || []).map((sn) => ({ value: sn, label: sn }))}
+                    placeholder={header.kaynak_depo_id ? ((depoSicilListeleri[l.urun_id] || []).length ? "Sicil no seç" : "Bu depoda müsait yok") : "Önce kaynak depo seçin"}
+                    fixDialogWheelScroll />
                 </div>
               )
             )}

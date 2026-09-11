@@ -1206,8 +1206,14 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   if (fis.tip === 'cikis') {
     const demirbasHatalar = [];
     const hurdaIstisnasi = HURDA_SEBEPLERI.includes(fis.sebep_kodu);
+    // Karışık fiş kısıtı: "Hurdaya Ayırma" SADECE demirbaş içerebilir (tüketim
+    // malzemesi hurdaya ayrılmaz, sarf edilir). "Kayıp/Çalıntı" hem demirbaşta
+    // hem tüketimde olabileceği icin kisitlanmaz.
     for (const s of satirlar) {
       const u = db.prepare('SELECT urun_tipi FROM stok_urunler WHERE id=?').get(s.urun_id);
+      if (fis.sebep_kodu === 'hurdaya_ayirma' && u?.urun_tipi !== 'demirbas') {
+        demirbasHatalar.push(`${s.urun_adi || s.urun_id}: Hurdaya Ayırma sebebiyle açılan fiş sadece demirbaş içerebilir`); continue;
+      }
       if (u?.urun_tipi !== 'demirbas') continue;
       if (!hurdaIstisnasi) { demirbasHatalar.push(`${s.urun_adi || s.urun_id}: demirbaş — Çıkış fişine giremez, Zimmet kullanın`); continue; }
       const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, fis.kaynak_depo_id, s.seri_no);
@@ -1978,6 +1984,21 @@ app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
   if (!urun_id) return res.status(400).json({ error: 'Ürün zorunlu' });
   try {
     const rows = db.prepare("SELECT DISTINCT seri_no FROM stok_hareketler WHERE urun_id=? AND seri_no IS NOT NULL AND seri_no<>'' ORDER BY seri_no").all(urun_id);
+    res.json(rows.map((r) => r.seri_no));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Transfer / Tedarikçiye İade: bir demirbaşın belirli bir depoda o an fiilen
+// mevcut (net pozitif) sicil no'ları -- zimmet durumuna bakmaz (Çıkış'ın
+// hurda istisnası için zaten ayrı ve zimmetsizlik de arayan
+// /api/stok/zimmet/seri-no-listesi kullanılıyor).
+app.get('/api/stok/demirbas-depo-sicil-listesi', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { urun_id, depo_id } = req.query;
+  if (!urun_id || !depo_id) return res.status(400).json({ error: 'Ürün ve depo zorunlu' });
+  try {
+    const rows = db.prepare(`SELECT seri_no FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no IS NOT NULL AND seri_no<>''
+      GROUP BY seri_no HAVING SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END) > 0 ORDER BY seri_no`).all(urun_id, depo_id);
     res.json(rows.map((r) => r.seri_no));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

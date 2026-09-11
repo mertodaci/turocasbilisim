@@ -307,6 +307,7 @@ function initDb() {
     "ALTER TABLE employees ADD COLUMN education_history TEXT DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN favorites TEXT DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN customer_id TEXT",
+    "ALTER TABLE users ADD COLUMN avatar_url TEXT",
     // authMiddleware / authRoutes / entityRouter 'users.status' bekliyor ama bu
     // kolon db.js'te hic olusturulmuyordu (prod DB'ye elle eklenmis, temiz
     // kurulumda -- or. sandbox -- eksikti; her authed istek 500 "Kimlik

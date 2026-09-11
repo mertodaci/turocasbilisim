@@ -225,8 +225,8 @@ function ProfileMenu() {
     <div className="relative">
       <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-muted transition-colors">
         <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-primary">
-          {employeeRecord?.avatar_url ? (
-            <img src={employeeRecord.avatar_url} alt={name} className="w-full h-full object-cover" />
+          {user?.avatar_url || employeeRecord?.avatar_url ? (
+            <img src={user?.avatar_url || employeeRecord?.avatar_url} alt={name} className="w-full h-full object-cover" />
           ) : initials}
         </div>
         <div className="hidden sm:block text-left leading-tight">

@@ -68,7 +68,7 @@ router.post('/login', async (req, res) => {
     );
     const userPerms = db.prepare("SELECT module, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE role_name = ?").all(user.role);
     res.cookie('auth_token', token, { httpOnly: true, secure: COOKIE_SECURE, sameSite: 'Strict', maxAge: 24 * 60 * 60 * 1000 });
-    res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, customer_id: user.customer_id, permissions: userPerms, must_change_password: user.must_change_password || 0 } });
+    res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, customer_id: user.customer_id, avatar_url: user.avatar_url, permissions: userPerms, must_change_password: user.must_change_password || 0 } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -78,7 +78,7 @@ router.post('/login', async (req, res) => {
 // KENDİ BİLGİLERİ
 router.get('/me', authMiddleware, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, email, full_name, role, customer_id, must_change_password FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, email, full_name, role, customer_id, must_change_password, avatar_url FROM users WHERE id = ?').get(req.user.id);
     try { user.permissions = db.prepare("SELECT module, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE role_name = ?").all(user.role); } catch(e) { user.permissions = []; }
     res.json(user);
   } catch (err) {
@@ -108,9 +108,11 @@ router.put('/change-password', authMiddleware, async (req, res) => {
 // Rol degisikligi sadece admin/yonetici tarafindan PUT /users/:id ile yapilabilir.
 router.put('/me', authMiddleware, (req, res) => {
   try {
-    const { full_name } = req.body;
-    db.prepare(`UPDATE users SET full_name = ?, updated_at = datetime('now') WHERE id = ?`).run(full_name, req.user.id);
-    const user = db.prepare('SELECT id, email, full_name, role, customer_id, must_change_password FROM users WHERE id = ?').get(req.user.id);
+    const current = db.prepare('SELECT full_name, avatar_url FROM users WHERE id = ?').get(req.user.id);
+    const full_name = req.body.full_name !== undefined ? req.body.full_name : current.full_name;
+    const avatar_url = req.body.avatar_url !== undefined ? req.body.avatar_url : current.avatar_url;
+    db.prepare(`UPDATE users SET full_name = ?, avatar_url = ?, updated_at = datetime('now') WHERE id = ?`).run(full_name, avatar_url, req.user.id);
+    const user = db.prepare('SELECT id, email, full_name, role, customer_id, must_change_password, avatar_url FROM users WHERE id = ?').get(req.user.id);
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });

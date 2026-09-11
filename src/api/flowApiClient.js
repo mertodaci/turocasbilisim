@@ -218,6 +218,11 @@ export const auth = {
       await fetch(`${BASE_URL}/api/auth/me`, { headers: authHeaders(), credentials: 'include' })
     );
   },
+  async updateProfile(data) {
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/me`, {
+      method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify(data),
+    }));
+  },
   async login(email, password) {
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',

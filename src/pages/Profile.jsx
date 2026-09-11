@@ -1,23 +1,54 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { UserCircle2, KeyRound, Eye, EyeOff, Palette } from "lucide-react";
+import { KeyRound, Eye, EyeOff, Palette, Camera, Loader2 } from "lucide-react";
 import { flowApi } from "@/api/flowApiClient";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import ThemeSelector from "@/components/ThemeSelector";
 
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
+
 const roleLabels = {
-  admin: { label: "Admin", color: "bg-red-100 text-red-700" },
+  admin: { label: "Sistem Yöneticisi", color: "bg-red-100 text-red-700" },
   yonetici: { label: "Yönetici", color: "bg-purple-100 text-purple-700" },
-  calisan: { label: "Çalışan", color: "bg-blue-100 text-blue-700" },
+  kullanici: { label: "Kullanıcı", color: "bg-blue-100 text-blue-700" },
+  ik: { label: "İK", color: "bg-emerald-100 text-emerald-700" },
+  stajer: { label: "Stajyer", color: "bg-amber-100 text-amber-700" },
+  musteri: { label: "Müşteri", color: "bg-slate-200 text-slate-700" },
 };
 
 export default function Profile() {
-  const { user, logout } = useAuth();
-  const roleInfo = roleLabels[user?.role] || roleLabels.calisan;
+  const { user, logout, checkUserAuth } = useAuth();
+  const roleInfo = roleLabels[user?.role] || { label: user?.role || "—", color: "bg-slate-200 text-slate-700" };
+  const initials = (user?.full_name || user?.email || "?").split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";
+
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
   const [pwLoading, setPwLoading] = useState(false);
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${BASE_URL}/api/upload`, { method: "POST", credentials: "include", body: formData });
+      if (!res.ok) throw new Error("Dosya yüklenemedi");
+      const data = await res.json();
+      await flowApi.auth.updateProfile({ full_name: user.full_name, avatar_url: `${BASE_URL}${data.url}` });
+      await checkUserAuth();
+      toast.success("Profil fotoğrafı güncellendi");
+    } catch (err) {
+      toast.error(err.message || "Fotoğraf yüklenemedi");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -52,36 +83,56 @@ export default function Profile() {
         <p className="text-sm text-muted-foreground mt-1">Hesap bilgileriniz</p>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-6 space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <UserCircle2 className="w-9 h-9 text-primary" />
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+        <div className="h-16 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+        <div className="px-6 pb-6 -mt-10 space-y-5">
+          <div className="flex items-end gap-4">
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="group relative w-20 h-20 rounded-2xl overflow-hidden border-4 border-card bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-md"
+                title="Profil fotoğrafını değiştir"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={user?.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-white">{initials}</span>
+                )}
+                <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-white" />
+                </span>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            </div>
+            <div className="pb-1 min-w-0">
+              <p className="text-xl font-bold text-foreground truncate">{user?.full_name || "—"}</p>
+              <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-lg font-bold text-foreground">{user?.full_name || "—"}</p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-          </div>
-        </div>
 
-        <div className="border-t border-border pt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Rol</span>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleInfo.color}`}>
+          <div className="flex items-center gap-2">
+            <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", roleInfo.color)}>
               {roleInfo.label}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">E-posta</span>
-            <span className="text-sm font-medium text-foreground">{user?.email}</span>
-          </div>
-        </div>
 
-        <button
-          onClick={() => logout()}
-          className="w-full mt-2 py-2.5 rounded-xl border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors"
-        >
-          Çıkış Yap
-        </button>
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">E-posta</span>
+              <span className="text-sm font-medium text-foreground">{user?.email}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => logout()}
+            className="w-full mt-2 py-2.5 rounded-xl border border-destructive/40 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors"
+          >
+            Çıkış Yap
+          </button>
+        </div>
       </div>
 
       {/* Tema Seçimi */}

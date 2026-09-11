@@ -19,6 +19,30 @@ const TIP_CFG = {
   iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
 };
 
+// İşlem Sebebi: Transfer'de hiç gösterilmez (kendi başına atomik bir fiş tipi zaten,
+// "farklı depoya transfer" sebebi burada olsaydı karşı depoya otomatik giriş yapmayan,
+// elle eşleştirilmesi gereken riskli bir ikinci yol açardı).
+const SEBEP_LISTESI = {
+  giris: [
+    { value: "satin_alma", label: "Satın Alma" },
+    { value: "sayim_fazlasi", label: "Sayım Fazlası" },
+    { value: "acilis_devir", label: "Açılış Bakiyesi / Devir" },
+  ],
+  cikis: [
+    { value: "sarf_kullanim", label: "Sarf / Kullanım" },
+    { value: "numune_test", label: "Numune / Test" },
+    { value: "hurdaya_ayirma", label: "Hurdaya Ayırma" },
+    { value: "kayip_calinti", label: "Kayıp / Çalıntı" },
+    { value: "sayim_eksigi", label: "Sayım Eksiği" },
+  ],
+  iade: [
+    { value: "arizali_urun", label: "Arızalı Ürün" },
+    { value: "yanlis_urun", label: "Yanlış Ürün Gönderildi" },
+    { value: "fazla_siparis", label: "Fazla Sipariş" },
+    { value: "diger", label: "Diğer" },
+  ],
+};
+
 const bosSatir = () => ({
   urun_id: "", urun_adi: "", urun_kodu: "", barkod: "", birim: "", carpan: 1, miktar: 1, birim_fiyat: 0,
   kaynak_raf_id: "", hedef_raf_id: "", icerik_aciklamasi: "", seri_no: "",
@@ -36,6 +60,7 @@ export default function FisForm({ tip }) {
   const [header, setHeader] = useState({
     tarih: bugun, cari_id: "", kaynak_depo_id: "", hedef_depo_id: "", hedef_saha_id: "",
     fatura_no: "", irsaliye_no: "", belge_no: "", aciklama: "",
+    sebep_kodu: SEBEP_LISTESI[tip]?.[0]?.value || "",
     teslim_eden: "", teslim_alan: "", gonderim_adresi: "",
   });
   const [lines, setLines] = useState([bosSatir()]);
@@ -60,7 +85,8 @@ export default function FisForm({ tip }) {
         tarih: f.tarih || bugun, cari_id: f.cari_id || "", kaynak_depo_id: f.kaynak_depo_id || "",
         hedef_depo_id: f.hedef_depo_id || "", hedef_saha_id: f.hedef_saha_id || "",
         fatura_no: f.fatura_no || "", irsaliye_no: f.irsaliye_no || "", belge_no: f.belge_no || "",
-        aciklama: f.aciklama || "", teslim_eden: f.teslim_eden || "", teslim_alan: f.teslim_alan || "",
+        aciklama: f.aciklama || "", sebep_kodu: f.sebep_kodu || SEBEP_LISTESI[tip]?.[0]?.value || "",
+        teslim_eden: f.teslim_eden || "", teslim_alan: f.teslim_alan || "",
         gonderim_adresi: f.gonderim_adresi || "",
       });
       setLines((f.satirlar || []).map((s) => ({
@@ -127,7 +153,8 @@ export default function FisForm({ tip }) {
     const h = { tip, tarih: header.tarih, cari_id: header.cari_id || null,
       cari_adi: cariler.find((c) => c.id === header.cari_id)?.company_name || null,
       fatura_no: header.fatura_no || null, irsaliye_no: header.irsaliye_no || null, belge_no: header.belge_no || null,
-      aciklama: header.aciklama || null, teslim_eden: header.teslim_eden || null, teslim_alan: header.teslim_alan || null,
+      aciklama: header.aciklama || null, sebep_kodu: tip !== "transfer" ? (header.sebep_kodu || null) : null,
+      teslim_eden: header.teslim_eden || null, teslim_alan: header.teslim_alan || null,
       gonderim_adresi: header.gonderim_adresi || null };
     if (tip === "giris") { h.hedef_depo_id = header.hedef_depo_id || null; h.hedef_depo_adi = depoAdi(header.hedef_depo_id); }
     if (tip === "iade") { h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id); }
@@ -260,6 +287,17 @@ export default function FisForm({ tip }) {
             <div><Label className="mb-1.5 block">Teslim Alan</Label><Input value={header.teslim_alan} onChange={(e) => setHeader({ ...header, teslim_alan: e.target.value })} /></div>
             <div className="sm:col-span-2 lg:col-span-3"><Label className="mb-1.5 block">Gönderilecek Adres</Label><Input value={header.gonderim_adresi} onChange={(e) => setHeader({ ...header, gonderim_adresi: e.target.value })} /></div>
           </>
+        )}
+        {SEBEP_LISTESI[tip] && (
+          <div>
+            <Label className="mb-1.5 block">İşlem Sebebi</Label>
+            <Select value={header.sebep_kodu} onValueChange={(v) => setHeader({ ...header, sebep_kodu: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SEBEP_LISTESI[tip].map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         )}
         <div className="sm:col-span-2 lg:col-span-3">
           <Label className="mb-1.5 block">Açıklama</Label>

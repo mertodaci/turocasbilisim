@@ -919,7 +919,7 @@ function normalizeSatir(s) {
   };
 }
 
-const _stokFisCols = ['fis_no','tip','tarih','durum','cari_id','cari_adi','kaynak_depo_id','kaynak_depo_adi','hedef_depo_id','hedef_depo_adi','hedef_saha_id','hedef_saha_adi','fatura_no','irsaliye_no','belge_no','aciklama','teslim_eden','teslim_alan','gonderim_adresi','kaynak_ref_tip','kaynak_ref_id','satir_sayisi','toplam_miktar','olusturan'];
+const _stokFisCols = ['fis_no','tip','tarih','durum','cari_id','cari_adi','kaynak_depo_id','kaynak_depo_adi','hedef_depo_id','hedef_depo_adi','hedef_saha_id','hedef_saha_adi','fatura_no','irsaliye_no','belge_no','aciklama','sebep_kodu','teslim_eden','teslim_alan','gonderim_adresi','kaynak_ref_tip','kaynak_ref_id','satir_sayisi','toplam_miktar','olusturan'];
 const _stokSatCols = ['fis_id','urun_id','urun_adi','urun_kodu','barkod','kaynak_raf_id','kaynak_raf_adi','hedef_raf_id','hedef_raf_adi','birim','carpan','miktar','miktar_ana_birim','birim_fiyat','tutar','icerik_aciklamasi','lot_no','uretim_tarihi','raf_omru_ay','kontrol_tarihi','skt','raf_omru_durumu','seri_no'];
 
 function insertStokFis(fisId, fis, satirlar, userEmail) {
@@ -1155,13 +1155,21 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
   // Demirbaş, Çıkış fişine giremez — kişiye/yere teslim edilecekse Zimmet kullanılmalı.
-  // Transfer ve Tedarikçiye İade'de demirbaş serbest (henüz zimmetlenmemiş demirbaş
-  // depolar arası taşınabilir veya arızalı çıkarsa tedarikçiye iade edilebilir).
+  // Tek istisna: "Hurdaya Ayırma" / "Kayıp-Çalıntı" sebebiyle kalıcı olarak elden
+  // çıkarılıyorsa (bu da bir Çıkış'tır) — ama sadece önce Zimmetten İade Alınmış
+  // (artık açık rezervasyonu olmayan) bir demirbaş için. Transfer ve Tedarikçiye
+  // İade'de demirbaş serbest (henüz zimmetlenmemiş demirbaş depolar arası
+  // taşınabilir veya arızalı çıkarsa tedarikçiye iade edilebilir).
+  const HURDA_SEBEPLERI = ['hurdaya_ayirma', 'kayip_calinti'];
   if (fis.tip === 'cikis') {
     const demirbasHatalar = [];
+    const hurdaIstisnasi = HURDA_SEBEPLERI.includes(fis.sebep_kodu);
     for (const s of satirlar) {
       const u = db.prepare('SELECT urun_tipi FROM stok_urunler WHERE id=?').get(s.urun_id);
-      if (u?.urun_tipi === 'demirbas') demirbasHatalar.push(`${s.urun_adi || s.urun_id}: demirbaş — Çıkış fişine giremez, Zimmet kullanın`);
+      if (u?.urun_tipi !== 'demirbas') continue;
+      if (!hurdaIstisnasi) { demirbasHatalar.push(`${s.urun_adi || s.urun_id}: demirbaş — Çıkış fişine giremez, Zimmet kullanın`); continue; }
+      const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, fis.kaynak_depo_id, s.seri_no);
+      if (blokeliMi) demirbasHatalar.push(`${s.urun_adi || s.urun_id} · SN ${s.seri_no}: hâlâ zimmette — önce İade Al yapılmalı`);
     }
     if (demirbasHatalar.length) return res.status(400).json({ error: 'Demirbaş ürün Çıkış fişinde olamaz:\n' + demirbasHatalar.join('\n') });
   }
@@ -1559,7 +1567,7 @@ app.post('/api/stok/sayim/:id/tamamla', authMiddleware, (req, res) => {
       const urunFiyat = (id) => db.prepare('SELECT alis_fiyati, ana_birim FROM stok_urunler WHERE id=?').get(id) || {};
       if (fazla.length) {
         const g = insertStokFis(_stokUUID(), { tip: 'giris', tarih: s.tarih, hedef_depo_id: s.depo_id, hedef_depo_adi: s.depo_adi,
-          belge_no: s.sayim_no, aciklama: `Sayım fazlası düzeltmesi (${s.sayim_no})` },
+          belge_no: s.sayim_no, aciklama: `Sayım fazlası düzeltmesi (${s.sayim_no})`, sebep_kodu: 'sayim_fazlasi' },
           fazla.map((r) => { const uf = urunFiyat(r.urun_id); return { urun_id: r.urun_id, urun_adi: r.urun_adi, birim: uf.ana_birim || 'ADET', carpan: 1, miktar: Number(r.fark), birim_fiyat: uf.alis_fiyati || 0, raf_omru_durumu: 'Raf ömrü uygulanmaz' }; }), req.user.email);
         const gs = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(g.id);
         stokFifoUygulaSayim(g, gs, req.user.email);
@@ -1568,7 +1576,7 @@ app.post('/api/stok/sayim/:id/tamamla', authMiddleware, (req, res) => {
       }
       if (eksik.length) {
         const c = insertStokFis(_stokUUID(), { tip: 'cikis', tarih: s.tarih, kaynak_depo_id: s.depo_id, kaynak_depo_adi: s.depo_adi,
-          hedef_depo_id: s.depo_id, hedef_depo_adi: s.depo_adi, belge_no: s.sayim_no, aciklama: `Sayım eksiği düzeltmesi (${s.sayim_no})` },
+          hedef_depo_id: s.depo_id, hedef_depo_adi: s.depo_adi, belge_no: s.sayim_no, aciklama: `Sayım eksiği düzeltmesi (${s.sayim_no})`, sebep_kodu: 'sayim_eksigi' },
           eksik.map((r) => { const uf = urunFiyat(r.urun_id); return { urun_id: r.urun_id, urun_adi: r.urun_adi, birim: uf.ana_birim || 'ADET', carpan: 1, miktar: Math.abs(Number(r.fark)), birim_fiyat: uf.alis_fiyati || 0 }; }), req.user.email);
         const cs = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(c.id);
         stokFifoUygulaSayim(c, cs, req.user.email);

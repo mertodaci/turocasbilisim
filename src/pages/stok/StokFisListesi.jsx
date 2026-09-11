@@ -24,6 +24,12 @@ const DURUM_BADGE = {
   iptal: "bg-red-100 text-red-600 line-through",
 };
 const DURUM_LBL = { taslak: "Taslak", onay_bekliyor: "Onay Bekliyor", onayli: "Onaylı", iptal: "İptal" };
+const SEBEP_LBL = {
+  satin_alma: "Satın Alma", sayim_fazlasi: "Sayım Fazlası", acilis_devir: "Açılış Bakiyesi / Devir",
+  sarf_kullanim: "Sarf / Kullanım", numune_test: "Numune / Test", hurdaya_ayirma: "Hurdaya Ayırma",
+  kayip_calinti: "Kayıp / Çalıntı", sayim_eksigi: "Sayım Eksiği",
+  arizali_urun: "Arızalı Ürün", yanlis_urun: "Yanlış Ürün Gönderildi", fazla_siparis: "Fazla Sipariş", diger: "Diğer",
+};
 
 export default function StokFisListesi() {
   const navigate = useNavigate();
@@ -226,6 +232,7 @@ export default function StokFisListesi() {
                 {detay.kaynak_depo_adi && <div>Kaynak: <b className="text-foreground">{detay.kaynak_depo_adi}</b></div>}
                 {(detay.hedef_depo_adi || detay.hedef_saha_adi) && <div>Hedef: <b className="text-foreground">{detay.hedef_saha_adi || detay.hedef_depo_adi}</b></div>}
                 {detay.onaylayan && <div>Onaylayan: <b className="text-foreground">{detay.onaylayan}</b></div>}
+                {detay.sebep_kodu && <div>Sebep: <b className="text-foreground">{SEBEP_LBL[detay.sebep_kodu] || detay.sebep_kodu}</b></div>}
                 {(detay.fatura_no || detay.irsaliye_no || detay.belge_no) && <div>Belge: <b className="text-foreground">{[detay.fatura_no, detay.irsaliye_no, detay.belge_no].filter(Boolean).join(" / ")}</b></div>}
               </div>
               {detay.aciklama && <p className="text-muted-foreground">Açıklama: {detay.aciklama}</p>}

@@ -476,6 +476,10 @@ function initDb() {
     // çalıştırmada hiçbir satır eşleşmez) migrations listesinde her başlangıçta
     // tekrar çalışması zararsızdır.
     "UPDATE stok_urunler SET urun_tipi = CASE WHEN seri_no_takip=1 THEN 'demirbas' ELSE 'tuketim' END WHERE urun_tipi IS NULL OR urun_tipi NOT IN ('demirbas','tuketim')",
+    // İşlem Sebebi: Giriş/Çıkış/Tedarikçiye İade fişlerinde raporlanabilir bir
+    // hareket nedeni (Satın Alma, Sarf/Kullanım, Hurdaya Ayırma, Kayıp, ...).
+    // Transfer'e bilinçli olarak eklenmiyor (kendi başına atomik bir fiş tipi zaten).
+    "ALTER TABLE stok_fisler ADD COLUMN sebep_kodu TEXT",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

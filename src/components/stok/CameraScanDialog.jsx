@@ -16,27 +16,48 @@ export default function CameraScanDialog({ open, onOpenChange, onScan }) {
   useEffect(() => {
     if (!open) return;
     setHata("");
-    const scanner = new Html5Qrcode(READER_ID);
-    scannerRef.current = scanner;
     let durduruldu = false;
 
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText) => {
-        if (durduruldu) return;
-        durduruldu = true;
-        scanner.stop().catch(() => {}).finally(() => {
-          onScan(decodedText);
-          onOpenChange(false);
-        });
-      },
-      () => {} // tarama karesi başarısız -- normal, sessiz geç
-    ).catch((err) => setHata("Kamera açılamadı: " + String(err?.message || err)));
+    // Dialog acilir acilmaz reader div'i DOM'a henuz yerlesmemis olabilir
+    // (Radix portal mount zamanlamasi) -- bir sonraki frame'e erteleyip
+    // element gercekten var mi diye kontrol ediyoruz. Aksi halde
+    // Html5Qrcode'un constructor'i senkron hata firlatip ErrorBoundary'ye
+    // dusuyor ve tum sayfayi cokertiyordu.
+    const frame = requestAnimationFrame(() => {
+      if (durduruldu) return;
+      if (!document.getElementById(READER_ID)) {
+        setHata("Kamera penceresi hazırlanamadı, tekrar deneyin.");
+        return;
+      }
+      let scanner;
+      try {
+        scanner = new Html5Qrcode(READER_ID);
+      } catch (err) {
+        setHata("Kamera başlatılamadı: " + String(err?.message || err));
+        return;
+      }
+      scannerRef.current = scanner;
+
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          if (durduruldu) return;
+          durduruldu = true;
+          scanner.stop().catch(() => {}).finally(() => {
+            onScan(decodedText);
+            onOpenChange(false);
+          });
+        },
+        () => {} // tarama karesi başarısız -- normal, sessiz geç
+      ).catch((err) => setHata("Kamera açılamadı: " + String(err?.message || err)));
+    });
 
     return () => {
       durduruldu = true;
-      scanner.stop().catch(() => {});
+      cancelAnimationFrame(frame);
+      scannerRef.current?.stop().catch(() => {});
+      scannerRef.current = null;
     };
   }, [open]); // eslint-disable-line
 

@@ -122,17 +122,16 @@ export default function FisForm({ tip }) {
   const rafOptions = (depoId) => raflar.filter((r) => r.depo_id === depoId).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));
 
   // Çıkış(hurda)/Transfer/İade'de sicil no artık elle yazılmıyor/üretilmiyor --
-  // kaynak depoda o an fiilen mevcut demirbaş sicillerinden seçiliyor. Çıkış-
-  // hurda için zimmetli olanlar hariç (backend de bunu zorunlu kılıyor);
-  // Transfer/İade'de zimmet durumu aranmaz.
+  // kaynak depoda o an fiilen mevcut VE zimmetli olmayan demirbaş sicillerinden
+  // seçiliyor (zimmetli bir demirbaş elden çıkarılamaz/taşınamaz — önce
+  // Zimmetten Düş yapılmalı; backend de bunu ayrıca zorunlu kılıyor).
   useEffect(() => {
     const ihtiyacVar = (tip === "cikis" && hurdaIstisnasi) || tip === "transfer" || tip === "iade";
     if (!ihtiyacVar || !header.kaynak_depo_id) { setDepoSicilListeleri({}); return; }
     const serililer = [...new Set(lines.filter((l) => l.urun_id && isSerili(l.urun_id)).map((l) => l.urun_id))];
     if (!serililer.length) { setDepoSicilListeleri({}); return; }
     let iptal = false;
-    const istek = tip === "cikis" ? flowApi.stok.zimmetSeriNoListesi : flowApi.stok.demirbasDepoSicilListesi;
-    Promise.all(serililer.map((uid) => istek(uid, header.kaynak_depo_id).then((liste) => [uid, liste]).catch(() => [uid, []])))
+    Promise.all(serililer.map((uid) => flowApi.stok.zimmetSeriNoListesi(uid, header.kaynak_depo_id).then((liste) => [uid, liste]).catch(() => [uid, []])))
       .then((sonuclar) => { if (!iptal) setDepoSicilListeleri(Object.fromEntries(sonuclar)); });
     return () => { iptal = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

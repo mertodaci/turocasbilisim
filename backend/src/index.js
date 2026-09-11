@@ -1242,9 +1242,13 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
     }
     if (yetersiz.length) return res.status(400).json({ error: 'Yetersiz stok — onaylanamadı:\n' + yetersiz.join('\n') });
 
-    // Rezervasyon kontrolü — çıkış/iade, başka projelere ayrılmış stoğu tüketemez.
-    // Bu fişin bağlı olduğu talebin rezervasyonları "kendi" sayılır ve hariç tutulur.
-    if (fis.tip === 'cikis' || fis.tip === 'iade') {
+    // Rezervasyon kontrolü — çıkış/iade/transfer, başka projelere ayrılmış VEYA
+    // zimmetli (bloke) stoğu tüketemez/taşıyamaz. Bu ayni mekanizma zimmetli bir
+    // demirbaşın Transfer ile de çıkarılmasını engeller (Zimmet, stok_rezervasyonlar
+    // tablosunda seri_no'lu bir "acik" kayit olarak tutulur -- burada genel amaçlı
+    // ihtiyaç/rezerve karşılaştırmasına dahil olur). Bu fişin bağlı olduğu talebin
+    // rezervasyonları "kendi" sayılır ve hariç tutulur.
+    if (fis.tip === 'cikis' || fis.tip === 'iade' || fis.tip === 'transfer') {
       const kendiTalep = fis.kaynak_ref_tip === 'talep' ? fis.kaynak_ref_id : null;
       const rezSorgu = db.prepare(`SELECT COALESCE(SUM(miktar - COALESCE(karsilanan,0)),0) m FROM stok_rezervasyonlar
         WHERE urun_id=? AND depo_id=? AND durum='acik' AND (is_deleted=0 OR is_deleted IS NULL)
@@ -1984,21 +1988,6 @@ app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
   if (!urun_id) return res.status(400).json({ error: 'Ürün zorunlu' });
   try {
     const rows = db.prepare("SELECT DISTINCT seri_no FROM stok_hareketler WHERE urun_id=? AND seri_no IS NOT NULL AND seri_no<>'' ORDER BY seri_no").all(urun_id);
-    res.json(rows.map((r) => r.seri_no));
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Transfer / Tedarikçiye İade: bir demirbaşın belirli bir depoda o an fiilen
-// mevcut (net pozitif) sicil no'ları -- zimmet durumuna bakmaz (Çıkış'ın
-// hurda istisnası için zaten ayrı ve zimmetsizlik de arayan
-// /api/stok/zimmet/seri-no-listesi kullanılıyor).
-app.get('/api/stok/demirbas-depo-sicil-listesi', authMiddleware, (req, res) => {
-  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
-  const { urun_id, depo_id } = req.query;
-  if (!urun_id || !depo_id) return res.status(400).json({ error: 'Ürün ve depo zorunlu' });
-  try {
-    const rows = db.prepare(`SELECT seri_no FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no IS NOT NULL AND seri_no<>''
-      GROUP BY seri_no HAVING SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END) > 0 ORDER BY seri_no`).all(urun_id, depo_id);
     res.json(rows.map((r) => r.seri_no));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -124,10 +124,13 @@ export default function FisForm({ tip }) {
   const urunById = (id) => urunler.find((u) => u.id === id);
   const isSerili = (id) => { const u = urunById(id); return u?.seri_no_takip === 1 || u?.seri_no_takip === true; };
   // Demirbaş, Çıkış fişine giremez — kişiye/yere teslim edilecekse Zimmet kullanılmalı.
+  // Tek istisna: sebep "Hurdaya Ayırma" / "Kayıp-Çalıntı" ise demirbaş da seçilebilir
+  // (backend ayrıca o demirbaşın zimmetsiz — önce İade Alınmış — olmasını zorunlu kılar).
   // Giriş/Transfer/İade'de demirbaş dahil tüm ürünler seçilebilir.
+  const hurdaIstisnasi = tip === "cikis" && ["hurdaya_ayirma", "kayip_calinti"].includes(header.sebep_kodu);
   const urunlerForTip = useMemo(
-    () => (tip === "cikis" ? urunler.filter((u) => u.urun_tipi !== "demirbas") : urunler),
-    [urunler, tip]
+    () => (tip === "cikis" && !hurdaIstisnasi ? urunler.filter((u) => u.urun_tipi !== "demirbas") : urunler),
+    [urunler, tip, hurdaIstisnasi]
   );
   const rafById = (id) => raflar.find((r) => r.id === id);
   const rafOptions = (depoId) => raflar.filter((r) => r.depo_id === depoId).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));

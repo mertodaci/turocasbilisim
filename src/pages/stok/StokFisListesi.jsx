@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,11 @@ const SEBEP_LBL = {
   sarf_kullanim: "Sarf / Kullanım", numune_test: "Numune / Test", hurdaya_ayirma: "Hurdaya Ayırma",
   kayip_calinti: "Kayıp / Çalıntı", sayim_eksigi: "Sayım Eksiği",
   arizali_urun: "Arızalı Ürün", yanlis_urun: "Yanlış Ürün Gönderildi", fazla_siparis: "Fazla Sipariş", diger: "Diğer",
+};
+
+const saat = (createdDate) => {
+  if (!createdDate) return "";
+  try { return format(new Date(createdDate), "HH:mm"); } catch { return ""; }
 };
 
 export default function StokFisListesi() {
@@ -158,7 +164,7 @@ export default function StokFisListesi() {
                   <tr key={f.id} className={`border-b last:border-0 hover:bg-muted/20 ${i % 2 ? "bg-muted/10" : ""}`}>
                     <td className="px-4 py-3 font-medium">{f.fis_no || "—"}</td>
                     <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${tb.cls}`}><tb.Icon className="w-3 h-3" />{tb.label}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground">{f.tarih || "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{f.tarih || "—"}{saat(f.created_date) && <span className="text-xs ml-1">{saat(f.created_date)}</span>}</td>
                     <td className="px-4 py-3 text-muted-foreground">{depoGosterim}</td>
                     <td className="px-4 py-3 text-muted-foreground">{f.satir_sayisi || 0}</td>
                     <td className="px-4 py-3 text-muted-foreground">{f.toplam_miktar || 0}</td>
@@ -226,7 +232,7 @@ export default function StokFisListesi() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 text-muted-foreground">
-                <div>Tarih: <b className="text-foreground">{detay.tarih}</b></div>
+                <div>Tarih: <b className="text-foreground">{detay.tarih}{saat(detay.created_date) && ` · ${saat(detay.created_date)}`}</b></div>
                 <div>Oluşturan: <b className="text-foreground">{detay.olusturan || "—"}</b></div>
                 {detay.cari_adi && <div>Firma: <b className="text-foreground">{detay.cari_adi}</b></div>}
                 {detay.kaynak_depo_adi && <div>Kaynak: <b className="text-foreground">{detay.kaynak_depo_adi}</b></div>}

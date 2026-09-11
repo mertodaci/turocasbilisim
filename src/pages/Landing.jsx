@@ -14,6 +14,18 @@ const MODULLER = [
   { icon: BarChart3, baslik: "Müşteri ve Operasyon Yönetimi" },
 ];
 
+// Logo koyu zeminde okunsun diye beyaza çevrilir, ama X'in orijinal
+// mavi köşesi (aksan üçgeni) korunsun diye ikinci, kırpılmış bir kopya
+// üstüne bindirilir.
+function TurkonixLogo({ className = "" }) {
+  return (
+    <div className={`relative ${className}`}>
+      <img src={turkonixLogo} alt="Turkonix" className="block w-full h-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+      <img src={turkonixLogo} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-contain" style={{ clipPath: "inset(20% 28% 58% 53%)" }} />
+    </div>
+  );
+}
+
 function SistemDurumu() {
   const [durum, setDurum] = useState("kontrol");
 
@@ -78,7 +90,7 @@ export default function Landing() {
         <div className="absolute bottom-0 left-0 w-64 h-96 bg-gradient-to-tr from-white/[0.03] to-transparent" style={{ clipPath: "polygon(0% 30%, 60% 0%, 100% 100%, 0% 100%)" }} />
 
         <div className="relative z-10 flex flex-col justify-center h-full px-16">
-          <img src={turkonixLogo} alt="Turkonix" className="h-32 w-auto object-contain self-start -ml-3" style={{ filter: "brightness(0) invert(1)" }} />
+          <TurkonixLogo className="w-[28rem] max-w-full self-start -ml-3" />
           <p className="text-slate-400 text-sm tracking-[0.2em] uppercase mt-6">İşinizi Daha İleriye Taşır</p>
           <div className="w-12 h-0.5 bg-blue-400/60 mt-5" />
         </div>
@@ -93,7 +105,7 @@ export default function Landing() {
       {/* Sağ — giriş formu */}
       <div className="flex-1 flex flex-col justify-center px-8 sm:px-16 lg:px-20 h-full overflow-y-auto">
         <div className="w-full max-w-sm mx-auto lg:mx-0">
-          <img src={turkonixLogo} alt="Turkonix" className="h-14 w-auto object-contain self-start mb-6 lg:hidden" style={{ filter: "brightness(0) invert(1)" }} />
+          <TurkonixLogo className="w-32 self-start mb-6 lg:hidden" />
 
           <p className="text-slate-400 text-xs tracking-[0.25em] uppercase">Turkonix</p>
           <p className="text-slate-500 text-xs tracking-[0.2em] uppercase mt-1">Entegre Yönetim Platformu</p>

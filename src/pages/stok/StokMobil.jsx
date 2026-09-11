@@ -188,7 +188,7 @@ export default function StokMobil() {
             ))}
           </div>
 
-          <div className="sticky bottom-2 pt-2">
+          <div className="sticky bottom-32 pt-2">
             <Button className="w-full h-14 text-base" disabled={saving || !lines.length || !depoId} onClick={kaydet}>
               <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Kaydet ve Onayla (${lines.length} kalem · ${toplam})`}
             </Button>
@@ -224,7 +224,7 @@ export default function StokMobil() {
                   </div>
                 ))}
               </div>
-              <div className="sticky bottom-2 pt-2">
+              <div className="sticky bottom-32 pt-2">
                 <Button className="w-full h-14 text-base" disabled={saving} onClick={sayimKaydet}>
                   <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Sayılanları Kaydet (${sayilanSatirlar.length} ürün)`}
                 </Button>

@@ -78,7 +78,6 @@ export default function Landing() {
 
         <div className="relative z-10 flex flex-col items-center">
           <TurkonixLogo className="w-full max-w-md" theme="fixed-dark" />
-          <p className="text-teal-300/90 text-sm tracking-wide mt-6">İş süreçleriniz tek merkezde.</p>
         </div>
 
         <div className="absolute bottom-14 left-0 right-0 px-12 z-10">
@@ -97,7 +96,7 @@ export default function Landing() {
 
       {/* Sağ — uygulamanın gerçek renk tokenlarıyla uyumlu, tema-duyarlı form paneli */}
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-background px-6 py-16">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-100 via-background to-fuchsia-100 dark:from-violet-950/40 dark:via-background dark:to-fuchsia-950/30" />
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-200 via-violet-50 to-fuchsia-200 dark:from-violet-950/60 dark:via-violet-950/20 dark:to-fuchsia-950/50" />
         <div className="relative w-full max-w-sm bg-card border border-border/50 rounded-3xl shadow-sm p-8 md:p-10">
           <TurkonixLogo className="w-28 mb-8 lg:hidden" />
 

@@ -264,14 +264,14 @@ function ProfileMenu() {
 
 export default function TopBar() {
   return (
-    <div className="h-16 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
+    <div className="h-20 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
       <Link to="/" className="flex items-center gap-2.5 shrink-0">
         <img
           src={turkonixLogo}
           alt="Turkonix"
-          className="h-12 w-auto object-contain dark:brightness-0 dark:invert"
+          className="h-16 w-auto object-contain dark:brightness-0 dark:invert"
         />
-        <span className="hidden sm:inline text-xl font-extrabold tracking-tight text-foreground">Turkonix</span>
+        <span className="hidden sm:inline text-2xl font-extrabold tracking-tight text-foreground">TURKONIX</span>
       </Link>
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <GlobalSearch />

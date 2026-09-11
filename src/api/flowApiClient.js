@@ -381,6 +381,7 @@ export const flowApi = {
   auth,
   stok,
   ik,
+  health: () => fetch(`${BASE_URL}/api/health`).then(r => { if (!r.ok) throw new Error('unhealthy'); return r.json(); }),
   entities: new Proxy({}, {
     get(_, entityName) {
       return createEntityClient(entityName);

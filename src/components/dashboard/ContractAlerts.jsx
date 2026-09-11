@@ -1,38 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { flowApi } from "@/api/flowApiClient";
 import { AlertTriangle, Clock } from "lucide-react";
+import { useContractAlerts } from "@/lib/useContractAlerts";
 
 // Sözleşme süresi yaklaşan/geçen kurumlar için uyarı bandı.
 // admin/yönetici (AdminDashboard) ve kullanıcı (UserDashboard) görür.
 // Her kurum adı tıklanabilir -> o kurumun detayına (/musteri/:id) gider.
 export default function ContractAlerts() {
-  const { data: contracts = [] } = useQuery({
-    queryKey: ["contract-alerts"],
-    queryFn: () => flowApi.entities.CustomerContract.list(),
-  });
-  const { data: customers = [] } = useQuery({
-    queryKey: ["contract-alerts-customers"],
-    queryFn: () => flowApi.entities.Customer.list("-created_date", 300),
-  });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const in30 = new Date(today);
-  in30.setDate(in30.getDate() + 30);
-
-  const nameOf = (cid) => customers.find((c) => c.id === cid)?.company_name || "Bilinmeyen kurum";
-
-  const expired = [];
-  const upcoming = [];
-  contracts.forEach((c) => {
-    if (!c.end_date || c.status === "iptal") return;
-    const end = new Date(c.end_date);
-    if (isNaN(end.getTime())) return;
-    end.setHours(0, 0, 0, 0);
-    if (end < today) expired.push(c);
-    else if (end <= in30) upcoming.push(c);
-  });
+  const { expired, upcoming, nameOf } = useContractAlerts();
 
   if (expired.length === 0 && upcoming.length === 0) return null;
 

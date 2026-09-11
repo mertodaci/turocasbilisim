@@ -2,8 +2,17 @@ import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail, Lock, User, Boxes, Clock, Users, Wallet, Building2, ClipboardList } from "lucide-react";
 import turkonixLogo from "@/assets/turkonix-logo.png";
+
+const MODULLER = [
+  { icon: Boxes, baslik: "Stok / Depo", alt: "Takip" },
+  { icon: Clock, baslik: "PDKS", alt: "Personel Devam Kontrol Sistemi" },
+  { icon: Users, baslik: "İK", alt: "Personel Kayıtları" },
+  { icon: Wallet, baslik: "Maaş", alt: "Bordro Yönetimi" },
+  { icon: Building2, baslik: "Müşteri", alt: "Yönetimi" },
+  { icon: ClipboardList, baslik: "İş Takibi", alt: "Proje ve Görev Takibi" },
+];
 
 export default function Landing() {
   const [tab, setTab] = useState("login");
@@ -41,50 +50,103 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{background: "linear-gradient(135deg, #0f172a 0%, #3730a3 100%)"}}>
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-blue-900/50 to-slate-900/70" />
-      <div className="relative z-20 w-full max-w-sm mx-4">
-        <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/25 ring-1 ring-white/10">
-          <div className="px-8 pt-10 pb-7 text-center border-b border-white/15">
-            <div className="inline-block bg-white rounded-2xl px-6 py-4 shadow-lg">
-              <img src={turkonixLogo} alt="Turkonix" className="h-14 w-auto object-contain" />
-            </div>
-            <p className="text-blue-100/90 text-sm mt-3">Turkonix — Sınırsız İletişim</p>
+    <div className="min-h-screen flex bg-[#FAF8F5]">
+      {/* Sol panel — giriş formu */}
+      <div className="w-full lg:w-[44%] flex flex-col justify-between px-8 sm:px-14 py-10 min-h-screen">
+        <img src={turkonixLogo} alt="Turkonix" className="h-11 w-auto self-start object-contain" />
+
+        <div className="w-full max-w-sm mx-auto">
+          <div className="w-9 h-1 rounded-full bg-indigo-600 mb-5" />
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {tab === "login" ? "Tekrar hoş geldiniz" : "Hesap oluşturun"}
+          </h1>
+          <p className="text-slate-500 text-sm mt-2 mb-8">
+            {tab === "login"
+              ? "TURKONIX ile iş süreçleriniz her zaman kontrolünüzde."
+              : "Birkaç bilgiyle TURKONIX hesabınızı oluşturun."}
+          </p>
+
+          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">{error}</div>}
+
+          {tab === "login" ? (
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input type="email" placeholder="E-posta" value={loginData.email} onChange={e => setLoginData(p => ({ ...p, email: e.target.value }))} className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={loginData.password} onChange={e => setLoginData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+              </div>
+              <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-12 shadow-lg shadow-indigo-600/25 mt-1" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Giriş Yap"}</Button>
+              <p className="text-center text-sm text-slate-500 pt-1">
+                Hesabınız yok mu?{" "}
+                <button type="button" onClick={() => { setTab("register"); setError(""); }} className="text-indigo-600 font-medium hover:underline">Kayıt olun</button>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-3.5">
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input type="text" placeholder="Ad Soyad" value={registerData.full_name} onChange={e => setRegisterData(p => ({ ...p, full_name: e.target.value }))} className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
+              </div>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input type="email" placeholder="E-posta" value={registerData.email} onChange={e => setRegisterData(p => ({ ...p, email: e.target.value }))} className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={registerData.password} onChange={e => setRegisterData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+              </div>
+              <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-12 shadow-lg shadow-indigo-600/25 mt-1" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Kayıt Ol"}</Button>
+              <p className="text-center text-sm text-slate-500 pt-1">
+                Zaten hesabınız var mı?{" "}
+                <button type="button" onClick={() => { setTab("login"); setError(""); }} className="text-indigo-600 font-medium hover:underline">Giriş yapın</button>
+              </p>
+            </form>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-200 pt-5">
+          <span>Daha verimli bir gelecek için, birlikte.</span>
+          <span className="font-bold tracking-wider text-slate-500">TURKONIX</span>
+        </div>
+      </div>
+
+      {/* Sağ panel — tanıtım */}
+      <div className="hidden lg:flex flex-1 relative overflow-hidden" style={{ background: "linear-gradient(150deg, #0a1128 0%, #131c47 55%, #1b2a5e 100%)" }}>
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/20 blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-[28rem] h-[28rem] rounded-full bg-cyan-400/10 blur-[110px]" />
+
+        <div className="relative z-10 flex flex-col justify-between h-full w-full px-16 py-16">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.2em] text-blue-300/80 uppercase leading-relaxed">
+              Entegre<br />Yazılım Çözümleri
+            </p>
+            <div className="w-10 h-0.5 bg-blue-400/70 my-5" />
+            <h2 className="text-4xl xl:text-[2.75rem] font-bold text-white leading-tight max-w-md">
+              Tüm operasyonlarınız,<br /><span className="text-indigo-300">tek merkezde.</span>
+            </h2>
+            <p className="text-blue-100/60 text-sm mt-4 max-w-sm">Daha düzenli, daha verimli, daha güçlü bir işletme.</p>
           </div>
-          <div className="px-8 py-6">
-            {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-300/40 rounded-xl text-red-100 text-sm text-center backdrop-blur-sm">{error}</div>}
-            {tab === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 z-10" />
-                  <Input type="email" placeholder="E-posta" value={loginData.email} onChange={e => setLoginData(p => ({ ...p, email: e.target.value }))} className="pl-10 rounded-xl border-white/50 bg-white/60 text-slate-900 placeholder:text-slate-600 focus-visible:ring-blue-400/60 focus-visible:border-blue-400" required />
+
+          <div className="grid grid-cols-2 gap-4 max-w-lg">
+            {MODULLER.map(({ icon: Icon, baslik, alt }, i) => (
+              <div key={baslik} className={`bg-white/[0.06] border border-white/10 backdrop-blur-sm rounded-2xl p-4 ${i % 2 === 1 ? "mt-6" : ""}`}>
+                <div className="w-9 h-9 rounded-lg bg-indigo-400/15 flex items-center justify-center mb-3">
+                  <Icon className="w-4 h-4 text-indigo-300" />
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 z-10" />
-                  <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={loginData.password} onChange={e => setLoginData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 rounded-xl border-white/50 bg-white/60 text-slate-900 placeholder:text-slate-600 focus-visible:ring-blue-400/60 focus-visible:border-blue-400" required />
-                  <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-900 z-10">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-                </div>
-                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11 shadow-lg shadow-indigo-600/30" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Giriş Yap"}</Button>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="text" placeholder="Ad Soyad" value={registerData.full_name} onChange={e => setRegisterData(p => ({ ...p, full_name: e.target.value }))} className="pl-10 rounded-xl border-gray-200 bg-white/70" required />
-                </div>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="email" placeholder="E-posta" value={registerData.email} onChange={e => setRegisterData(p => ({ ...p, email: e.target.value }))} className="pl-10 rounded-xl border-gray-200 bg-white/70" required />
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type={showPassword ? "text" : "password"} placeholder="Sifre" value={registerData.password} onChange={e => setRegisterData(p => ({ ...p, password: e.target.value }))} className="pl-10 pr-10 rounded-xl border-gray-200 bg-white/70" required />
-                  <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-                </div>
-                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11" disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Kayit Ol"}</Button>
-              </form>
-            )}
+                <p className="text-white font-semibold text-sm leading-tight">{baslik}</p>
+                <p className="text-blue-200/50 text-xs mt-0.5 leading-snug">{alt}</p>
+              </div>
+            ))}
           </div>
+
+          <p className="text-xs font-semibold tracking-[0.2em] text-blue-300/60 uppercase leading-relaxed">
+            İşiniz<br />Daima İleride
+          </p>
         </div>
       </div>
     </div>

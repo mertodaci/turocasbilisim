@@ -119,21 +119,29 @@ export default function BottomNav() {
     );
   };
 
-  // Flyout panelinin bir "kolonu" — grubun doğrudan çocuğu. Alt-grubu varsa
-  // kalın (tıklanamaz) başlık + altında leaf satırları; yoksa kolonun kendisi
-  // tek satırlık tıklanabilir bir leaf.
-  const renderFlyoutColumn = (child) => {
-    const hasKids = child.children && child.children.length > 0;
-    if (!hasKids) {
-      return <div key={child.labelKey} className="min-w-[180px]">{renderFlyoutLeaf(child)}</div>;
-    }
+  // Bir düğümü özyinelemeli render eder — alt-grubu varsa kalın
+  // (tıklanamaz) başlık + altında çocuklarını (yine düğüm ya da yaprak
+  // olabilir) render eder; yaprak ise tek satırlık tıklanabilir satır.
+  // Bu sayede kolonlar (grubun doğrudan çocuğu) kendi içinde bir kat daha
+  // alt-gruba sahip olabilir (ör. İnsan Kaynakları > Maaş & Bordro >
+  // Tanım/İşlem/Rapor) — 2-seviye gruplarda (Stok, İş Takibi, PDKS)
+  // davranış birebir eskisiyle aynı kalır.
+  const renderFlyoutNode = (node, depth = 0) => {
+    const hasKids = node.children && node.children.length > 0;
+    if (!hasKids) return renderFlyoutLeaf(node);
     return (
-      <div key={child.labelKey} className="min-w-[180px]">
-        <p className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t(child.labelKey)}</p>
-        <div className="space-y-0.5">{child.children.map(renderFlyoutLeaf)}</div>
+      <div key={node.labelKey} className={depth > 0 ? "mt-2" : ""}>
+        <p className={cn(
+          "px-2.5 py-1.5 font-bold uppercase tracking-wide text-muted-foreground",
+          depth === 0 ? "text-[11px]" : "text-[10px] opacity-70"
+        )}>{t(node.labelKey)}</p>
+        <div className="space-y-0.5">{node.children.map((c) => renderFlyoutNode(c, depth + 1))}</div>
       </div>
     );
   };
+  const renderFlyoutColumn = (child) => (
+    <div key={child.labelKey} className="min-w-[180px]">{renderFlyoutNode(child, 0)}</div>
+  );
 
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
   const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;

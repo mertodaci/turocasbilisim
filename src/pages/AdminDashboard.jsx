@@ -115,8 +115,8 @@ export default function AdminDashboard() {
       {/* BAŞLIK */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">{greeting}, {firstName}</p>
-          <h1 className="text-2xl font-bold mt-0.5">Yönetim Merkezi</h1>
+          <p className="text-lg text-muted-foreground">{greeting}, {firstName}</p>
+          <h1 className="text-lg font-normal mt-0.5">Yönetim Merkezi</h1>
           <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
         </div>
         <div className="text-right">

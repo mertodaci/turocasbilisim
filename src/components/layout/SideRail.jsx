@@ -143,7 +143,7 @@ export default function SideRail() {
       {expanded && <div className="fixed inset-0 z-30" onClick={closeAll} />}
 
       <nav className={cn(
-        "hidden md:flex fixed left-0 top-16 bottom-0 z-40 bg-card border-r border-border flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
+        "hidden md:flex fixed left-0 top-20 bottom-0 z-40 bg-card border-r border-border flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
         expanded ? "w-64" : "w-16"
       )}>
         <button

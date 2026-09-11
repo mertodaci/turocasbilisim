@@ -1,27 +1,79 @@
 import { useState } from "react";
+import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, EyeOff, Mail, Lock, Boxes, Users, UserRound, Database, BarChart3, ArrowRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, Boxes, Users, Wallet, Building2, ScrollText, ClipboardList, Sun, Moon } from "lucide-react";
 import turkonixLogo from "@/assets/turkonix-logo.png";
 
-const MODULLER = [
-  { icon: Boxes, baslik: "Stok / Depo Takibi" },
+// Sol paneldeki özellik listesi — uygulamanın gerçek modülleri (bottom nav /
+// navItems.js ile tutarlı), şablon metni değil.
+const OZELLIKLER = [
+  { icon: Boxes, baslik: "Stok / Depo Yönetimi" },
   { icon: Users, baslik: "PDKS" },
-  { icon: UserRound, baslik: "Personel Kayıtları" },
-  { icon: Database, baslik: "Maaş Yönetimi" },
-  { icon: BarChart3, baslik: "Müşteri ve Operasyon Yönetimi" },
+  { icon: Wallet, baslik: "Maaş & Bordro" },
+  { icon: Building2, baslik: "Müşteri Yönetimi" },
+  { icon: ScrollText, baslik: "Sözleşme Yönetimi" },
+  { icon: ClipboardList, baslik: "İş Takibi" },
 ];
 
-// Logo koyu zeminde okunsun diye beyaza çevrilir, ama X'in orijinal
-// mavi köşesi (aksan üçgeni) korunsun diye ikinci, kırpılmış bir kopya
-// üstüne bindirilir.
+// Logo açık temada olduğu gibi (koyu lacivert) okunaklı; koyu temada beyaza
+// çevrilir + mavi aksan üçgeni ikinci, kırpılmış bir kopyayla korunur.
 function TurkonixLogo({ className = "" }) {
   return (
     <div className={`relative ${className}`}>
-      <img src={turkonixLogo} alt="Turkonix" className="block w-full h-auto object-contain" style={{ filter: "brightness(0) invert(1)" }} />
-      <img src={turkonixLogo} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-contain" style={{ clipPath: "inset(20% 28% 58% 53%)" }} />
+      <img src={turkonixLogo} alt="Turkonix" className="block w-full h-auto object-contain dark:brightness-0 dark:invert" />
+      <img src={turkonixLogo} alt="" aria-hidden="true" className="hidden dark:block absolute inset-0 w-full h-full object-contain" style={{ clipPath: "inset(20% 28% 58% 53%)" }} />
     </div>
+  );
+}
+
+// Düşük detaylı bina silüeti — sol/sağ dekoratif panellerin altında.
+function SkylineSilhouette({ className = "" }) {
+  return (
+    <svg viewBox="0 0 400 80" className={className} preserveAspectRatio="none" fill="currentColor" aria-hidden="true">
+      <rect x="0" y="30" width="30" height="50" />
+      <rect x="35" y="15" width="24" height="65" />
+      <rect x="64" y="40" width="20" height="40" />
+      <rect x="89" y="5" width="28" height="75" />
+      <rect x="122" y="35" width="22" height="45" />
+      <rect x="149" y="20" width="18" height="60" />
+      <rect x="172" y="45" width="26" height="35" />
+      <rect x="203" y="10" width="24" height="70" />
+      <rect x="232" y="30" width="20" height="50" />
+      <rect x="257" y="0" width="30" height="80" />
+      <rect x="292" y="38" width="22" height="42" />
+      <rect x="319" y="18" width="26" height="62" />
+      <rect x="350" y="42" width="20" height="38" />
+      <rect x="375" y="25" width="25" height="55" />
+    </svg>
+  );
+}
+
+// Sağ üstteki gerçek tema anahtarı — mockup'taki güneş|anahtar|ay sürgüsü,
+// ama gerçekten uygulamanın next-themes durumunu değiştiriyor.
+function ThemeSwitch({ className = "" }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur border border-border shadow-sm text-muted-foreground hover:text-foreground transition-colors",
+        className
+      )}
+      title={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
+    >
+      <Sun className="w-3.5 h-3.5 shrink-0" />
+      <span className={cn("relative w-8 h-4 rounded-full transition-colors shrink-0", isDark ? "bg-primary" : "bg-muted")}>
+        <span className={cn("absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", isDark && "translate-x-4")} />
+      </span>
+      <Moon className="w-3.5 h-3.5 shrink-0" />
+    </button>
   );
 }
 
@@ -30,6 +82,7 @@ export default function Landing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
 
   const handleLogin = async (e) => {
@@ -45,67 +98,96 @@ export default function Landing() {
     }
   };
 
-  return (
-    <div className="h-screen overflow-hidden relative flex" style={{ background: "linear-gradient(135deg, #0a1024 0%, #101a3a 50%, #0a1230 100%)" }}>
-      {/* Sol — marka bloğu */}
-      <div className="hidden lg:flex lg:w-[50%] relative overflow-hidden border-r border-white/10">
-        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-white/[0.04] to-transparent -translate-x-1/3 -translate-y-1/3 rotate-12" style={{ clipPath: "polygon(20% 0%, 100% 10%, 80% 100%, 0% 90%)" }} />
-        <div className="absolute bottom-0 left-0 w-64 h-96 bg-gradient-to-tr from-white/[0.03] to-transparent" style={{ clipPath: "polygon(0% 30%, 60% 0%, 100% 100%, 0% 100%)" }} />
+  // Uygulamada self-servis şifre sıfırlama akışı yok (hesaplar İK/admin
+  // tarafından açılıp şifre atanıyor) — boşa çıkan bir link yerine dürüst
+  // bir yönlendirme mesajı.
+  const handleForgotPassword = () => {
+    toast.info("Şifre sıfırlama için yöneticinizle iletişime geçin.");
+  };
 
-        <div className="relative z-10 flex flex-col justify-center h-full px-16">
-          <TurkonixLogo className="w-[36rem] max-w-full self-start -ml-3" />
-          <p className="text-slate-400 text-sm tracking-[0.2em] uppercase mt-6">İşinizi Daha İleriye Taşır</p>
-          <div className="w-12 h-0.5 bg-blue-400/60 mt-5" />
+  return (
+    <div className="min-h-screen relative flex bg-background transition-colors">
+      <ThemeSwitch className="absolute top-5 right-5 md:top-7 md:right-7 z-20" />
+
+      {/* Sol — özellik paneli (marka rengi, temadan bağımsız) */}
+      <div className="hidden lg:flex lg:w-[38%] relative overflow-hidden bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-white">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/3 translate-x-1/3 blur-2xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-1/3 -translate-x-1/3 blur-2xl" />
+
+        <div className="relative z-10 flex flex-col justify-center h-full px-12 py-16">
+          <h2 className="text-3xl font-bold leading-tight">
+            İşiniz Her Zaman<br /><span className="text-sky-200">Yolunda</span>
+          </h2>
+          <div className="mt-9 space-y-4">
+            {OZELLIKLER.map(({ icon: Icon, baslik }) => (
+              <div key={baslik} className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-white/90">{baslik}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="absolute bottom-14 left-16 z-10">
-          <p className="text-[11px] font-semibold tracking-[0.25em] text-slate-500 uppercase leading-loose">
-            Veri<br />İnsan<br />Süreç<br />Daha Güçlü Yarınlar
-          </p>
+        <SkylineSilhouette className="absolute bottom-0 left-0 w-full h-16 text-white/10" />
+      </div>
+
+      {/* Orta — giriş kartı, uygulamanın gerçek temasıyla uyumlu */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          <div className="bg-card border border-border rounded-3xl shadow-xl p-8">
+            <TurkonixLogo className="w-40 mx-auto" />
+            <p className="text-center text-xs text-muted-foreground tracking-wide mt-2 mb-7">Sınırsız İletişim, Gerçek Verimlilik</p>
+
+            <h1 className="text-2xl font-bold text-foreground text-center">Tekrar hoş geldiniz</h1>
+            <p className="text-sm text-muted-foreground text-center mt-2 mb-6">
+              Turkonix hesabınıza giriş yaparak kaldığınız yerden devam edin.
+            </p>
+
+            {error && <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm text-center">{error}</div>}
+
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input type="email" placeholder="E-posta" value={loginData.email} onChange={e => setLoginData(p => ({ ...p, email: e.target.value }))} className="pl-11 h-12 rounded-xl" required />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={loginData.password} onChange={e => setLoginData(p => ({ ...p, password: e.target.value }))} className="pl-11 pr-11 h-12 rounded-xl" required />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-0.5">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox checked={rememberMe} onCheckedChange={setRememberMe} />
+                  Beni hatırla
+                </label>
+                <button type="button" onClick={handleForgotPassword} className="text-xs text-primary hover:underline">
+                  Şifremi unuttum
+                </button>
+              </div>
+
+              <Button type="submit" className="w-full rounded-xl h-12 shadow-lg mt-1 group" disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex items-center gap-2">Giriş Yap <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></span>}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
 
-      {/* Sağ — giriş formu */}
-      <div className="flex-1 flex flex-col justify-center px-8 sm:px-16 lg:px-20 h-full overflow-y-auto">
-        <div className="w-full max-w-sm mx-auto lg:mx-0">
-          <TurkonixLogo className="w-32 self-start mb-6 lg:hidden" />
+      {/* Sağ — gece paneli (marka rengi, temadan bağımsız), yalnız çok geniş ekranlarda */}
+      <div className="hidden xl:flex xl:w-[30%] relative overflow-hidden bg-gradient-to-br from-slate-900 via-[#0a1024] to-indigo-950 text-white">
+        <div className="absolute top-12 right-16 w-20 h-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-300 shadow-[0_0_50px_15px_rgba(226,232,255,0.25)]" />
 
-          <p className="text-slate-400 text-xs tracking-[0.25em] uppercase">Turkonix</p>
-          <p className="text-slate-500 text-xs tracking-[0.2em] uppercase mt-1">Entegre Yönetim Platformu</p>
-
-          <h1 className="text-4xl font-bold text-white tracking-tight mt-5">Tekrar hoş geldiniz</h1>
-          <p className="text-slate-400 text-sm mt-3 mb-7 leading-relaxed">
-            İş süreçlerinizi tek platformda yönetin.<br />Daha verimli, daha güçlü, birlikte.
-          </p>
-
-          {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-400/30 rounded-xl text-red-300 text-sm text-center">{error}</div>}
-
-          <form onSubmit={handleLogin} className="space-y-3.5">
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <Input type="email" placeholder="E-posta" value={loginData.email} onChange={e => setLoginData(p => ({ ...p, email: e.target.value }))} className="pl-11 h-14 rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/40 focus-visible:border-blue-400/60" required />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <Input type={showPassword ? "text" : "password"} placeholder="Şifre" value={loginData.password} onChange={e => setLoginData(p => ({ ...p, password: e.target.value }))} className="pl-11 pr-11 h-14 rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/40 focus-visible:border-blue-400/60" required />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-            </div>
-            <Button type="submit" className="w-full rounded-2xl bg-blue-600 hover:bg-blue-500 h-14 shadow-lg shadow-blue-600/30 mt-1 group" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="flex items-center gap-2">Giriş Yap <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></span>}
-            </Button>
-          </form>
-
-          <div className="border-t border-white/10 mt-7 pt-6">
-            <div className="flex justify-between">
-              {MODULLER.map(({ icon: Icon, baslik }) => (
-                <div key={baslik} className="flex flex-col items-center text-center w-16">
-                  <Icon className="w-5 h-5 text-blue-300/80 mb-1.5" />
-                  <p className="text-[10px] text-slate-400 leading-tight">{baslik}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="relative z-10 flex flex-col justify-end h-full px-12 pb-20">
+          <h2 className="text-3xl font-bold leading-tight">Bugün de<br />Yarın da</h2>
+          <p className="text-sm text-white/60 mt-4">İşiniz hep güvende, Turkonix yanınızda.</p>
         </div>
+
+        <SkylineSilhouette className="absolute bottom-0 left-0 w-full h-16 text-white/10" />
       </div>
     </div>
   );

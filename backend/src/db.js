@@ -499,10 +499,6 @@ function initDb() {
       'stok_parti_takibi',
       // Faz 4: Sayım
       'stok_sayim',
-      // Faz 5: Malzeme Talep
-      'stok_talep',
-      // Proje/saha rezervasyonu
-      'stok_rezervasyon',
       // Faz 6: Raporlar
       'stok_raporlar',
       // Faz 7: Satın Alma
@@ -513,8 +509,6 @@ function initDb() {
       'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
       // Faz 13: QNB e-Belge
       'stok_qnb',
-      // Faz 14: Fiyat Araştır
-      'stok_fiyat_arastir',
       // ── İK / Özlük / Bordro modülü (önek: ikb_) ──────────────────
       // Faz 1: şube, bölüm, bordro personel işlemleri (zam/çıkış/ücret geçmişi yetkisi), zam, şahsi hesap
       'ikb_subeler','ikb_bolumler','ikb_personel','ikb_zam','ikb_ozluk_evrak',
@@ -731,7 +725,7 @@ function initDb() {
       CREATE TABLE IF NOT EXISTS stok_sayimlar (
         id TEXT PRIMARY KEY, sayim_no TEXT, depo_id TEXT, depo_adi TEXT, tarih TEXT,
         tip TEXT DEFAULT 'tam',                       -- tam | kismi
-        durum TEXT DEFAULT 'taslak',                  -- taslak | sayiliyor | fark_onay | tamamlandi | iptal
+        durum TEXT DEFAULT 'taslak',                  -- taslak | sayiliyor | tamamlandi | iptal
         aciklama TEXT, satir_sayisi INTEGER DEFAULT 0, farkli_satir INTEGER DEFAULT 0,
         olusturan TEXT, onaylayan TEXT, tamamlanma_tarihi TEXT,
         duzeltme_giris_fis_id TEXT, duzeltme_cikis_fis_id TEXT,
@@ -1484,7 +1478,7 @@ function initDb() {
       }
     };
     const HEP = ['stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf','stok_sahalar','stok_tedarikciler',
-      'stok_giris','stok_cikis','stok_transfer','stok_talep','stok_fisler','stok_sayim','stok_parti_takibi',
+      'stok_giris','stok_cikis','stok_transfer','stok_fisler','stok_sayim','stok_parti_takibi',
       'stok_raporlar','stok_satinalma','stok_zimmet','stok_dashboard','stok_mobil','stok_etiket','stok_excel'];
     const RAPORLAR = ['stok_raporlar','stok_parti_takibi','stok_dashboard','stok_fisler'];
     // Sadece bu bloğun ilk çalışmasında (depo_yetkilisi'nin hiç yetkisi yoksa) uygula.

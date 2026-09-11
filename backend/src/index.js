@@ -1114,9 +1114,13 @@ app.put('/api/stok/fis/:id', authMiddleware, (req, res) => {
     const toplam = norm.reduce((a, s) => a + s.miktar_ana_birim, 0);
     db.transaction(() => {
       const upd = {};
-      for (const c of _stokFisCols) if (c in fisData && c !== 'tip' && c !== 'fis_no') upd[c] = fisData[c] ?? null;
+      // durum genel dongude degil, asagida ayrica ve sadece izinli iki degerle set edilir --
+      // bu route stok yeterlilik/rezervasyon/seri-no/FIFO kontrolu yapmiyor, 'onayli'/'iptal'
+      // gibi bir degerin buradan sizip stok_hareketler hic olusmadan "onayli" gorunen bir
+      // fis yaratmasi engellenir. Gercek onaylama /api/stok/fis/:id/onayla uzerinden gecer.
+      for (const c of _stokFisCols) if (c in fisData && c !== 'tip' && c !== 'fis_no' && c !== 'durum') upd[c] = fisData[c] ?? null;
       upd.satir_sayisi = norm.length; upd.toplam_miktar = toplam; upd.updated_date = now;
-      if (fisData.durum === 'onay_bekliyor') upd.durum = 'onay_bekliyor';
+      if (['taslak', 'onay_bekliyor'].includes(fisData.durum)) upd.durum = fisData.durum;
       const keys = Object.keys(upd);
       db.prepare(`UPDATE stok_fisler SET ${keys.map((k) => k + '=@' + k).join(',')} WHERE id=@id`).run({ ...upd, id: fis.id });
       db.prepare('DELETE FROM stok_fis_satirlari WHERE fis_id=?').run(fis.id);
@@ -1197,12 +1201,17 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   {
     const seriHatalar = [];
     const seriBak = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?");
+    const buFisteGorulen = new Set(); // ayni fis icinde ayni seri no'nun iki satirda kullanilmasini yakalamak icin
     for (const s of satirlar) {
       const u = db.prepare('SELECT seri_no_takip FROM stok_urunler WHERE id=?').get(s.urun_id);
       if (!u || !u.seri_no_takip) continue;
       if (Math.abs((Number(s.miktar_ana_birim) || 0) - 1) > 1e-9) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no takipli — her satır 1 ana birim olmalı`); continue; }
       const sn = s.seri_no ? String(s.seri_no).trim() : '';
       if (!sn) { seriHatalar.push(`${s.urun_adi || s.urun_id}: seri no zorunlu`); continue; }
+      const depoId = fis.tip === 'giris' ? fis.hedef_depo_id : fis.kaynak_depo_id;
+      const anahtar = `${s.urun_id}|${depoId}|${sn}`;
+      if (buFisteGorulen.has(anahtar)) { seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu fişte birden fazla satırda kullanılmış`); continue; }
+      buFisteGorulen.add(anahtar);
       if (fis.tip === 'giris') {
         if (seriBak.get(s.urun_id, fis.hedef_depo_id, sn).n > 0) seriHatalar.push(`${s.urun_adi || s.urun_id} · SN ${sn}: bu seri no zaten hedef depoda kayıtlı`);
       } else {
@@ -1357,6 +1366,13 @@ app.get('/api/stok/partiler', authMiddleware, (req, res) => {
     if (urun_id) { cond.push('urun_id=?'); params.push(urun_id); }
     if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
     if (durum === 'acik') cond.push("durum!='kapali' AND kalan_bakiye>0");
+    else if (durum === 'suresi_gecti') {
+      // "Süresi Geçen" KPI'siyle (parti-ozet) aynı canlı hesap kullanılır -- stored
+      // durum sütunu yalnızca giriş anında veya "FIFO Yeniden Hesapla" ile set edilir,
+      // SKT zaman içinde geçtiğinde otomatik güncellenmez ve KPI'dan sapardı.
+      cond.push("durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ?");
+      params.push(new Date().toISOString().slice(0, 10));
+    }
     else if (durum && durum !== 'hepsi') { cond.push('durum=?'); params.push(durum); }
     if (skt1) { cond.push('skt>=?'); params.push(skt1); }
     if (skt2) { cond.push('skt<=?'); params.push(skt2); }
@@ -1490,17 +1506,19 @@ app.put('/api/stok/sayim/:id', authMiddleware, (req, res) => {
   const { satirlar = [], aciklama, durum } = req.body || {};
   try {
     const now = new Date().toISOString();
-    let farkli = 0;
     db.transaction(() => {
       const upd = db.prepare("UPDATE stok_sayim_satirlari SET sayilan_miktar=?, fark=?, sayan=?, not_=?, updated_date=? WHERE id=? AND sayim_id=?");
       for (const r of satirlar) {
         const say = (r.sayilan_miktar === '' || r.sayilan_miktar == null) ? null : Number(r.sayilan_miktar);
         const fark = say == null ? 0 : +(say - (Number(r.sistem_miktar) || 0)).toFixed(6);
-        if (fark !== 0) farkli++;
         upd.run(say, fark, req.user.email, r.not_ || null, now, r.id, s.id);
       }
+      // farkli_satir HER ZAMAN tum satirlar uzerinden yeniden hesaplanir -- istek govdesi
+      // sadece degisen satirlari iceriyor olabilir (ornegin mobil kismi kaydetme), bu
+      // yuzden sayiya sadece istekteki satirlar degil, sayimin guncel tam durumu yansitilir.
+      const farkli = db.prepare("SELECT COUNT(*) n FROM stok_sayim_satirlari WHERE sayim_id=? AND fark != 0").get(s.id).n;
       db.prepare("UPDATE stok_sayimlar SET aciklama=COALESCE(?,aciklama), durum=?, farkli_satir=?, updated_date=? WHERE id=?")
-        .run(aciklama ?? null, durum && ['sayiliyor', 'fark_onay'].includes(durum) ? durum : s.durum, farkli, now, s.id);
+        .run(aciklama ?? null, durum === 'sayiliyor' ? durum : s.durum, farkli, now, s.id);
     })();
     const out = db.prepare('SELECT * FROM stok_sayimlar WHERE id=?').get(s.id);
     out.satirlar = db.prepare('SELECT * FROM stok_sayim_satirlari WHERE sayim_id=? ORDER BY urun_adi').all(s.id);
@@ -1577,7 +1595,7 @@ app.get('/api/stok/sayim-ozet', authMiddleware, (req, res) => {
   try {
     const ND = "(is_deleted=0 OR is_deleted IS NULL)";
     const c = (w) => db.prepare(`SELECT COUNT(*) n FROM stok_sayimlar WHERE ${ND}${w ? ' AND ' + w : ''}`).get().n;
-    res.json({ toplam: c(''), taslak: c("durum IN ('taslak','sayiliyor','fark_onay')"), tamamlandi: c("durum='tamamlandi'") });
+    res.json({ toplam: c(''), taslak: c("durum IN ('taslak','sayiliyor')"), tamamlandi: c("durum='tamamlandi'") });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2130,7 +2148,7 @@ app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
     const bugunCikis = db.prepare("SELECT COALESCE(SUM(toplam_miktar),0) m, COUNT(*) n FROM stok_fisler WHERE tip IN ('cikis','transfer') AND durum='onayli' AND tarih=?").get(bugun);
     const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const bekleyenTalep = db.prepare("SELECT COUNT(*) n FROM stok_talepler WHERE durum IN ('taslak','onay_bekliyor','onayli','kismen_sevk') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
-    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor','fark_onay') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const gecikenZimmet = db.prepare("SELECT COUNT(*) n FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < ?").get(bugun).n;
     const sktGecen = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ?").get(bugun).n;
     const sktYaklasan = db.prepare("SELECT COUNT(*) n FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days')").get(bugun, bugun).n;
@@ -2164,7 +2182,7 @@ app.get('/api/stok/uyarilar', authMiddleware, (req, res) => {
     const sktYaklasan = db.prepare("SELECT id, urun_id, urun_adi, depo_adi, lot_no, skt, kalan_bakiye FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days') ORDER BY skt LIMIT 100").all(bugun, bugun);
     const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const bekleyenTalep = db.prepare("SELECT COUNT(*) n FROM stok_talepler WHERE durum IN ('onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
-    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor','fark_onay') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const gecikenZimmet = db.prepare("SELECT COUNT(*) n FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < ?").get(bugun).n;
     const toplam = kritik.length + sktGecen.length + sktYaklasan.length + bekleyenFis + bekleyenTalep + sayimGorevi + gecikenZimmet;
     res.json({

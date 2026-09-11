@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, ListChecks, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +45,7 @@ export default function FisForm({ tip }) {
   const [depoFifoMaliyet, setDepoFifoMaliyet] = useState({}); // { [urun_id]: en eski açık partinin alış maliyeti }
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 5000) });
+  const ekBarkodMap = useUrunEkBarkodMap();
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
   const { data: raflar = [] } = useQuery({ queryKey: ["stok_raflar"], queryFn: () => flowApi.entities.StokRaf.list("depo_adi", 8000) });
   const { data: sahalar = [] } = useQuery({ queryKey: ["stok_sahalar"], queryFn: () => flowApi.entities.StokSaha.list("ad", 5000) });
@@ -274,7 +276,7 @@ export default function FisForm({ tip }) {
               <div className="md:col-span-4">
                 <Label className="mb-1 block text-xs">Ürün *</Label>
                 <SearchableSelect value={l.urun_id} onChange={(v) => onPickUrun(i, v)}
-                  options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: u.barkod || "" }))}
+                  options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))}
                   placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
               </div>
               {tip !== "giris" && (

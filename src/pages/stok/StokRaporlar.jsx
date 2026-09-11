@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { flowApi } from "@/api/flowApiClient";
@@ -38,6 +39,7 @@ export default function StokRaporlar() {
   const hareket = useQuery({ queryKey: ["rp_hareket", f.depo_id, f.tip, f.t1, f.t2], queryFn: () => flowApi.stok.rapor("hareket", { depo_id: f.depo_id, tip: f.tip, t1: f.t1, t2: f.t2 }), enabled: tab === "hareket" });
   const raf = useQuery({ queryKey: ["rp_raf", f.depo_id], queryFn: () => flowApi.stok.rapor("raf-doluluk", { depo_id: f.depo_id }), enabled: tab === "raf" });
   const degerleme = useQuery({ queryKey: ["rp_deger", f.depo_id, f.urun_id], queryFn: () => flowApi.stok.rapor("degerleme", { depo_id: f.depo_id, urun_id: f.urun_id }), enabled: tab === "degerleme" });
+  const tutarlilik = useQuery({ queryKey: ["stok_fifo_tutarlilik"], queryFn: () => flowApi.stok.fifoTutarlilik(), enabled: tab === "degerleme" });
 
   const depoOpts = [{ value: "", label: "Tüm Depolar" }, ...depolar.map((d) => ({ value: d.id, label: d.ad }))];
   const urunOpts = [{ value: "", label: "Tüm Ürünler" }, ...urunler.map((u) => ({ value: u.id, label: u.ad }))];
@@ -202,6 +204,15 @@ export default function StokRaporlar() {
 
       {tab === "degerleme" && (
         <div className="space-y-3">
+          {tutarlilik.data?.sayisi > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                {tutarlilik.data.sayisi} ürün/depo için parti izi ile stok bakiyesi uyuşmuyor — aşağıdaki değerler bu kayıtlarda gerçek durumu yansıtmayabilir.
+                Detay ve düzeltme için <Link to="/stok/partiler" className="underline font-medium">Parti &amp; Raf Ömrü Takibi</Link> ekranına bakın.
+              </p>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2 items-center">
             <div className="w-52"><SearchableSelect value={f.depo_id} onChange={(v) => setF({ ...f, depo_id: v })} options={depoOpts} placeholder="Depo" /></div>
             <div className="w-64"><SearchableSelect value={f.urun_id} onChange={(v) => setF({ ...f, urun_id: v })} options={urunOpts} placeholder="Ürün" /></div>

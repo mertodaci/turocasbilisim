@@ -12,10 +12,10 @@ import { toast } from "sonner";
 
 const DURUM_BADGE = {
   taslak: "bg-slate-100 text-slate-600", sayiliyor: "bg-amber-100 text-amber-700",
-  fark_onay: "bg-amber-100 text-amber-700", tamamlandi: "bg-emerald-100 text-emerald-700",
+  tamamlandi: "bg-emerald-100 text-emerald-700",
   iptal: "bg-red-100 text-red-600 line-through",
 };
-const DURUM_LBL = { taslak: "Taslak", sayiliyor: "Sayılıyor", fark_onay: "Fark Onayı", tamamlandi: "Tamamlandı", iptal: "İptal" };
+const DURUM_LBL = { taslak: "Taslak", sayiliyor: "Sayılıyor", tamamlandi: "Tamamlandı", iptal: "İptal" };
 
 export default function StokSayim() {
   const queryClient = useQueryClient();

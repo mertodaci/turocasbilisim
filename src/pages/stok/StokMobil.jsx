@@ -125,7 +125,6 @@ export default function StokMobil() {
 
   const kaydet = async () => {
     if (!depoId) { toast.error("Depo seçin"); return; }
-    if (mode === "cikis" && !sahaId && !depoId) { toast.error("Hedef gerekli"); return; }
     const satirlar = lines.filter((l) => l.miktar > 0);
     if (!satirlar.length) { toast.error("Ürün yok"); return; }
     const depoAdi = depolar.find((d) => d.id === depoId)?.ad;

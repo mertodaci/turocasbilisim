@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
 import { HardHat, Plus, Trash2, Undo2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
@@ -203,6 +204,7 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
 
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000), enabled: open });
+  const ekBarkodMap = useUrunEkBarkodMap();
 
   useEffect(() => {
     if (!depoId) { setDepoKullanilabilir({}); return; }
@@ -298,7 +300,7 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
                     <div className="col-span-7">
                       <Label className="mb-1 block text-[11px]">Ürün</Label>
                       <SearchableSelect value={s.urun_id} onChange={(v) => onPickUrun(i, v)}
-                        options={urunler.map((x) => ({ value: x.id, label: `${x.kod ? x.kod + " · " : ""}${x.ad}`, keywords: x.barkod || "" }))}
+                        options={urunler.map((x) => ({ value: x.id, label: `${x.kod ? x.kod + " · " : ""}${x.ad}`, keywords: [x.barkod, ekBarkodMap[x.id]].filter(Boolean).join(" ") }))}
                         placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
                     </div>
                     <div className="col-span-4">

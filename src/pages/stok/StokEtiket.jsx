@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
 import { Tags, Plus, Trash2, Printer, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +23,7 @@ export default function StokEtiket() {
   const [boyut, setBoyut] = useState("standart");
 
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000) });
+  const ekBarkodMap = useUrunEkBarkodMap();
   const { data: fisler = [] } = useQuery({ queryKey: ["stok_etiket_fisleri"], queryFn: () => flowApi.entities.StokEtiketFis.list("-created_date", 500) });
 
   const ekle = () => {
@@ -102,7 +104,7 @@ export default function StokEtiket() {
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">
         <div className="flex flex-wrap gap-2 items-end">
-          <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: u.barkod || "" }))} placeholder="Ürün ara / okut" /></div>
+          <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))} placeholder="Ürün ara / okut" /></div>
           <Input type="number" className="w-24" value={adet} onChange={(e) => setAdet(parseInt(e.target.value) || 1)} />
           <Button onClick={ekle} disabled={!sel}><Plus className="w-4 h-4 mr-1.5" /> Sepete Ekle</Button>
         </div>

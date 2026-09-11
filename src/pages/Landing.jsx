@@ -85,12 +85,12 @@ export default function Landing() {
       <SistemDurumu />
 
       {/* Sol — marka bloğu */}
-      <div className="hidden lg:flex lg:w-[42%] relative overflow-hidden border-r border-white/10">
+      <div className="hidden lg:flex lg:w-[50%] relative overflow-hidden border-r border-white/10">
         <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-white/[0.04] to-transparent -translate-x-1/3 -translate-y-1/3 rotate-12" style={{ clipPath: "polygon(20% 0%, 100% 10%, 80% 100%, 0% 90%)" }} />
         <div className="absolute bottom-0 left-0 w-64 h-96 bg-gradient-to-tr from-white/[0.03] to-transparent" style={{ clipPath: "polygon(0% 30%, 60% 0%, 100% 100%, 0% 100%)" }} />
 
         <div className="relative z-10 flex flex-col justify-center h-full px-16">
-          <TurkonixLogo className="w-[28rem] max-w-full self-start -ml-3" />
+          <TurkonixLogo className="w-[36rem] max-w-full self-start -ml-3" />
           <p className="text-slate-400 text-sm tracking-[0.2em] uppercase mt-6">İşinizi Daha İleriye Taşır</p>
           <div className="w-12 h-0.5 bg-blue-400/60 mt-5" />
         </div>

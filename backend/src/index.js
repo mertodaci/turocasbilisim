@@ -874,11 +874,15 @@ function stokKritikListe() {
   const minMap = {};
   for (const m of db.prepare('SELECT urun_id, depo_id, MAX(min_seviye) min_seviye FROM stok_urun_raf GROUP BY urun_id, depo_id').all())
     minMap[`${m.urun_id}|${m.depo_id}`] = m.min_seviye || 0;
+  // Demirbaş "kritik stok / yeniden sipariş" kavramına girmez -- azalması genelde
+  // tüketimden değil zimmetli (aktif kullanımda) olmasından kaynaklanır.
+  const demirbasSet = new Set(db.prepare("SELECT id FROM stok_urunler WHERE urun_tipi='demirbas'").all().map((r) => r.id));
   const bakiye = db.prepare(`SELECT urun_id, MAX(urun_adi) urun_adi, depo_id, MAX(depo_adi) depo_adi,
       SUM(CASE WHEN tip='giris' THEN miktar ELSE -miktar END) m
     FROM stok_hareketler GROUP BY urun_id, depo_id`).all();
   const out = [];
   for (const r of bakiye) {
+    if (demirbasSet.has(r.urun_id)) continue;
     const min = minMap[`${r.urun_id}|${r.depo_id}`] || 10;
     if (r.m > 0 && r.m <= min) out.push({ urun_id: r.urun_id, urun_adi: r.urun_adi, depo_id: r.depo_id, depo_adi: r.depo_adi, mevcut: r.m, min_seviye: min });
   }
@@ -1647,9 +1651,9 @@ app.get('/api/stok/rapor/durum', authMiddleware, (req, res) => {
       FROM stok_hareketler h ${where}
       GROUP BY h.depo_id, h.raf_id, h.urun_id
       ORDER BY MAX(h.depo_adi), MAX(h.urun_adi)`).all(...params);
-    // ürün grup + birim + min seviye zenginleştir
+    // ürün grup + birim + min seviye + tip zenginleştir
     const urunMap = {};
-    for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim FROM stok_urunler').all()) urunMap[u.id] = u;
+    for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim, urun_tipi FROM stok_urunler').all()) urunMap[u.id] = u;
     const minMap = {};
     for (const m of db.prepare('SELECT urun_id, depo_id, min_seviye FROM stok_urun_raf').all()) minMap[`${m.urun_id}|${m.depo_id}`] = m.min_seviye;
     // Açık rezervasyon (urun,depo bazında). Rapor rafa göre gruplu; rezerve depo
@@ -1662,10 +1666,12 @@ app.get('/api/stok/rapor/durum', authMiddleware, (req, res) => {
       const key = `${r.urun_id}|${r.depo_id}`;
       const rezerve = rezGoruldu.has(key) ? 0 : (rezMap[key] || 0);
       rezGoruldu.add(key);
-      return { ...r, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '', birim: urunMap[r.urun_id]?.ana_birim || 'ADET', min_seviye: minMap[`${r.urun_id}|${r.depo_id}`] || 0, rezerve, kullanilabilir: +(r.mevcut - rezerve).toFixed(4) };
+      return { ...r, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '', birim: urunMap[r.urun_id]?.ana_birim || 'ADET', urun_tipi: urunMap[r.urun_id]?.urun_tipi || '', min_seviye: minMap[`${r.urun_id}|${r.depo_id}`] || 0, rezerve, kullanilabilir: +(r.mevcut - rezerve).toFixed(4) };
     });
     if (mode === 'zero') rows = rows.filter((r) => r.mevcut <= 1e-9);
-    else if (mode === 'critical') rows = rows.filter((r) => r.mevcut > 0 && r.mevcut <= (r.min_seviye || 10));
+    // Demirbaş "kritik stok / yeniden sipariş" kavramına girmez -- azalması genelde
+    // tüketimden değil zimmetli (aktif kullanımda) olmasından kaynaklanır.
+    else if (mode === 'critical') rows = rows.filter((r) => r.urun_tipi !== 'demirbas' && r.mevcut > 0 && r.mevcut <= (r.min_seviye || 10));
     if (q) { const s = q.toLowerCase(); rows = rows.filter((r) => `${r.urun_adi} ${r.urun_kodu} ${r.depo_adi} ${r.raf_adi} ${r.grup}`.toLowerCase().includes(s)); }
     const tot = rows.reduce((a, r) => ({ giren: a.giren + r.giren, cikan: a.cikan + r.cikan, mevcut: a.mevcut + r.mevcut, rezerve: a.rezerve + (r.rezerve || 0) }), { giren: 0, cikan: 0, mevcut: 0, rezerve: 0 });
     tot.kullanilabilir = +(tot.mevcut - tot.rezerve).toFixed(4);

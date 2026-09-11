@@ -2,21 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
 import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown } from "lucide-react";
-import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
-
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-
 
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -149,22 +137,6 @@ function ThemeToggle() {
   );
 }
 
-function LanguageSelector() {
-  const { language, setLanguage } = useLanguage();
-
-  return (
-    <Select value={language} onValueChange={setLanguage}>
-      <SelectTrigger className="w-16 h-9 text-sm font-semibold">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="tr" className="text-base font-semibold">TR</SelectItem>
-        <SelectItem value="en" className="text-base font-semibold">EN</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
-
 // İstanbul sabit konum — Open-Meteo, API anahtarı gerektirmez.
 const ISTANBUL_LAT = 41.0082;
 const ISTANBUL_LON = 28.9784;
@@ -280,7 +252,6 @@ export default function TopBar() {
       <GlobalSearch />
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <WeatherWidget />
-        <LanguageSelector />
         <ThemeToggle />
         <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">
           <HelpCircle className="w-5 h-5" />

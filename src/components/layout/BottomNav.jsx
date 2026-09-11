@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Star } from "lucide-react";
+import { Star, ChevronRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -46,10 +46,10 @@ export default function BottomNav() {
   // Gezinince uçan alt-menüyü kapat.
   useEffect(() => { setFlyout(null); }, [location.pathname]);
 
-  const openFlyout = (key, el) => {
+  const openFlyout = (key, el, hasSubgroups) => {
     clearTimeout(flyoutTimer.current);
     const r = el.getBoundingClientRect();
-    const width = 224; // w-56
+    const width = hasSubgroups ? Math.min(680, window.innerWidth - 16) : 256; // w-64
     const left = Math.max(8, Math.min(r.left + r.width / 2 - width / 2, window.innerWidth - 8 - width));
     const bottom = window.innerHeight - r.top + 12;
     setFlyout({ key, left, bottom });
@@ -80,17 +80,9 @@ export default function BottomNav() {
   }
   const navItems = filterNavTree(allNavItems);
 
-  // Bir grubun uçan alt-menüsü — beyaz kart, alt-gruplar tıklanamaz bölüm
-  // başlığı olur, leaf'ler tıklanabilir satır (rozet + favori yıldızı dahil).
-  const renderFlyoutTree = (items) => items.map((it) => {
-    if (it.children && it.children.length > 0) {
-      return (
-        <div key={it.labelKey} className="mt-1 first:mt-0">
-          <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">{t(it.labelKey)}</p>
-          <div>{renderFlyoutTree(it.children)}</div>
-        </div>
-      );
-    }
+  // Tek satır — hem tekil (alt-grupsuz) kolonlarda hem bir alt-grup
+  // kolonunun içinde kullanılır. Rozet + favori yıldızı + sağda ok (›).
+  const renderFlyoutLeaf = (it) => {
     const active = location.pathname === it.path;
     const isFav = favorites.includes(it.labelKey);
     const showLeaveBadge = (it.labelKey === "my_leave_requests" || it.labelKey === "ik_leave_requests") && pendingLeaveCount > 0;
@@ -104,7 +96,7 @@ export default function BottomNav() {
       <Link key={it.path} to={it.path}
         onClick={() => setFlyout(null)}
         className={cn(
-          "group flex items-center gap-2.5 mx-1 px-2.5 py-2 rounded-lg text-sm transition-colors",
+          "group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
           active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
         )}>
         <it.icon className="w-4 h-4 shrink-0" />
@@ -122,11 +114,29 @@ export default function BottomNav() {
           title={isFav ? "Favorilerden çıkar" : "Favorilere ekle"}>
           <Star className={cn("w-3.5 h-3.5", isFav ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40")} />
         </button>
+        <ChevronRight className="w-3.5 h-3.5 text-current opacity-30 group-hover:opacity-60 shrink-0" />
       </Link>
     );
-  });
+  };
+
+  // Flyout panelinin bir "kolonu" — grubun doğrudan çocuğu. Alt-grubu varsa
+  // kalın (tıklanamaz) başlık + altında leaf satırları; yoksa kolonun kendisi
+  // tek satırlık tıklanabilir bir leaf.
+  const renderFlyoutColumn = (child) => {
+    const hasKids = child.children && child.children.length > 0;
+    if (!hasKids) {
+      return <div key={child.labelKey} className="min-w-[180px]">{renderFlyoutLeaf(child)}</div>;
+    }
+    return (
+      <div key={child.labelKey} className="min-w-[180px]">
+        <p className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t(child.labelKey)}</p>
+        <div className="space-y-0.5">{child.children.map(renderFlyoutLeaf)}</div>
+      </div>
+    );
+  };
 
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
+  const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;
 
   return (
     <>
@@ -158,12 +168,13 @@ export default function BottomNav() {
               </Link>
             );
           }
+          const itemHasSubgroups = item.children.some((c) => c.children && c.children.length > 0);
           return (
             <button
               key={item.labelKey}
-              onMouseEnter={(e) => openFlyout(item.labelKey, e.currentTarget)}
+              onMouseEnter={(e) => openFlyout(item.labelKey, e.currentTarget, itemHasSubgroups)}
               onMouseLeave={scheduleCloseFlyout}
-              onClick={(e) => (isFlyoutOpen ? setFlyout(null) : openFlyout(item.labelKey, e.currentTarget))}
+              onClick={(e) => (isFlyoutOpen ? setFlyout(null) : openFlyout(item.labelKey, e.currentTarget, itemHasSubgroups))}
               className={itemClasses}>
               <item.icon className="w-5 h-5 shrink-0" />
               <span className="whitespace-nowrap">{t(item.labelKey)}</span>
@@ -177,10 +188,17 @@ export default function BottomNav() {
         <div
           onMouseEnter={cancelCloseFlyout}
           onMouseLeave={scheduleCloseFlyout}
-          className="fixed z-[70] w-56 max-h-[70vh] overflow-y-auto scrollbar-thin bg-card text-foreground border border-border rounded-xl shadow-2xl py-1.5"
+          className={cn(
+            "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
+            flyoutHasSubgroups ? "w-[min(92vw,680px)]" : "w-64"
+          )}
           style={{ left: flyout.left, bottom: flyout.bottom }}>
-          <p className="px-3 pt-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t(flyoutItem.labelKey)}</p>
-          {renderFlyoutTree(flyoutItem.children)}
+          <p className="px-4 pt-3 pb-1 text-sm font-bold text-foreground">{t(flyoutItem.labelKey)}</p>
+          <div
+            className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
+            style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" } : undefined}>
+            {flyoutItem.children.map(renderFlyoutColumn)}
+          </div>
         </div>
       )}
     </>

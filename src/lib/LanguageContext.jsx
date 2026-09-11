@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 const LanguageContext = createContext();
 
@@ -238,21 +238,18 @@ const translations = {
 };
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem("app_language");
-    return saved || "tr";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("app_language", language);
-  }, [language]);
+  // Dil seçici UI'sı kaldırıldı — uygulama yalnız Türkçe. `language`/
+  // `setLanguage` context'te (başka tüketicisi kalmasa da imza bozulmasın
+  // diye) duruyor ama artık hiçbir yerden değiştirilmiyor; eski bir
+  // oturumdan kalan `localStorage.app_language=en` de artık okunmuyor.
+  const [language] = useState("tr");
 
   const t = (key) => {
     return translations[language]?.[key] || translations.tr?.[key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: () => {}, t }}>
       {children}
     </LanguageContext.Provider>
   );

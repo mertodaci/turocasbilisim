@@ -52,7 +52,8 @@ const JobTrackingV3 = lazy(() => import('./pages/JobTrackingV3'));
 const JobTrackingDashboard = lazy(() => import('./pages/JobTrackingDashboard'));
 const JobTrackingTickets = lazy(() => import('./pages/JobTrackingTickets'));
 const JobTrackingKanban = lazy(() => import('./pages/JobTrackingKanban'));
-const JobTrackingSettings = lazy(() => import('./pages/JobTrackingSettings'));
+const JobTrackingTicketStatuses = lazy(() => import('./pages/JobTrackingTicketStatuses'));
+const JobTrackingTicketTypes = lazy(() => import('./pages/JobTrackingTicketTypes'));
 // Stok / Depo Yönetimi — Faz 1: Tanımlar
 const StokUrunler = lazy(() => import('./pages/stok/StokUrunler'));
 const StokGruplar = lazy(() => import('./pages/stok/StokGruplar'));
@@ -216,7 +217,8 @@ const AuthenticatedApp = () => {
         <Route path="/is-takibi/dashboard" element={guard("is_takibi_dashboard", <JobTrackingDashboard />)} />
         <Route path="/is-takibi/tickets" element={guard("is_takibi_biletler", <JobTrackingTickets />)} />
         <Route path="/is-takibi/kanban" element={guard("is_takibi_kanban", <JobTrackingKanban />)} />
-        <Route path="/is-takibi/tanimlar" element={guard("is_takibi_tanimlar", <JobTrackingSettings />)} />
+        <Route path="/is-takibi/bilet-durumlari" element={guard("is_takibi_bilet_durumlari", <JobTrackingTicketStatuses />)} />
+        <Route path="/is-takibi/bilet-tipleri" element={guard("is_takibi_bilet_tipleri", <JobTrackingTicketTypes />)} />
         {/* Stok / Depo Yönetimi — Faz 1: Tanımlar */}
         <Route path="/stok/urunler" element={guard("stok_urunler", <StokUrunler />)} />
         <Route path="/stok/gruplar" element={guard("stok_gruplar", <StokGruplar />)} />

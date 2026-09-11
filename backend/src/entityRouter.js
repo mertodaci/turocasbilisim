@@ -108,7 +108,7 @@ const TABLE_TO_MODULE = {
   announcements: 'announcements',
   job_projects: 'is_takibi_projeler',
   job_tickets: 'is_takibi_biletler',
-  job_ticket_statuses: 'is_takibi_tanimlar',
+  job_ticket_statuses: 'is_takibi_bilet_durumlari',
   job_comments: 'is_takibi_biletler',
   job_effort_plans: 'is_takibi_biletler',
   job_effort_logs: 'is_takibi_biletler',

@@ -2,21 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
 import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown } from "lucide-react";
-import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
-
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-
+import turkonixLogo from "@/assets/turkonix-logo.png";
 
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -24,9 +13,9 @@ import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from 
 import { useQuery } from "@tanstack/react-query";
 
 const themes = [
-  { value: "light", icon: Sun },
-  { value: "dark", icon: Moon },
-  { value: "system", icon: Monitor },
+  { value: "light", icon: Sun, label: "Açık" },
+  { value: "dark", icon: Moon, label: "Koyu" },
+  { value: "system", icon: Monitor, label: "Sistem" },
 ];
 
 function NotificationBell() {
@@ -126,42 +115,44 @@ function NotificationBell() {
   );
 }
 
+// Tema seçici — tek ikon buton, tıklayınca aşağı açılan menüde 3 seçenek
+// (NotificationBell/ProfileMenu ile aynı açılır-panel deseni).
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const current = themes.find((t) => t.value === theme) || themes[2];
 
   return (
-    <div className="flex items-center gap-0.5 bg-muted rounded-xl p-1">
-      {themes.map(({ value, icon: Icon }) => (
-        <button
-          key={value}
-          onClick={() => setTheme(value)}
-          className={cn(
-            "p-1.5 rounded-lg transition-all",
-            theme === value
-              ? "bg-card shadow text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Icon className="w-4 h-4" />
-        </button>
-      ))}
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        title="Görünüm"
+      >
+        <current.icon className="w-5 h-5" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-40 bg-card border rounded-xl shadow-xl z-50 overflow-hidden p-1">
+            {themes.map(({ value, icon: Icon, label }) => (
+              <button
+                key={value}
+                onClick={() => { setTheme(value); setOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                  theme === value ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
-  );
-}
-
-function LanguageSelector() {
-  const { language, setLanguage } = useLanguage();
-
-  return (
-    <Select value={language} onValueChange={setLanguage}>
-      <SelectTrigger className="w-16 h-9 text-sm font-semibold">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="tr" className="text-base font-semibold">TR</SelectItem>
-        <SelectItem value="en" className="text-base font-semibold">EN</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -273,14 +264,18 @@ function ProfileMenu() {
 
 export default function TopBar() {
   return (
-    <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
-      <div className="text-sm font-semibold text-foreground truncate shrink-0 hidden xl:block">
-        THIS IS OUR HOME
-      </div>
-      <GlobalSearch />
+    <div className="h-20 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
+      <Link to="/" className="flex items-center gap-2.5 shrink-0">
+        <img
+          src={turkonixLogo}
+          alt="Turkonix"
+          className="h-16 w-auto object-contain dark:brightness-0 dark:invert"
+        />
+        <span className="hidden sm:inline text-2xl font-extrabold tracking-tight text-foreground">TURKONIX</span>
+      </Link>
       <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <GlobalSearch />
         <WeatherWidget />
-        <LanguageSelector />
         <ThemeToggle />
         <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">
           <HelpCircle className="w-5 h-5" />

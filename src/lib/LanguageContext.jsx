@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 const LanguageContext = createContext();
 
@@ -29,7 +29,9 @@ const translations = {
     is_takibi_projeler: "Projeler",
     is_takibi_biletler: "Biletler",
     is_takibi_kanban: "Panolar",
-    is_takibi_tanimlar: "İş Takibi Tanımlar",
+    is_takibi_tanim: "Tanımlar",
+    is_takibi_bilet_durumlari: "Bilet Durumları",
+    is_takibi_bilet_tipleri: "Bilet Tipleri",
     is_takibi_islem: "İşlem",
     tools: "Araçlar",
     messages: "Mesajlar",
@@ -145,7 +147,9 @@ const translations = {
     is_takibi_projeler: "Projects",
     is_takibi_biletler: "Tickets",
     is_takibi_kanban: "Boards",
-    is_takibi_tanimlar: "Job Tracking Definitions",
+    is_takibi_tanim: "Definitions",
+    is_takibi_bilet_durumlari: "Ticket Statuses",
+    is_takibi_bilet_tipleri: "Ticket Types",
     is_takibi_islem: "Operations",
     tools: "Tools",
     messages: "Messages",
@@ -238,21 +242,18 @@ const translations = {
 };
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem("app_language");
-    return saved || "tr";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("app_language", language);
-  }, [language]);
+  // Dil seçici UI'sı kaldırıldı — uygulama yalnız Türkçe. `language`/
+  // `setLanguage` context'te (başka tüketicisi kalmasa da imza bozulmasın
+  // diye) duruyor ama artık hiçbir yerden değiştirilmiyor; eski bir
+  // oturumdan kalan `localStorage.app_language=en` de artık okunmuyor.
+  const [language] = useState("tr");
 
   const t = (key) => {
     return translations[language]?.[key] || translations.tr?.[key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: () => {}, t }}>
       {children}
     </LanguageContext.Provider>
   );

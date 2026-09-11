@@ -5,14 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Eye, EyeOff, Mail, Lock, User, Boxes, Clock, Users, Wallet, Building2, ClipboardList } from "lucide-react";
 import turkonixLogo from "@/assets/turkonix-logo.png";
 
-const MODULLER = [
-  { icon: Boxes, baslik: "Stok / Depo", alt: "Takip" },
-  { icon: Clock, baslik: "PDKS", alt: "Personel Devam Kontrol Sistemi" },
-  { icon: Users, baslik: "İK", alt: "Personel Kayıtları" },
-  { icon: Wallet, baslik: "Maaş", alt: "Bordro Yönetimi" },
-  { icon: Building2, baslik: "Müşteri", alt: "Yönetimi" },
-  { icon: ClipboardList, baslik: "İş Takibi", alt: "Proje ve Görev Takibi" },
-];
+const hexClip = { clipPath: "polygon(9% 0%, 100% 0%, 100% 100%, 9% 100%, 0% 50%)" };
+
+function ModulKart({ icon: Icon, baslik, alt, vurgu, className = "" }) {
+  return (
+    <div className={`w-44 bg-slate-800/50 border border-white/10 backdrop-blur-sm py-3 pl-7 pr-4 ${className}`} style={hexClip}>
+      {vurgu ? (
+        <div className="w-9 h-9 flex items-center justify-center mb-2 bg-cyan-400/10 border border-cyan-300/40" style={hexClip}>
+          <Icon className="w-4 h-4 text-cyan-300" />
+        </div>
+      ) : (
+        <Icon className="w-5 h-5 text-slate-300 mb-2" />
+      )}
+      <p className="text-white font-semibold text-sm leading-tight">{baslik}</p>
+      <p className="text-blue-200/50 text-[11px] mt-0.5 leading-snug">{alt}</p>
+    </div>
+  );
+}
 
 export default function Landing() {
   const [tab, setTab] = useState("login");
@@ -50,17 +59,17 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FAF8F5]">
+    <div className="h-screen overflow-hidden flex bg-[#FAF8F5]">
       {/* Sol panel — giriş formu */}
-      <div className="w-full lg:w-[44%] flex flex-col justify-between px-8 sm:px-14 py-10 min-h-screen">
-        <img src={turkonixLogo} alt="Turkonix" className="h-11 w-auto self-start object-contain" />
+      <div className="w-full lg:w-[44%] flex flex-col justify-between px-8 sm:px-14 py-6 h-full">
+        <img src={turkonixLogo} alt="Turkonix" className="h-40 w-auto self-start object-contain -ml-3" />
 
         <div className="w-full max-w-sm mx-auto">
-          <div className="w-9 h-1 rounded-full bg-indigo-600 mb-5" />
+          <div className="w-9 h-1 rounded-full bg-indigo-600 mb-4" />
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             {tab === "login" ? "Tekrar hoş geldiniz" : "Hesap oluşturun"}
           </h1>
-          <p className="text-slate-500 text-sm mt-2 mb-8">
+          <p className="text-slate-500 text-sm mt-2 mb-6">
             {tab === "login"
               ? "TURKONIX ile iş süreçleriniz her zaman kontrolünüzde."
               : "Birkaç bilgiyle TURKONIX hesabınızı oluşturun."}
@@ -69,7 +78,7 @@ export default function Landing() {
           {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">{error}</div>}
 
           {tab === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-3.5">
+            <form onSubmit={handleLogin} className="space-y-3">
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input type="email" placeholder="E-posta" value={loginData.email} onChange={e => setLoginData(p => ({ ...p, email: e.target.value }))} className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
@@ -86,7 +95,7 @@ export default function Landing() {
               </p>
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="space-y-3.5">
+            <form onSubmit={handleRegister} className="space-y-3">
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input type="text" placeholder="Ad Soyad" value={registerData.full_name} onChange={e => setRegisterData(p => ({ ...p, full_name: e.target.value }))} className="pl-10 h-12 rounded-xl border-slate-200 bg-slate-100/80 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500/40 focus-visible:border-indigo-400" required />
@@ -109,39 +118,48 @@ export default function Landing() {
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-200 pt-5">
+        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-200 pt-4">
           <span>Daha verimli bir gelecek için, birlikte.</span>
           <span className="font-bold tracking-wider text-slate-500">TURKONIX</span>
         </div>
       </div>
 
       {/* Sağ panel — tanıtım */}
-      <div className="hidden lg:flex flex-1 relative overflow-hidden" style={{ background: "linear-gradient(150deg, #0a1128 0%, #131c47 55%, #1b2a5e 100%)" }}>
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/20 blur-[100px]" />
-        <div className="absolute bottom-0 left-0 w-[28rem] h-[28rem] rounded-full bg-cyan-400/10 blur-[110px]" />
+      <div className="hidden lg:flex flex-1 relative overflow-hidden h-full" style={{ background: "linear-gradient(150deg, #0a1128 0%, #131c47 55%, #1b2a5e 100%)" }}>
+        {/* izometrik platform hissi veren büyük eğik bloklar */}
+        <div className="absolute top-[-10%] right-[-8%] w-[34rem] h-[34rem] bg-gradient-to-br from-white/[0.05] to-transparent rotate-[28deg]" style={{ clipPath: "polygon(30% 0%, 100% 20%, 70% 100%, 0% 80%)" }} />
+        <div className="absolute bottom-[-15%] left-[-10%] w-[38rem] h-[38rem] bg-gradient-to-tr from-black/20 to-transparent rotate-[18deg]" style={{ clipPath: "polygon(20% 10%, 100% 0%, 90% 90%, 10% 100%)" }} />
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-indigo-500/20 blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-cyan-400/10 blur-[110px]" />
 
-        <div className="relative z-10 flex flex-col justify-between h-full w-full px-16 py-16">
+        <div className="relative z-10 flex flex-col justify-between h-full w-full pl-14 pr-4 py-7">
           <div>
             <p className="text-xs font-semibold tracking-[0.2em] text-blue-300/80 uppercase leading-relaxed">
               Entegre<br />Yazılım Çözümleri
             </p>
-            <div className="w-10 h-0.5 bg-blue-400/70 my-5" />
-            <h2 className="text-4xl xl:text-[2.75rem] font-bold text-white leading-tight max-w-md">
+            <div className="w-10 h-0.5 bg-blue-400/70 my-3" />
+            <h2 className="text-3xl xl:text-[2.5rem] font-bold text-white leading-tight max-w-md">
               Tüm operasyonlarınız,<br /><span className="text-indigo-300">tek merkezde.</span>
             </h2>
-            <p className="text-blue-100/60 text-sm mt-4 max-w-sm">Daha düzenli, daha verimli, daha güçlü bir işletme.</p>
+            <p className="text-blue-100/60 text-sm mt-3 max-w-sm">Daha düzenli, daha verimli, daha güçlü bir işletme.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 max-w-lg">
-            {MODULLER.map(({ icon: Icon, baslik, alt }, i) => (
-              <div key={baslik} className={`bg-white/[0.06] border border-white/10 backdrop-blur-sm rounded-2xl p-4 ${i % 2 === 1 ? "mt-6" : ""}`}>
-                <div className="w-9 h-9 rounded-lg bg-indigo-400/15 flex items-center justify-center mb-3">
-                  <Icon className="w-4 h-4 text-indigo-300" />
-                </div>
-                <p className="text-white font-semibold text-sm leading-tight">{baslik}</p>
-                <p className="text-blue-200/50 text-xs mt-0.5 leading-snug">{alt}</p>
-              </div>
-            ))}
+          {/* Modül kartları — mockup'taki çapraz kademeli yerleşim */}
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-end pr-6">
+              <ModulKart icon={Boxes} baslik="Stok / Depo" alt="Takip" vurgu />
+            </div>
+            <div className="flex gap-6 pl-16">
+              <ModulKart icon={Clock} baslik="PDKS" alt="Personel Devam Kontrol Sistemi" />
+              <ModulKart icon={Users} baslik="İK" alt="Personel Kayıtları" className="mt-4" />
+            </div>
+            <div className="flex gap-6">
+              <ModulKart icon={Wallet} baslik="Maaş" alt="Bordro Yönetimi" />
+              <ModulKart icon={Building2} baslik="Müşteri" alt="Yönetimi" className="mt-4" />
+            </div>
+            <div className="flex pl-8">
+              <ModulKart icon={ClipboardList} baslik="İş Takibi" alt="Proje ve Görev Takibi" />
+            </div>
           </div>
 
           <p className="text-xs font-semibold tracking-[0.2em] text-blue-300/60 uppercase leading-relaxed">

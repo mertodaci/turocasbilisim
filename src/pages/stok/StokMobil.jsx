@@ -162,12 +162,13 @@ export default function StokMobil() {
       ? { tip: "giris", hedef_depo_id: depoId, hedef_depo_adi: depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() }
       : { tip: "cikis", kaynak_depo_id: depoId, kaynak_depo_adi: depoAdi, hedef_saha_id: sahaId || null, hedef_saha_adi: sahalar.find((s) => s.id === sahaId)?.ad, hedef_depo_id: sahaId ? null : depoId, hedef_depo_adi: sahaId ? null : depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() };
     // Girişte demirbaş: kullanıcı tek satırda toplam adedi girer, her fiziksel
-    // birim kendi sicil no'suyla ayrı satıra bölünür (masaüstü FisForm.jsx ile
-    // aynı mantık — bkz. sicilNoUret).
+    // birim kendi satırına bölünür (masaüstü FisForm.jsx ile aynı mantık);
+    // sicil no burada ÜRETİLMİYOR -- onaylama anında backend tarafından
+    // atomik/sıralı olarak atanıyor.
     const genisletilmis = satirlar.flatMap((l) => {
       if (mode === "giris" && l.seri_no_takip) {
         const adet = Math.max(1, Math.round(l.miktar));
-        return Array.from({ length: adet }, (_, idx) => ({ ...l, miktar: 1, carpan: 1, seri_no: `${l.urun_kodu || "SN"}-${Date.now()}-${idx}` }));
+        return Array.from({ length: adet }, () => ({ ...l, miktar: 1, carpan: 1, seri_no: "" }));
       }
       return [{ ...l, carpan: 1 }];
     });

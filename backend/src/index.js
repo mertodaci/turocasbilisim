@@ -901,6 +901,23 @@ function stokFisNoUret(tip) {
   return `${pre}-${yil}-${String(next).padStart(5, '0')}`;
 }
 
+// Demirbaş sicil no üretimi -- "YYYYNNNN" (ör. 20260001). Girişte sicil no
+// artik kullanicidan/istemciden alinmiyor, burada -- fis onaylama
+// transaction'i icinde, atomik olarak -- uretiliyor (fis_no/zimmet_no ile
+// ayni desen). Ayni yil icindeki en buyuk mevcut sicili JS'te (string
+// ORDER BY degil) hesaplar, boylece 9999'u astiginda basamak sayisi
+// degisse bile yanlis "max" secilmez.
+function demirbasSicilSonrakiBaslangic(yil) {
+  const prefix = String(yil);
+  const rows = db.prepare("SELECT DISTINCT seri_no FROM stok_hareketler WHERE seri_no LIKE ?").all(`${prefix}%`);
+  let maxN = 0;
+  for (const r of rows) {
+    const n = parseInt(String(r.seri_no).slice(prefix.length), 10);
+    if (Number.isFinite(n) && n > maxN) maxN = n;
+  }
+  return maxN + 1;
+}
+
 function stokFisPerm(req, action) {
   const mods = ['stok_fisler', 'stok_giris', 'stok_cikis', 'stok_transfer', 'stok_iade'];
   return req.user?.role === 'admin' || mods.some((m) => checkPermission(db, req.user?.role, m, action));
@@ -1150,6 +1167,27 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   if (fis.durum === 'iptal') return res.status(400).json({ error: 'İptal edilmiş fiş onaylanamaz' });
   const satirlar = db.prepare('SELECT * FROM stok_fis_satirlari WHERE fis_id=?').all(fis.id);
   if (!satirlar.length) return res.status(400).json({ error: 'Fişte satır yok' });
+
+  // Girişte demirbaş: sicil no artik istemciden alinmiyor -- burada, onaylama
+  // aninda, atomik ve sirali olarak ("YYYYNNNN", ör. 20260001) uretilip hem
+  // bu fis satirina hem asagidaki stok_hareketi kaydina yaziliyor. Route
+  // senkron calistigi icin (await yok) iki ayri onaylama istegi arasinda
+  // yarisma/cakisma olusmaz.
+  if (fis.tip === 'giris') {
+    const yil = new Date().getFullYear();
+    let sonrakiSicil = null;
+    const simdi = new Date().toISOString();
+    for (const s of satirlar) {
+      if (s.seri_no && String(s.seri_no).trim()) continue;
+      const u = db.prepare('SELECT seri_no_takip FROM stok_urunler WHERE id=?').get(s.urun_id);
+      if (!u || !u.seri_no_takip) continue;
+      if (sonrakiSicil === null) sonrakiSicil = demirbasSicilSonrakiBaslangic(yil);
+      const yeniSicil = `${yil}${String(sonrakiSicil).padStart(4, '0')}`;
+      sonrakiSicil += 1;
+      db.prepare('UPDATE stok_fis_satirlari SET seri_no=?, updated_date=? WHERE id=?').run(yeniSicil, simdi, s.id);
+      s.seri_no = yeniSicil;
+    }
+  }
 
   const depo = (id) => (id ? db.prepare('SELECT * FROM stok_depolar WHERE id=?').get(id) : null);
   const kd = depo(fis.kaynak_depo_id), hd = depo(fis.hedef_depo_id);

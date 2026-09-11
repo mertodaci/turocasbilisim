@@ -20,11 +20,6 @@ const TIP_CFG = {
   iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
 };
 
-// Girişte demirbaş için sicil no artık kullanıcıdan istenmiyor -- onaylanınca
-// (aslında burada, fişe eklenirken) her fiziksel birim için otomatik üretilir.
-// Aynı saniyede üretilen birden fazla sicilin çakışmaması için birim sırası eklenir.
-const sicilNoUret = (urunKodu, idx) => `${urunKodu || "SN"}-${Date.now()}-${idx}`;
-
 const bosSatir = () => ({
   urun_id: "", urun_adi: "", urun_kodu: "", barkod: "", birim: "", carpan: 1, miktar: 1, birim_fiyat: 0,
   kaynak_raf_id: "", hedef_raf_id: "", icerik_aciklamasi: "", seri_no: "",
@@ -160,11 +155,12 @@ export default function FisForm({ tip }) {
         hedef_raf_adi: l.hedef_raf_id ? (rafById(l.hedef_raf_id)?.ad || rafById(l.hedef_raf_id)?.kod || "") : "",
       };
       // Girişte demirbaş: tek satırda girilen toplam adet, her biri kendi
-      // sicil no'suna sahip ayrı ayrı satırlara bölünüyor (kullanıcı 5 adet
-      // için 5 satır girmek zorunda kalmasın).
+      // satırına bölünüyor (kullanıcı 5 adet için 5 satır girmek zorunda
+      // kalmasın); sicil no burada ÜRETİLMİYOR -- onaylama anında backend
+      // tarafından atomik/sıralı olarak atanıyor (bkz. demirbasSicilSonrakiBaslangic).
       if (tip === "giris" && l.urun_id && isSerili(l.urun_id)) {
         const adet = Math.max(1, Math.round((Number(l.miktar) || 1) * (Number(l.carpan) || 1)));
-        return Array.from({ length: adet }, (_, idx) => ({ ...base, miktar: 1, carpan: 1, seri_no: sicilNoUret(l.urun_kodu, idx) }));
+        return Array.from({ length: adet }, () => ({ ...base, miktar: 1, carpan: 1, seri_no: "" }));
       }
       return [base];
     });

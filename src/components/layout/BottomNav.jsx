@@ -185,21 +185,24 @@ export default function BottomNav() {
       </nav>
 
       {flyout && flyoutItem && (
-        <div
-          onMouseEnter={cancelCloseFlyout}
-          onMouseLeave={scheduleCloseFlyout}
-          className={cn(
-            "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
-            flyoutHasSubgroups ? "w-[min(92vw,680px)]" : "w-64"
-          )}
-          style={{ left: flyout.left, bottom: flyout.bottom }}>
-          <p className="px-4 pt-3 pb-1 text-sm font-bold text-foreground">{t(flyoutItem.labelKey)}</p>
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setFlyout(null)} />
           <div
-            className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
-            style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" } : undefined}>
-            {flyoutItem.children.map(renderFlyoutColumn)}
+            onMouseEnter={cancelCloseFlyout}
+            onMouseLeave={scheduleCloseFlyout}
+            className={cn(
+              "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
+              flyoutHasSubgroups ? "w-[min(92vw,680px)]" : "w-64"
+            )}
+            style={{ left: flyout.left, bottom: flyout.bottom }}>
+            <p className="px-4 pt-3 pb-1 text-sm font-bold text-foreground">{t(flyoutItem.labelKey)}</p>
+            <div
+              className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
+              style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" } : undefined}>
+              {flyoutItem.children.map(renderFlyoutColumn)}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

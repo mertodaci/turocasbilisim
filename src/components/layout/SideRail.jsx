@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Star, ChevronLeft } from "lucide-react";
+import { Star, Menu, X, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -8,11 +8,12 @@ import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
 import { allNavItems } from "./navItems";
 
-// Sağ kenar dikey ray — BottomNav'ın (alt bar) yanında, ikinci/ek bir
+// Sol kenar dikey ray — BottomNav'ın (alt bar) yanında, ikinci/ek bir
 // navigasyon yüzeyi. Aynı navItems.js verisini ve aynı görünürlük/rozet/
 // favori mantığını kullanır (BottomNav.jsx ile kasıtlı kod tekrarı —
-// ikisi bağımsız çalışan iki ayrı navigasyon). Yalnızca masaüstünde
-// görünür; dar ekranda yalnız BottomNav kalır.
+// ikisi bağımsız çalışan iki ayrı navigasyon). Dar hâlde yalnız ikonlar;
+// hamburger'e tıklayınca tüm çubuk etiketli geniş panele dönüşür, alt
+// gruplar accordion olarak açılır/kapanır. Yalnızca masaüstünde görünür.
 export default function SideRail() {
   const location = useLocation();
   const { user } = useAuth();
@@ -33,22 +34,20 @@ export default function SideRail() {
   };
 
   const [favorites, setFavorites] = useState([]);
-  const [flyout, setFlyout] = useState(null); // { key, right, top }
+  const [expanded, setExpanded] = useState(false);
+  const [openGroup, setOpenGroup] = useState(null); // { top-level labelKey açık mı }
+  const [openSubGroup, setOpenSubGroup] = useState(null); // iç içe (Tanım/İşlem/Rapor gibi) açık alt-grup
 
   useEffect(() => {
     if (!user) return;
     flowApi.auth.getFavorites().then(setFavorites).catch(() => setFavorites([]));
   }, [user]);
 
-  useEffect(() => { setFlyout(null); }, [location.pathname]);
-
-  const openFlyout = (key, el, hasSubgroups) => {
-    const r = el.getBoundingClientRect();
-    const width = hasSubgroups ? Math.min(680, window.innerWidth - 16) : 256;
-    const top = Math.max(8, Math.min(r.top, window.innerHeight - 16 - 40));
-    const right = window.innerWidth - r.left + 12;
-    setFlyout({ key, right, top, width });
-  };
+  useEffect(() => {
+    setExpanded(false);
+    setOpenGroup(null);
+    setOpenSubGroup(null);
+  }, [location.pathname]);
 
   const toggleFavorite = async (e, labelKey) => {
     e.preventDefault();
@@ -70,7 +69,19 @@ export default function SideRail() {
   }
   const navItems = filterNavTree(allNavItems);
 
-  const renderFlyoutLeaf = (it) => {
+  const closeAll = () => {
+    setExpanded(false);
+    setOpenGroup(null);
+    setOpenSubGroup(null);
+  };
+
+  const handleGroupClick = (labelKey) => {
+    if (!expanded) setExpanded(true);
+    setOpenGroup((k) => (k === labelKey ? null : labelKey));
+    setOpenSubGroup(null);
+  };
+
+  const renderLeaf = (it, depth = 0) => {
     const active = location.pathname === it.path;
     const isFav = favorites.includes(it.labelKey);
     const showLeaveBadge = (it.labelKey === "my_leave_requests" || it.labelKey === "ik_leave_requests") && pendingLeaveCount > 0;
@@ -82,9 +93,10 @@ export default function SideRail() {
     const showStokBadge = it.labelKey === "stok_dashboard" && stokUyariCount > 0;
     return (
       <Link key={it.path} to={it.path}
-        onClick={() => setFlyout(null)}
+        onClick={closeAll}
+        style={{ paddingLeft: `${0.625 + depth * 1}rem` }}
         className={cn(
-          "group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
+          "group flex items-center gap-2.5 pr-2.5 py-2 rounded-lg text-sm transition-colors",
           active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
         )}>
         <it.icon className="w-4 h-4 shrink-0" />
@@ -106,85 +118,87 @@ export default function SideRail() {
     );
   };
 
-  const renderFlyoutColumn = (child) => {
+  // İç içe alt-grup (İK'nın Tanım/İşlem/Rapor'u gibi) — kendi accordion'u.
+  const renderSubGroup = (child, depth) => {
     const hasKids = child.children && child.children.length > 0;
-    if (!hasKids) {
-      return <div key={child.labelKey} className="min-w-[180px]">{renderFlyoutLeaf(child)}</div>;
-    }
+    if (!hasKids) return renderLeaf(child, depth);
+    const isOpen = openSubGroup === child.labelKey;
     return (
-      <div key={child.labelKey} className="min-w-[180px]">
-        <p className="px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t(child.labelKey)}</p>
-        <div className="space-y-0.5">{child.children.map(renderFlyoutLeaf)}</div>
+      <div key={child.labelKey}>
+        <button
+          onClick={() => setOpenSubGroup((k) => (k === child.labelKey ? null : child.labelKey))}
+          style={{ paddingLeft: `${0.625 + depth * 1}rem` }}
+          className="w-full flex items-center gap-2.5 pr-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-muted transition-colors">
+          <child.icon className="w-4 h-4 shrink-0" />
+          <span className="truncate flex-1 text-left font-semibold text-xs uppercase tracking-wide">{t(child.labelKey)}</span>
+          <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isOpen && "rotate-180")} />
+        </button>
+        {isOpen && <div className="space-y-0.5">{child.children.map((c) => renderSubGroup(c, depth + 1))}</div>}
       </div>
     );
   };
 
-  const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
-  const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;
-
   return (
     <>
-      <nav className="hidden md:flex fixed right-0 top-16 bottom-0 z-40 w-16 bg-card border-l border-border flex-col items-center gap-1 py-3 overflow-y-auto scrollbar-thin">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const hasChildren = item.children && item.children.length > 0;
-          const showSupportBadge = item.labelKey === "support_center" && (unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount) > 0;
-          const showHrBadge = item.labelKey === "insan_kaynaklari" && (pendingLeaveCount > 0 || pendingExpenseIKCount > 0);
-          const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
-          const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
-          const anyBadge = showSupportBadge || showHrBadge || showJTBadge || showStokBadge;
-          const isFlyoutOpen = flyout?.key === item.labelKey;
+      {expanded && <div className="fixed inset-0 z-30" onClick={closeAll} />}
 
-          const itemClasses = cn(
-            "relative flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all shrink-0",
-            (isActive || isFlyoutOpen)
-              ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/25"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          );
+      <nav className={cn(
+        "hidden md:flex fixed left-0 top-16 bottom-0 z-40 bg-card border-r border-border flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
+        expanded ? "w-64" : "w-16"
+      )}>
+        <button
+          onClick={() => { setExpanded((v) => !v); if (expanded) { setOpenGroup(null); setOpenSubGroup(null); } }}
+          className="flex items-center justify-center w-full h-12 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border-b border-border"
+          title={expanded ? "Menüyü daralt" : "Menüyü genişlet"}>
+          {expanded ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
 
-          if (!hasChildren) {
-            return (
-              <Link key={item.labelKey} to={item.path} title={t(item.labelKey)} className={itemClasses}>
-                <item.icon className="w-5 h-5" />
-                {anyBadge && <span className="absolute top-1 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />}
-              </Link>
+        <div className="flex-1 py-2 flex flex-col gap-0.5 px-2">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const hasChildren = item.children && item.children.length > 0;
+            const showSupportBadge = item.labelKey === "support_center" && (unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount) > 0;
+            const showHrBadge = item.labelKey === "insan_kaynaklari" && (pendingLeaveCount > 0 || pendingExpenseIKCount > 0);
+            const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
+            const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
+            const anyBadge = showSupportBadge || showHrBadge || showJTBadge || showStokBadge;
+            const isGroupOpen = openGroup === item.labelKey;
+
+            const rowClasses = cn(
+              "relative flex items-center gap-2.5 rounded-xl transition-all shrink-0",
+              expanded ? "w-full h-11 px-2.5" : "w-12 h-12 justify-center mx-auto",
+              (isActive || isGroupOpen)
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/25"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             );
-          }
-          const itemHasSubgroups = item.children.some((c) => c.children && c.children.length > 0);
-          return (
-            <button
-              key={item.labelKey}
-              title={t(item.labelKey)}
-              onClick={(e) => (isFlyoutOpen ? setFlyout(null) : openFlyout(item.labelKey, e.currentTarget, itemHasSubgroups))}
-              className={itemClasses}>
-              <item.icon className="w-5 h-5" />
-              {anyBadge && <span className="absolute top-1 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />}
-            </button>
-          );
-        })}
-      </nav>
 
-      {flyout && flyoutItem && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setFlyout(null)} />
-          <div
-            className={cn(
-              "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
-              flyoutHasSubgroups ? "w-[min(92vw,680px)]" : "w-64"
-            )}
-            style={{ right: flyout.right, top: flyout.top }}>
-            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
-              <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
-              <p className="text-sm font-bold text-foreground">{t(flyoutItem.labelKey)}</p>
-            </div>
-            <div
-              className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
-              style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" } : undefined}>
-              {flyoutItem.children.map(renderFlyoutColumn)}
-            </div>
-          </div>
-        </>
-      )}
+            if (!hasChildren) {
+              return (
+                <Link key={item.labelKey} to={item.path} title={t(item.labelKey)} onClick={closeAll} className={rowClasses}>
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  {expanded && <span className="truncate text-sm font-medium">{t(item.labelKey)}</span>}
+                  {anyBadge && <span className={cn("absolute w-2 h-2 bg-orange-500 rounded-full", expanded ? "top-2 left-7" : "top-1 right-1.5")} />}
+                </Link>
+              );
+            }
+            return (
+              <div key={item.labelKey}>
+                <button title={t(item.labelKey)} onClick={() => handleGroupClick(item.labelKey)} className={rowClasses}>
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  {expanded && <span className="truncate text-sm font-medium flex-1 text-left">{t(item.labelKey)}</span>}
+                  {expanded && <ChevronDown className={cn("w-4 h-4 shrink-0 transition-transform", isGroupOpen && "rotate-180")} />}
+                  {anyBadge && <span className={cn("absolute w-2 h-2 bg-orange-500 rounded-full", expanded ? "top-2 left-7" : "top-1 right-1.5")} />}
+                </button>
+                {expanded && isGroupOpen && (
+                  <div className="mt-0.5 space-y-0.5 pl-1">
+                    {item.children.map((c) => renderSubGroup(c, 1))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 }

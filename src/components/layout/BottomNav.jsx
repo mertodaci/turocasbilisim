@@ -100,7 +100,7 @@ export default function BottomNav() {
           active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
         )}>
         <it.icon className="w-4 h-4 shrink-0" />
-        <span className="truncate flex-1">{t(it.labelKey)}</span>
+        <span className="truncate flex-1" title={t(it.labelKey)}>{t(it.labelKey)}</span>
         {showLeaveBadge && <span className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full">{pendingLeaveCount}</span>}
         {showExpenseBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseCount}</span>}
         {showExpenseIKBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseIKCount}</span>}

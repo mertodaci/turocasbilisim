@@ -100,7 +100,7 @@ export default function SideRail() {
           active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
         )}>
         <it.icon className="w-4 h-4 shrink-0" />
-        <span className="truncate flex-1">{t(it.labelKey)}</span>
+        <span className="truncate flex-1" title={t(it.labelKey)}>{t(it.labelKey)}</span>
         {showLeaveBadge && <span className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full">{pendingLeaveCount}</span>}
         {showExpenseBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseCount}</span>}
         {showExpenseIKBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseIKCount}</span>}
@@ -130,7 +130,7 @@ export default function SideRail() {
           style={{ paddingLeft: `${0.625 + depth * 1}rem` }}
           className="w-full flex items-center gap-2.5 pr-2.5 py-2 rounded-lg text-sm text-foreground/80 hover:bg-muted transition-colors">
           <child.icon className="w-4 h-4 shrink-0" />
-          <span className="truncate flex-1 text-left font-semibold text-xs uppercase tracking-wide">{t(child.labelKey)}</span>
+          <span className="truncate flex-1 text-left font-semibold text-xs uppercase tracking-wide" title={t(child.labelKey)}>{t(child.labelKey)}</span>
           <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 transition-transform", isOpen && "rotate-180")} />
         </button>
         {isOpen && <div className="space-y-0.5">{child.children.map((c) => renderSubGroup(c, depth + 1))}</div>}
@@ -176,7 +176,7 @@ export default function SideRail() {
               return (
                 <Link key={item.labelKey} to={item.path} title={t(item.labelKey)} onClick={closeAll} className={rowClasses}>
                   <item.icon className="w-5 h-5 shrink-0" />
-                  {expanded && <span className="truncate text-sm font-medium">{t(item.labelKey)}</span>}
+                  {expanded && <span className="truncate text-sm font-medium" title={t(item.labelKey)}>{t(item.labelKey)}</span>}
                   {anyBadge && <span className={cn("absolute w-2 h-2 bg-orange-500 rounded-full", expanded ? "top-2 left-7" : "top-1 right-1.5")} />}
                 </Link>
               );
@@ -185,7 +185,7 @@ export default function SideRail() {
               <div key={item.labelKey}>
                 <button title={t(item.labelKey)} onClick={() => handleGroupClick(item.labelKey)} className={rowClasses}>
                   <item.icon className="w-5 h-5 shrink-0" />
-                  {expanded && <span className="truncate text-sm font-medium flex-1 text-left">{t(item.labelKey)}</span>}
+                  {expanded && <span className="truncate text-sm font-medium flex-1 text-left" title={t(item.labelKey)}>{t(item.labelKey)}</span>}
                   {expanded && <ChevronDown className={cn("w-4 h-4 shrink-0 transition-transform", isGroupOpen && "rotate-180")} />}
                   {anyBadge && <span className={cn("absolute w-2 h-2 bg-orange-500 rounded-full", expanded ? "top-2 left-7" : "top-1 right-1.5")} />}
                 </button>

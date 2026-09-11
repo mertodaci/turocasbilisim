@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,11 @@ const DURUM_BADGE = {
   iade: "bg-slate-100 text-slate-600",
 };
 const DURUM_LBL = { acik: "Açık", kismen_iade: "Kısmen İade", iade: "İade Edildi" };
+
+const iadeZamani = (satir) => {
+  if (!satir.iade_miktar || Number(satir.iade_miktar) <= 0 || !satir.updated_date) return null;
+  try { return format(new Date(satir.updated_date), "dd.MM.yyyy HH:mm"); } catch { return null; }
+};
 
 const bosSatir = () => ({ urun_id: "", urun_adi: "", seri_no: "" });
 
@@ -156,7 +162,8 @@ export default function StokZimmet() {
               <table className="w-full text-xs border rounded-lg overflow-hidden">
                 <thead className="bg-muted/40"><tr>
                   <th className="text-left px-2 py-1.5">Ürün</th><th className="text-right px-2 py-1.5">Zimmetli</th>
-                  <th className="text-right px-2 py-1.5">İade Edilen</th><th className="text-right px-2 py-1.5">Düşülecek Miktar</th>
+                  <th className="text-right px-2 py-1.5">İade Edilen</th><th className="text-left px-2 py-1.5">İade Tarihi</th>
+                  <th className="text-right px-2 py-1.5">Düşülecek Miktar</th>
                 </tr></thead>
                 <tbody>
                   {detay.satirlar.map((s) => {
@@ -166,6 +173,7 @@ export default function StokZimmet() {
                         <td className="px-2 py-1.5">{s.urun_adi}{s.seri_no ? ` · SN ${s.seri_no}` : ""}</td>
                         <td className="px-2 py-1.5 text-right">{s.miktar} {s.birim}</td>
                         <td className="px-2 py-1.5 text-right">{s.iade_miktar}</td>
+                        <td className="px-2 py-1.5 text-muted-foreground">{iadeZamani(s) || "—"}</td>
                         <td className="px-2 py-1.5 text-right">
                           {kalan <= 1e-9 ? <span className="text-muted-foreground">—</span> : (
                             <Input type="number" className="h-7 w-20 text-right inline-block" value={iadeMiktarlar[s.id] ?? ""} max={kalan}

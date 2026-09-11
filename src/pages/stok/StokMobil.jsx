@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import CameraScanDialog from "@/components/stok/CameraScanDialog";
 import { SEBEP_LISTESI } from "@/lib/stokSebepleri";
@@ -24,6 +25,7 @@ export default function StokMobil() {
   const [kameraAcik, setKameraAcik] = useState(false);
   const [bilinmeyen, setBilinmeyen] = useState(null); // { kod } -- barkod bulunamadi, baglama dialogu
   const [yeniUrunAdi, setYeniUrunAdi] = useState("");
+  const [yeniUrunDemirbas, setYeniUrunDemirbas] = useState(false);
   const [baglanacakUrunId, setBaglanacakUrunId] = useState("");
   const [sebepKodu, setSebepKodu] = useState(SEBEP_LISTESI.giris[0].value);
   const [oneriler, setOneriler] = useState([]); // isimle arama sonuçları (2+ karakter sonrası)
@@ -113,10 +115,13 @@ export default function StokMobil() {
   const yeniUrunOlustur = async () => {
     if (!yeniUrunAdi.trim()) return;
     try {
-      const u = await flowApi.entities.StokUrun.create({ ad: yeniUrunAdi.trim(), barkod: bilinmeyen.kod, ana_birim: "ADET", kdv: 20, aktif: 1 });
+      const u = await flowApi.entities.StokUrun.create({
+        ad: yeniUrunAdi.trim(), barkod: bilinmeyen.kod, ana_birim: "ADET", kdv: 20, aktif: 1,
+        urun_tipi: yeniUrunDemirbas ? "demirbas" : "tuketim", seri_no_takip: yeniUrunDemirbas ? 1 : 0,
+      });
       toast.success(`"${u.ad}" oluşturuldu ve barkod bağlandı`);
       if (mode === "sayim") toast.error("Yeni ürün bu depo sayımında henüz yok — masaüstünden sayıma ekleyin"); else ekle(u);
-      setBilinmeyen(null); setYeniUrunAdi(""); inputRef.current?.focus();
+      setBilinmeyen(null); setYeniUrunAdi(""); setYeniUrunDemirbas(false); inputRef.current?.focus();
     } catch (e) { toast.error(String(e?.message || "Oluşturulamadı")); }
   };
 
@@ -319,6 +324,10 @@ export default function StokMobil() {
           </div>
           <div className="space-y-2 pt-2 border-t">
             <Label className="text-xs">Ya da yeni ürün oluştur</Label>
+            <div className="flex items-center justify-between gap-2 py-1">
+              <Label htmlFor="yeni-urun-demirbas" className="text-xs font-normal text-muted-foreground">Demirbaş (araç, ekipman vb. — sicil no ile takip edilir)</Label>
+              <Switch id="yeni-urun-demirbas" checked={yeniUrunDemirbas} onCheckedChange={setYeniUrunDemirbas} />
+            </div>
             <div className="flex gap-2">
               <Input placeholder="Ürün adı" value={yeniUrunAdi} onChange={(e) => setYeniUrunAdi(e.target.value)} />
               <Button disabled={!yeniUrunAdi.trim()} onClick={yeniUrunOlustur}><PackagePlus className="w-4 h-4" /></Button>

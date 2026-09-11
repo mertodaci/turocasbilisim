@@ -1154,6 +1154,18 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
   if (fis.tip === 'transfer' && ((kd && !kd.kural_transfer) || (hd && !hd.kural_transfer)))
     return res.status(400).json({ error: 'Transfer bu depo(lar) için kapalı' });
 
+  // Demirbaş, Çıkış fişine giremez — kişiye/yere teslim edilecekse Zimmet kullanılmalı.
+  // Transfer ve Tedarikçiye İade'de demirbaş serbest (henüz zimmetlenmemiş demirbaş
+  // depolar arası taşınabilir veya arızalı çıkarsa tedarikçiye iade edilebilir).
+  if (fis.tip === 'cikis') {
+    const demirbasHatalar = [];
+    for (const s of satirlar) {
+      const u = db.prepare('SELECT urun_tipi FROM stok_urunler WHERE id=?').get(s.urun_id);
+      if (u?.urun_tipi === 'demirbas') demirbasHatalar.push(`${s.urun_adi || s.urun_id}: demirbaş — Çıkış fişine giremez, Zimmet kullanın`);
+    }
+    if (demirbasHatalar.length) return res.status(400).json({ error: 'Demirbaş ürün Çıkış fişinde olamaz:\n' + demirbasHatalar.join('\n') });
+  }
+
   if (fis.tip === 'cikis' || fis.tip === 'transfer' || fis.tip === 'iade') {
     // Aynı ürün + kaynak raf için birden çok satır varsa toplam ihtiyacı birlikte
     // kontrol et; satır bazlı ayrı ayrı kontrol (60 + 60, stok 100) negatif stoğa yol açardı.
@@ -1451,10 +1463,14 @@ app.post('/api/stok/fifo-yeniden-hesapla', authMiddleware, (req, res) => {
 function stokSayimPerm(req, action) {
   return req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_sayim', action);
 }
+// Sayımda "sistem_miktar" fiziksel olarak depoda beklenen (kullanılabilir) miktardır --
+// zimmetli/rezerve edilmiş miktar hariç tutulur, çünkü o malzeme depoda değil,
+// kişi/yerde bulunur (zimmetli miktar ayrıca Stok Durum raporundaki "Rezerve" kolonunda görünür).
 function stokDepoStokListe(depoId) {
   return db.prepare(`SELECT h.urun_id,
       COALESCE(MAX(h.urun_adi), (SELECT ad FROM stok_urunler WHERE id=h.urun_id)) AS urun_adi,
-      COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) AS sistem_miktar
+      COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0)
+        - COALESCE((SELECT SUM(r.miktar - COALESCE(r.karsilanan,0)) FROM stok_rezervasyonlar r WHERE r.urun_id=h.urun_id AND r.depo_id=h.depo_id AND r.durum='acik'), 0) AS sistem_miktar
     FROM stok_hareketler h WHERE h.depo_id=? GROUP BY h.urun_id`).all(depoId);
 }
 
@@ -1957,7 +1973,7 @@ app.post('/api/stok/zimmet', authMiddleware, (req, res) => {
   const { personel_id, yer_id, depo_id, tarih, termin_tarihi, notlar, satirlar = [] } = req.body || {};
   if (!personel_id && !yer_id) return res.status(400).json({ error: 'Personel veya Zimmet Yeri en az biri zorunlu' });
   if (!depo_id) return res.status(400).json({ error: 'Depo zorunlu' });
-  const temiz = satirlar.filter((s) => s.urun_id && (s.seri_no || Number(s.miktar) > 0));
+  const temiz = satirlar.filter((s) => s.urun_id && s.seri_no);
   if (!temiz.length) return res.status(400).json({ error: 'En az bir malzeme satırı gerekli' });
   const emp = personel_id ? db.prepare('SELECT id, full_name FROM employees WHERE id=?').get(personel_id) : null;
   const yer = yer_id ? db.prepare('SELECT * FROM stok_zimmet_yerleri WHERE id=?').get(yer_id) : null;
@@ -1968,18 +1984,12 @@ app.post('/api/stok/zimmet', authMiddleware, (req, res) => {
     for (const s of temiz) {
       const urun = db.prepare('SELECT * FROM stok_urunler WHERE id=?').get(s.urun_id);
       if (!urun) { yetersiz.push(`${s.urun_id}: ürün bulunamadı`); continue; }
-      if (urun.seri_no_takip) {
-        if (!s.seri_no) { yetersiz.push(`${urun.ad}: seri no takipli — seri no seçilmeli`); continue; }
-        const icerideMi = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?").get(s.urun_id, depo_id, s.seri_no).n > 0;
-        if (!icerideMi) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: bu depoda içeride değil`); continue; }
-        const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, depo_id, s.seri_no);
-        if (blokeliMi) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: zaten başka bir zimmette`); continue; }
-      } else {
-        const mevcut = stokMevcut(s.urun_id, depo_id, null);
-        const rezerve = db.prepare("SELECT COALESCE(SUM(miktar-COALESCE(karsilanan,0)),0) m FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND durum='acik'").get(s.urun_id, depo_id).m;
-        const kullanilabilir = mevcut - rezerve;
-        if (Number(s.miktar) > kullanilabilir + 1e-9) yetersiz.push(`${urun.ad}: kullanılabilir ${+kullanilabilir.toFixed(2)}, istenen ${s.miktar}`);
-      }
+      if (urun.urun_tipi !== 'demirbas') { yetersiz.push(`${urun.ad}: demirbaş değil — Zimmet'e giremez, Çıkış fişi kullanın`); continue; }
+      if (!s.seri_no) { yetersiz.push(`${urun.ad}: sicil no seçilmeli`); continue; }
+      const icerideMi = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?").get(s.urun_id, depo_id, s.seri_no).n > 0;
+      if (!icerideMi) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: bu depoda içeride değil`); continue; }
+      const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, depo_id, s.seri_no);
+      if (blokeliMi) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: zaten başka bir zimmette`); continue; }
     }
     if (yetersiz.length) return res.status(400).json({ error: 'Zimmetlenemedi:\n' + yetersiz.join('\n') });
 
@@ -1996,7 +2006,7 @@ app.post('/api/stok/zimmet', authMiddleware, (req, res) => {
         tarih || now.slice(0, 10), termin_tarihi || null, notlar || null, req.user.email, now, now);
       for (const s of temiz) {
         const urun = db.prepare('SELECT ad, ana_birim FROM stok_urunler WHERE id=?').get(s.urun_id);
-        const miktar = s.seri_no ? 1 : Number(s.miktar);
+        const miktar = 1; // demirbaş her zaman seri no'lu, satır başına 1 birim
         const rezId = _stokUUID();
         db.prepare(`INSERT INTO stok_rezervasyonlar (id, rez_no, urun_id, urun_adi, depo_id, depo_adi, miktar, karsilanan, durum, tarih, aciklama, seri_no, zimmet_satir_id, olusturan, created_by, created_date, updated_date)
           VALUES (?,?,?,?,?,?,?,0,'acik',?,?,?,?,?,?,?,?)`).run(

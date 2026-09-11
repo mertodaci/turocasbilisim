@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ const DURUM_BADGE = {
 };
 const DURUM_LBL = { acik: "Açık", kismen_iade: "Kısmen İade", iade: "İade Edildi" };
 
-const bosSatir = () => ({ urun_id: "", urun_adi: "", seri_no: "", miktar: 1 });
+const bosSatir = () => ({ urun_id: "", urun_adi: "", seri_no: "" });
 
 export default function StokZimmet() {
   const qc = useQueryClient();
@@ -198,22 +198,13 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
   const [termin, setTermin] = useState("");
   const [notlar, setNotlar] = useState("");
   const [satirlar, setSatirlar] = useState([bosSatir()]);
-  const [depoKullanilabilir, setDepoKullanilabilir] = useState({});
   const [seriListeleri, setSeriListeleri] = useState({}); // { [urun_id]: [seri_no, ...] }
   const [saving, setSaving] = useState(false);
 
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000), enabled: open });
+  const demirbasUrunler = useMemo(() => urunler.filter((u) => u.urun_tipi === "demirbas"), [urunler]);
   const ekBarkodMap = useUrunEkBarkodMap();
-
-  useEffect(() => {
-    if (!depoId) { setDepoKullanilabilir({}); return; }
-    flowApi.stok.rapor("durum", { depo_id: depoId }).then((r) => {
-      const m = {};
-      (r?.rows || []).forEach((row) => { m[row.urun_id] = (m[row.urun_id] || 0) + (row.kullanilabilir || 0); });
-      setDepoKullanilabilir(m);
-    }).catch(() => {});
-  }, [depoId]);
 
   const sifirla = () => {
     setDepoId(""); setPersonelId(""); setYerId(""); setTarih(new Date().toISOString().slice(0, 10));
@@ -226,9 +217,9 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
   const silSatir = (i) => setSatirlar((ss) => ss.length > 1 ? ss.filter((_, idx) => idx !== i) : ss);
 
   const onPickUrun = async (i, urunId) => {
-    const u = urunler.find((x) => x.id === urunId);
-    setSatir(i, { urun_id: urunId, urun_adi: u?.ad || "", seri_no: "", miktar: 1 });
-    if (u?.seri_no_takip && depoId) {
+    const u = demirbasUrunler.find((x) => x.id === urunId);
+    setSatir(i, { urun_id: urunId, urun_adi: u?.ad || "", seri_no: "" });
+    if (depoId) {
       try {
         const liste = await flowApi.stok.zimmetSeriNoListesi(urunId, depoId);
         setSeriListeleri((sl) => ({ ...sl, [urunId]: liste }));
@@ -239,7 +230,7 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
   const gonder = async () => {
     if (!depoId) { toast.error("Depo seçin"); return; }
     if (!personelId && !yerId) { toast.error("Personel veya Zimmet Yeri en az biri gerekli"); return; }
-    const temiz = satirlar.filter((s) => s.urun_id && (s.seri_no || Number(s.miktar) > 0));
+    const temiz = satirlar.filter((s) => s.urun_id && s.seri_no);
     if (!temiz.length) { toast.error("En az bir malzeme satırı ekleyin"); return; }
     setSaving(true);
     try {
@@ -291,42 +282,27 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
               <Button size="sm" variant="outline" onClick={ekleSatir} disabled={!depoId}><Plus className="w-3.5 h-3.5 mr-1" /> Satır Ekle</Button>
             </div>
             {!depoId && <p className="text-xs text-muted-foreground">Önce depo seçin.</p>}
-            {depoId && satirlar.map((s, i) => {
-              const u = urunler.find((x) => x.id === s.urun_id);
-              const serili = u?.seri_no_takip;
-              return (
-                <div key={i} className="border rounded-xl p-2.5 space-y-2 bg-muted/10">
-                  <div className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-7">
-                      <Label className="mb-1 block text-[11px]">Ürün</Label>
-                      <SearchableSelect value={s.urun_id} onChange={(v) => onPickUrun(i, v)}
-                        options={urunler.map((x) => ({ value: x.id, label: `${x.kod ? x.kod + " · " : ""}${x.ad}`, keywords: [x.barkod, ekBarkodMap[x.id]].filter(Boolean).join(" ") }))}
-                        placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
-                    </div>
-                    <div className="col-span-4">
-                      {serili ? (
-                        <>
-                          <Label className="mb-1 block text-[11px]">Seri No</Label>
-                          <SearchableSelect value={s.seri_no} onChange={(v) => setSatir(i, { seri_no: v })}
-                            options={(seriListeleri[s.urun_id] || []).map((sn) => ({ value: sn, label: sn }))}
-                            placeholder={(seriListeleri[s.urun_id] || []).length ? "Seri no seç" : "Bu depoda müsait yok"} />
-                        </>
-                      ) : (
-                        <>
-                          <Label className="mb-1 block text-[11px]">
-                            Miktar {s.urun_id && <span className="text-muted-foreground font-normal">· çıkabilir: {depoKullanilabilir[s.urun_id] ?? 0}</span>}
-                          </Label>
-                          <Input type="number" value={s.miktar} onChange={(e) => setSatir(i, { miktar: parseFloat(e.target.value) || 0 })} />
-                        </>
-                      )}
-                    </div>
-                    <div className="col-span-1 flex justify-end">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => silSatir(i)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
+            {depoId && satirlar.map((s, i) => (
+              <div key={i} className="border rounded-xl p-2.5 space-y-2 bg-muted/10">
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-7">
+                    <Label className="mb-1 block text-[11px]">Ürün (Demirbaş)</Label>
+                    <SearchableSelect value={s.urun_id} onChange={(v) => onPickUrun(i, v)}
+                      options={demirbasUrunler.map((x) => ({ value: x.id, label: `${x.kod ? x.kod + " · " : ""}${x.ad}`, keywords: [x.barkod, ekBarkodMap[x.id]].filter(Boolean).join(" ") }))}
+                      placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
+                  </div>
+                  <div className="col-span-4">
+                    <Label className="mb-1 block text-[11px]">Sicil No</Label>
+                    <SearchableSelect value={s.seri_no} onChange={(v) => setSatir(i, { seri_no: v })}
+                      options={(seriListeleri[s.urun_id] || []).map((sn) => ({ value: sn, label: sn }))}
+                      placeholder={(seriListeleri[s.urun_id] || []).length ? "Sicil no seç" : "Bu depoda müsait yok"} />
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => silSatir(i)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t">

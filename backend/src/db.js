@@ -469,6 +469,13 @@ function initDb() {
     "ALTER TABLE stok_zimmetler ADD COLUMN depo_id TEXT",
     "ALTER TABLE stok_zimmetler ADD COLUMN depo_adi TEXT",
     "ALTER TABLE stok_zimmetler ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    // Demirbaş / Tüketim ayrımı: urun_tipi (önceden serbest metin, kullanılmıyordu)
+    // artık kontrollü bir sınıflandırma ('demirbas' | 'tuketim'). Zaten seri_no_takip=1
+    // olan ürünler (tekil takip edilenler) otomatik 'demirbas' sayılır ki zimmet
+    // yeteneklerini kaybetmesinler. WHERE koşulu idempotent olduğu için (ikinci
+    // çalıştırmada hiçbir satır eşleşmez) migrations listesinde her başlangıçta
+    // tekrar çalışması zararsızdır.
+    "UPDATE stok_urunler SET urun_tipi = CASE WHEN seri_no_takip=1 THEN 'demirbas' ELSE 'tuketim' END WHERE urun_tipi IS NULL OR urun_tipi NOT IN ('demirbas','tuketim')",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

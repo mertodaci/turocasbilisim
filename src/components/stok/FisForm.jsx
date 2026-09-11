@@ -97,6 +97,12 @@ export default function FisForm({ tip }) {
   const depoAdi = (id) => depolar.find((d) => d.id === id)?.ad || "";
   const urunById = (id) => urunler.find((u) => u.id === id);
   const isSerili = (id) => { const u = urunById(id); return u?.seri_no_takip === 1 || u?.seri_no_takip === true; };
+  // Demirbaş, Çıkış fişine giremez — kişiye/yere teslim edilecekse Zimmet kullanılmalı.
+  // Giriş/Transfer/İade'de demirbaş dahil tüm ürünler seçilebilir.
+  const urunlerForTip = useMemo(
+    () => (tip === "cikis" ? urunler.filter((u) => u.urun_tipi !== "demirbas") : urunler),
+    [urunler, tip]
+  );
   const rafById = (id) => raflar.find((r) => r.id === id);
   const rafOptions = (depoId) => raflar.filter((r) => r.depo_id === depoId).map((r) => ({ value: r.id, label: `${r.kod || ""} ${r.ad || ""}`.trim() }));
 
@@ -276,7 +282,7 @@ export default function FisForm({ tip }) {
               <div className="md:col-span-4">
                 <Label className="mb-1 block text-xs">Ürün *</Label>
                 <SearchableSelect value={l.urun_id} onChange={(v) => onPickUrun(i, v)}
-                  options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))}
+                  options={urunlerForTip.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))}
                   placeholder="Ürün kodu / adı / barkod" fixDialogWheelScroll />
               </div>
               {tip !== "giris" && (

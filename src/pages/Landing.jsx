@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, Boxes, Users, Wallet, Building2, ScrollText, ClipboardList } from "lucide-react";
 import turkonixLogo from "@/assets/turkonix-logo.png";
+import sehirSiluet from "@/assets/sehir-siluet.png";
 
 // Sol paneldeki özellik şeridi — uygulamanın gerçek modülleri.
 const OZELLIKLER = [
@@ -70,12 +71,17 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Sol — sabit koyu lacivert marka paneli */}
-      <div className="hidden lg:flex lg:w-[55%] flex-col items-center justify-center relative overflow-hidden px-12 py-16" style={{ background: "linear-gradient(160deg, #0a1230 0%, #0d1840 100%)" }}>
-        <TurkonixLogo className="w-full max-w-md" theme="fixed-dark" />
-        <p className="text-teal-300/80 text-sm tracking-wide mt-6">İş süreçleriniz tek merkezde.</p>
+      {/* Sol — şehir silueti görselli marka paneli */}
+      <div className="hidden lg:flex lg:w-[55%] flex-col items-center justify-center relative overflow-hidden px-12 py-16">
+        <img src={sehirSiluet} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover object-bottom" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a1230]/75 via-[#0a1230]/45 to-[#0a1230]/85" />
 
-        <div className="absolute bottom-14 left-0 right-0 px-12">
+        <div className="relative z-10 flex flex-col items-center">
+          <TurkonixLogo className="w-full max-w-md" theme="fixed-dark" />
+          <p className="text-teal-300/90 text-sm tracking-wide mt-6">İş süreçleriniz tek merkezde.</p>
+        </div>
+
+        <div className="absolute bottom-14 left-0 right-0 px-12 z-10">
           <div className="flex items-start justify-between gap-2">
             {OZELLIKLER.map(({ icon: Icon, baslik }) => (
               <div key={baslik} className="flex flex-col items-center text-center w-20">
@@ -90,8 +96,9 @@ export default function Landing() {
       </div>
 
       {/* Sağ — uygulamanın gerçek renk tokenlarıyla uyumlu, tema-duyarlı form paneli */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-16">
-        <div className="w-full max-w-sm bg-card border border-border/50 rounded-3xl shadow-sm p-8 md:p-10">
+      <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-background px-6 py-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-100 via-background to-fuchsia-100 dark:from-violet-950/40 dark:via-background dark:to-fuchsia-950/30" />
+        <div className="relative w-full max-w-sm bg-card border border-border/50 rounded-3xl shadow-sm p-8 md:p-10">
           <TurkonixLogo className="w-28 mb-8 lg:hidden" />
 
           <div className="w-10 h-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 mb-4" />

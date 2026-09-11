@@ -1,12 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import CameraScanDialog from "@/components/stok/CameraScanDialog";
+import { SEBEP_LISTESI } from "@/lib/stokSebepleri";
 import { ScanLine, Minus, Plus, Trash2, Check, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, Camera, Link2, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +25,8 @@ export default function StokMobil() {
   const [bilinmeyen, setBilinmeyen] = useState(null); // { kod } -- barkod bulunamadi, baglama dialogu
   const [yeniUrunAdi, setYeniUrunAdi] = useState("");
   const [baglanacakUrunId, setBaglanacakUrunId] = useState("");
+  const [sebepKodu, setSebepKodu] = useState(SEBEP_LISTESI.giris[0].value);
+  const [oneriler, setOneriler] = useState([]); // isimle arama sonuçları (2+ karakter sonrası)
 
   // sayım için
   const [sayimId, setSayimId] = useState(null);
@@ -35,7 +39,27 @@ export default function StokMobil() {
   // Sadece "bilinmeyen barkod -> mevcut ürüne bağla" dialogu açıkken yüklenir.
   const { data: tumUrunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000), enabled: !!bilinmeyen });
 
-  const modDegistir = (m) => { setMode(m); setLines([]); setSayimId(null); setSayimSatirlari([]); setScan(""); };
+  const modDegistir = (m) => {
+    setMode(m); setLines([]); setSayimId(null); setSayimSatirlari([]); setScan(""); setOneriler([]);
+    if (SEBEP_LISTESI[m]) setSebepKodu(SEBEP_LISTESI[m][0].value);
+  };
+
+  // İsimle arama: 2+ karakter yazılınca (barkod tabancasının hızlı yazıp Enter'a
+  // basmasından farklı olarak) elle yazan kullanıcı için debounce'lu öneri listesi.
+  useEffect(() => {
+    const q = scan.trim();
+    if (q.length < 2) { setOneriler([]); return; }
+    let iptal = false;
+    const t = setTimeout(() => {
+      flowApi.stok.barkodCoz({ q }).then((r) => { if (!iptal) setOneriler(r.adaylar || []); }).catch(() => { if (!iptal) setOneriler([]); });
+    }, 300);
+    return () => { iptal = true; clearTimeout(t); };
+  }, [scan]);
+
+  const oneriSec = (u) => {
+    if (mode === "sayim") sayimaEkle(u); else ekle(u);
+    setScan(""); setOneriler([]); inputRef.current?.focus();
+  };
 
   const ekle = (u) => {
     setLines((ls) => {
@@ -129,8 +153,8 @@ export default function StokMobil() {
     if (!satirlar.length) { toast.error("Ürün yok"); return; }
     const depoAdi = depolar.find((d) => d.id === depoId)?.ad;
     const fis = mode === "giris"
-      ? { tip: "giris", hedef_depo_id: depoId, hedef_depo_adi: depoAdi, belge_no: "MOBIL-" + Date.now() }
-      : { tip: "cikis", kaynak_depo_id: depoId, kaynak_depo_adi: depoAdi, hedef_saha_id: sahaId || null, hedef_saha_adi: sahalar.find((s) => s.id === sahaId)?.ad, hedef_depo_id: sahaId ? null : depoId, hedef_depo_adi: sahaId ? null : depoAdi, belge_no: "MOBIL-" + Date.now() };
+      ? { tip: "giris", hedef_depo_id: depoId, hedef_depo_adi: depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() }
+      : { tip: "cikis", kaynak_depo_id: depoId, kaynak_depo_adi: depoAdi, hedef_saha_id: sahaId || null, hedef_saha_adi: sahalar.find((s) => s.id === sahaId)?.ad, hedef_depo_id: sahaId ? null : depoId, hedef_depo_adi: sahaId ? null : depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() };
     setSaving(true);
     try {
       const saved = await flowApi.stok.createFis(fis, satirlar.map((l) => ({ ...l, carpan: 1 })));
@@ -144,8 +168,22 @@ export default function StokMobil() {
   const toplam = lines.reduce((a, l) => a + (l.miktar || 0), 0);
   const sayilanSatirlar = sayimSatirlari.filter((s) => s.sayilan_miktar != null);
 
+  const oneriListesi = (
+    oneriler.length > 0 && (
+      <div className="absolute z-30 top-[calc(100%+4px)] left-0 right-0 bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto">
+        {oneriler.map((u) => (
+          <button key={u.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted text-sm border-b last:border-0"
+            onMouseDown={(e) => e.preventDefault()} onClick={() => oneriSec(u)}>
+            <p className="font-medium truncate">{u.ad}</p>
+            <p className="text-xs text-muted-foreground">{u.kod}{u.barkod ? " · " + u.barkod : ""}</p>
+          </button>
+        ))}
+      </div>
+    )
+  );
+
   return (
-    <div className="max-w-md mx-auto space-y-4">
+    <div className="max-w-md mx-auto space-y-4 pb-16">
       <div className="grid grid-cols-3 gap-2">
         <Button variant={mode === "giris" ? "default" : "outline"} className="h-12 text-sm" onClick={() => modDegistir("giris")}>
           <ArrowDownToLine className="w-4 h-4 mr-1.5" /> Giriş
@@ -163,13 +201,25 @@ export default function StokMobil() {
           <div className="space-y-2">
             <SearchableSelect value={depoId} onChange={setDepoId} options={depolar.map((d) => ({ value: d.id, label: d.ad }))} placeholder={mode === "giris" ? "Hedef depo" : "Kaynak depo"} className="h-11" />
             {mode === "cikis" && <SearchableSelect value={sahaId} onChange={setSahaId} options={[{ value: "", label: "Hedef: aynı depo" }, ...sahalar.map((s) => ({ value: s.id, label: "Saha: " + s.ad }))]} placeholder="Hedef saha (ops.)" className="h-11" />}
+            {SEBEP_LISTESI[mode] && (
+              <Select value={sebepKodu} onValueChange={setSebepKodu}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SEBEP_LISTESI[mode].map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          <div className="flex gap-2">
-            <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
-              onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onScan(); }} />
-            <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
-            <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+          <div className="relative">
+            <div className="flex gap-2">
+              <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
+                onChange={(e) => setScan(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") onScan(); if (e.key === "Escape") setOneriler([]); }} />
+              <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
+              <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+            </div>
+            {oneriListesi}
           </div>
 
           <div className="space-y-2">
@@ -188,10 +238,12 @@ export default function StokMobil() {
             ))}
           </div>
 
-          <div className="sticky bottom-32 pt-2">
-            <Button className="w-full h-14 text-base" disabled={saving || !lines.length || !depoId} onClick={kaydet}>
-              <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Kaydet ve Onayla (${lines.length} kalem · ${toplam})`}
-            </Button>
+          <div className="fixed inset-x-0 bottom-32 z-40 flex justify-center px-4 pointer-events-none">
+            <div className="w-full max-w-md pointer-events-auto">
+              <Button className="w-full h-14 text-base shadow-lg" disabled={saving || !lines.length || !depoId} onClick={kaydet}>
+                <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Kaydet ve Onayla (${lines.length} kalem · ${toplam})`}
+              </Button>
+            </div>
           </div>
         </>
       ) : (
@@ -206,11 +258,15 @@ export default function StokMobil() {
             </div>
           ) : (
             <>
-              <div className="flex gap-2">
-                <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
-                  onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onScan(); }} />
-                <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
-                <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
+                    onChange={(e) => setScan(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") onScan(); if (e.key === "Escape") setOneriler([]); }} />
+                  <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
+                  <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+                </div>
+                {oneriListesi}
               </div>
               <div className="space-y-2">
                 {!sayilanSatirlar.length ? <p className="text-center text-muted-foreground py-8 text-sm">Barkod okutarak saymaya başlayın.</p>
@@ -224,10 +280,12 @@ export default function StokMobil() {
                   </div>
                 ))}
               </div>
-              <div className="sticky bottom-32 pt-2">
-                <Button className="w-full h-14 text-base" disabled={saving} onClick={sayimKaydet}>
-                  <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Sayılanları Kaydet (${sayilanSatirlar.length} ürün)`}
-                </Button>
+              <div className="fixed inset-x-0 bottom-32 z-40 flex justify-center px-4 pointer-events-none">
+                <div className="w-full max-w-md pointer-events-auto">
+                  <Button className="w-full h-14 text-base shadow-lg" disabled={saving} onClick={sayimKaydet}>
+                    <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Sayılanları Kaydet (${sayilanSatirlar.length} ürün)`}
+                  </Button>
+                </div>
               </div>
             </>
           )}

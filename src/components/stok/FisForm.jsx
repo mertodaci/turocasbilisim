@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
+import { SEBEP_LISTESI } from "@/lib/stokSebepleri";
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, ListChecks, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,30 +18,6 @@ const TIP_CFG = {
   cikis: { baslik: "Stok Çıkış Fişi", icon: ArrowUpFromLine, renk: "text-red-600", aciklama: "Kaynak depodan sarf / teslim çıkışı. İsteğe bağlı hedef saha/proje seçilebilir. Depo→depo taşıma için Depo Transfer fişi kullanın. Onaylama anında stok yeterlilik kontrol edilir." },
   transfer: { baslik: "Depo Transfer Fişi", icon: ArrowLeftRight, renk: "text-blue-600", aciklama: "Depo/araç/raf arası net transfer. Lot, maliyet ve tarihler hedefe aynen taşınır." },
   iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
-};
-
-// İşlem Sebebi: Transfer'de hiç gösterilmez (kendi başına atomik bir fiş tipi zaten,
-// "farklı depoya transfer" sebebi burada olsaydı karşı depoya otomatik giriş yapmayan,
-// elle eşleştirilmesi gereken riskli bir ikinci yol açardı).
-const SEBEP_LISTESI = {
-  giris: [
-    { value: "satin_alma", label: "Satın Alma" },
-    { value: "sayim_fazlasi", label: "Sayım Fazlası" },
-    { value: "acilis_devir", label: "Açılış Bakiyesi / Devir" },
-  ],
-  cikis: [
-    { value: "sarf_kullanim", label: "Sarf / Kullanım" },
-    { value: "numune_test", label: "Numune / Test" },
-    { value: "hurdaya_ayirma", label: "Hurdaya Ayırma" },
-    { value: "kayip_calinti", label: "Kayıp / Çalıntı" },
-    { value: "sayim_eksigi", label: "Sayım Eksiği" },
-  ],
-  iade: [
-    { value: "arizali_urun", label: "Arızalı Ürün" },
-    { value: "yanlis_urun", label: "Yanlış Ürün Gönderildi" },
-    { value: "fazla_siparis", label: "Fazla Sipariş" },
-    { value: "diger", label: "Diğer" },
-  ],
 };
 
 const bosSatir = () => ({

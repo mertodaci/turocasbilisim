@@ -1169,7 +1169,7 @@ app.post('/api/stok/fis/:id/onayla', authMiddleware, (req, res) => {
       if (u?.urun_tipi !== 'demirbas') continue;
       if (!hurdaIstisnasi) { demirbasHatalar.push(`${s.urun_adi || s.urun_id}: demirbaş — Çıkış fişine giremez, Zimmet kullanın`); continue; }
       const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, fis.kaynak_depo_id, s.seri_no);
-      if (blokeliMi) demirbasHatalar.push(`${s.urun_adi || s.urun_id} · SN ${s.seri_no}: hâlâ zimmette — önce İade Al yapılmalı`);
+      if (blokeliMi) demirbasHatalar.push(`${s.urun_adi || s.urun_id} · SN ${s.seri_no}: hâlâ zimmette — önce Zimmetten Düş yapılmalı`);
     }
     if (demirbasHatalar.length) return res.status(400).json({ error: 'Demirbaş ürün Çıkış fişinde olamaz:\n' + demirbasHatalar.join('\n') });
   }

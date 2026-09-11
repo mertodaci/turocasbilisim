@@ -42,8 +42,8 @@ export default function StokZimmet() {
 
   const iadeM = useMutation({
     mutationFn: ({ id, satirlar }) => flowApi.stok.zimmetIade(id, { satirlar }),
-    onSuccess: () => { invalidate(); setDetay(null); toast.success("İade işlendi"); },
-    onError: (e) => toast.error(String(e?.message || "İade edilemedi")),
+    onSuccess: () => { invalidate(); setDetay(null); toast.success("Zimmetten düşüldü"); },
+    onError: (e) => toast.error(String(e?.message || "Zimmetten düşülemedi")),
   });
 
   const openDetay = async (z) => {
@@ -59,7 +59,7 @@ export default function StokZimmet() {
     const satirlar = detay.satirlar
       .map((s) => ({ satir_id: s.id, iade_miktar: Math.min(Number(iadeMiktarlar[s.id]) || 0, +(s.miktar - s.iade_miktar).toFixed(6)) }))
       .filter((s) => s.iade_miktar > 1e-9);
-    if (!satirlar.length) { toast.error("İade edilecek miktar girin"); return; }
+    if (!satirlar.length) { toast.error("Düşülecek miktar girin"); return; }
     iadeM.mutate({ id: detay.id, satirlar });
   };
 
@@ -129,7 +129,7 @@ export default function StokZimmet() {
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs font-medium ${DURUM_BADGE[z.durum] || ""}`}>{DURUM_LBL[z.durum] || z.durum}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Detay / İade" onClick={() => openDetay(z)}><Eye className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Detay / Zimmetten Düş" onClick={() => openDetay(z)}><Eye className="w-3.5 h-3.5" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -156,7 +156,7 @@ export default function StokZimmet() {
               <table className="w-full text-xs border rounded-lg overflow-hidden">
                 <thead className="bg-muted/40"><tr>
                   <th className="text-left px-2 py-1.5">Ürün</th><th className="text-right px-2 py-1.5">Zimmetli</th>
-                  <th className="text-right px-2 py-1.5">İade Edilen</th><th className="text-right px-2 py-1.5">İade Miktarı</th>
+                  <th className="text-right px-2 py-1.5">İade Edilen</th><th className="text-right px-2 py-1.5">Düşülecek Miktar</th>
                 </tr></thead>
                 <tbody>
                   {detay.satirlar.map((s) => {
@@ -179,7 +179,7 @@ export default function StokZimmet() {
               </table>
               {detay.durum !== "iade" && (
                 <div className="flex justify-end pt-2 border-t">
-                  <Button disabled={iadeM.isPending} onClick={iadeGonder}><Undo2 className="w-4 h-4 mr-1.5" /> İade Al</Button>
+                  <Button disabled={iadeM.isPending} onClick={iadeGonder}><Undo2 className="w-4 h-4 mr-1.5" /> Zimmetten Düş</Button>
                 </div>
               )}
             </div>

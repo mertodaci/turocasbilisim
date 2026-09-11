@@ -2,7 +2,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Link } from "react-router-dom";
-import ContractAlerts from "@/components/dashboard/ContractAlerts";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -10,6 +9,7 @@ import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriang
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts } from "@/lib/NotificationContext";
+import { useContractAlerts } from "@/lib/useContractAlerts";
 import { kisa } from "@/lib/hakedisUtils";
 
 const TONES = {
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const { statusName } = useTicketStatuses();
   const { user } = useAuth();
   const { stokUyari } = useStokAlerts();
+  const { expired: sozlesmeSonaEren, upcoming: sozlesmeYaklasan, nameOf: sozlesmeFirmaAdi } = useContractAlerts();
 
   const { data: summary = { openTickets: [], openCount: 0, byStatus: [], dailyTrend: [] } } = useQuery({ queryKey: ["admin-summary"], queryFn: () => fetch("/api/dashboard/admin-summary", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000 });
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
@@ -99,8 +100,52 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-5">
 
-      {/* SÖZLEŞME UYARILARI */}
-      <ContractAlerts />
+      {/* DİKKAT GEREKTİRENLER — sözleşme + stok + bilet + İK tek panelde */}
+      {(sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0 || alerts.length > 0) && (
+        <div className="rounded-2xl overflow-hidden border-2 border-red-200 dark:border-red-900 shadow-md">
+          <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white">
+            <AlertTriangle className="w-5 h-5" />
+            <span className="text-sm font-extrabold uppercase tracking-wide">Dikkat Gerektirenler</span>
+            <span className="ml-auto text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
+              {sozlesmeSonaEren.length + sozlesmeYaklasan.length + alerts.length} konu
+            </span>
+          </div>
+          <div className="bg-red-50/60 dark:bg-red-950/10 p-4 space-y-2.5">
+            {sozlesmeSonaEren.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <p className="text-sm font-semibold text-red-900 dark:text-red-400 shrink-0">{sozlesmeSonaEren.length} kurumun sözleşmesi sona erdi:</p>
+                {sozlesmeSonaEren.map((c) => (
+                  <Link key={c.id} to={`/musteri/${c.customer_id}`} className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 hover:underline">
+                    {sozlesmeFirmaAdi(c.customer_id)}{c.end_date ? ` (${new Date(c.end_date).toLocaleDateString("tr-TR")})` : ""}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {sozlesmeYaklasan.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-400 shrink-0">{sozlesmeYaklasan.length} kurumun sözleşmesi 30 gün içinde dolacak:</p>
+                {sozlesmeYaklasan.map((c) => (
+                  <Link key={c.id} to={`/musteri/${c.customer_id}`} className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 hover:underline">
+                    {sozlesmeFirmaAdi(c.customer_id)}{c.end_date ? ` (${new Date(c.end_date).toLocaleDateString("tr-TR")})` : ""}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {alerts.length > 0 && (
+              <div className={cn("flex items-center gap-2 flex-wrap pt-1", (sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0) && "border-t border-red-200/60 dark:border-red-900/40 mt-1")}>
+                {alerts.map((a, i) => (
+                  <Link key={i} to={a.to}
+                    className={cn("flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-1 hover:shadow-sm transition-all bg-white dark:bg-card", TONES[a.tone])}>
+                    <a.icon className="w-3.5 h-3.5" /> {a.n} {a.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* BAŞLIK */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -114,18 +159,6 @@ export default function AdminDashboard() {
           <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
         </div>
       </div>
-
-      {/* DİKKAT GEREKTİRENLER */}
-      {alerts.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {alerts.map((a, i) => (
-            <Link key={i} to={a.to}
-              className={cn("flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-1 hover:shadow-sm transition-all", TONES[a.tone])}>
-              <a.icon className="w-3.5 h-3.5" /> {a.n} {a.label}
-            </Link>
-          ))}
-        </div>
-      )}
 
       {/* DUYURU */}
       {activeAnnouncements.length > 0 && (

@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 import ContractAlerts from "@/components/dashboard/ContractAlerts";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, Warehouse, ArrowLeftRight } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts } from "@/lib/NotificationContext";
@@ -19,11 +20,6 @@ const TONES = {
   blue:   "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900",
   violet: "bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-900",
   slate:  "bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800",
-  sky:    "bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-900",
-  indigo: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900",
-  cyan:   "bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-900",
-  teal:   "bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-900",
-  purple: "bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900",
 };
 
 const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yok: "Oluşmadı" };
@@ -37,8 +33,6 @@ export default function AdminDashboard() {
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: announcements = [] } = useQuery({ queryKey: ["announcements-active"], queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }) });
-  const { data: stokDeger } = useQuery({ queryKey: ["stok-degerleme-admin"], queryFn: () => flowApi.stok.rapor("degerleme"), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
-  const { data: stokPanel } = useQuery({ queryKey: ["stok-dashboard-admin"], queryFn: () => flowApi.stok.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
 
   const ik = ikData?.kpi || {};
   const donem = ikData?.bordro_donem || {};
@@ -69,43 +63,18 @@ export default function AdminDashboard() {
 
   const aktifSozlesme = (contracts.stats || []).find(s => s.status === "aktif")?.c || 0;
   const donemDurum = DONEM_DURUM[donem.durum] || "—";
-  const stokUrunSayisi = new Set((stokDeger?.rows || []).map(r => r.urun_id)).size;
-  const stokBugunGiris = stokPanel?.bugun_giris?.n || 0;
-  const stokBugunCikis = stokPanel?.bugun_cikis?.n || 0;
 
-  // ── Hero KPI'lar — en çarpıcı 2 ₺ metriği, büyük gösterilir ──
-  const heroKpis = [
-    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", color: "from-emerald-500 to-emerald-700", icon: DollarSign, path: "/sozlesmeler" },
-    { label: "Stok Değeri", value: `${kisa(stokDeger?.toplam_deger || 0)} ₺`, sub: `${stokUrunSayisi} ürün`, color: "from-amber-500 to-amber-700", icon: Warehouse, path: "/stok/raporlar" },
-  ];
-
-  // ── Secondary KPI'lar — küçük/sade kartlar, İş Takibi bilinçli olarak son 2'de ──
+  // ── KPI kartları — İş Takibi bilinçli olarak son 2 kartta ──
   const kpis = [
-    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, tone: "blue", icon: ScrollText, path: "/sozlesmeler" },
-    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, tone: "sky", icon: Building2, path: "/musteriler" },
-    { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, tone: "indigo", icon: Users, path: "/calisanlar" },
-    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, tone: "slate", icon: Wallet, path: "/ik/bordro" },
-    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, tone: "rose", icon: Boxes, path: "/stok" },
-    { label: "Bugünkü Stok Hareketi", value: stokBugunGiris + stokBugunCikis, sub: `${stokBugunGiris} giriş · ${stokBugunCikis} çıkış`, tone: "cyan", icon: ArrowLeftRight, path: "/stok/fisler" },
-    { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, tone: "teal", icon: ClipboardList, path: "/is-takibi/tickets" },
-    { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, tone: "purple", icon: Briefcase, path: "/is-takibi" },
+    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, color: "from-blue-500 to-blue-700", icon: ScrollText, path: "/sozlesmeler" },
+    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", color: "from-emerald-500 to-emerald-700", icon: DollarSign, path: "/sozlesmeler" },
+    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, color: "from-sky-500 to-sky-700", icon: Building2, path: "/musteriler" },
+    { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
+    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
+    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
+    { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/is-takibi/tickets" },
+    { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
   ];
-
-  // ── Son Aktiviteler — bilet + stok hareketi karışık, tarihe göre sıralı ──
-  const aktiviteler = [
-    ...openTickets.slice(0, 6).map(t => ({
-      key: `t-${t.id}`, tarih: t.created_date, title: t.title, sub: t.customer_name || "—",
-      badge: statusName(t.status),
-      tone: { kritik: "red", yuksek: "orange", orta: "amber", dusuk: "slate" }[t.priority] || "slate",
-      icon: ClipboardList, to: "/is-takibi/tickets",
-    })),
-    ...(stokPanel?.son_hareket || []).slice(0, 6).map((r, i) => ({
-      key: `s-${i}-${r.fis_no}`, tarih: r.tarih, title: r.urun_adi, sub: `${r.depo_adi} · ${r.fis_no}`,
-      badge: { giris: "Giriş", cikis: "Çıkış", transfer: "Transfer", iade: "İade" }[r.tip] || r.tip,
-      tone: r.tip === "giris" ? "blue" : r.tip === "cikis" ? "rose" : "amber",
-      icon: Warehouse, to: "/stok/fisler",
-    })),
-  ].sort((a, b) => new Date(b.tarih) - new Date(a.tarih)).slice(0, 10);
 
   // ── Dikkat gerektiren uyarı çipleri (modüller arası, yalnız > 0) ──
   const alerts = [
@@ -239,41 +208,27 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* HERO KPI — en çarpıcı 2 ₺ metriği */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {heroKpis.map((item, i) => (
+      {/* MODÜL KPI BANNER — 8 kart, tam 4×2 */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        {kpis.map((item, i) => (
           <Link key={i} to={item.path}
             className="rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">
-            <div className={`bg-gradient-to-br ${item.color} p-6 text-white`}>
-              <div className="flex items-center justify-between mb-4">
-                <item.icon size={28} className="opacity-80" />
-                <ArrowUpRight size={18} className="opacity-50" />
+            <div className={`bg-gradient-to-br ${item.color} p-5 text-white`}>
+              <div className="flex items-center justify-between mb-3">
+                <item.icon size={22} className="opacity-80" />
+                <ArrowUpRight size={16} className="opacity-50" />
               </div>
-              <div className="text-4xl font-black truncate">{item.value}</div>
-              <div className="text-white/80 text-sm mt-1.5">{item.label}</div>
+              <div className="text-3xl font-black truncate">{item.value}</div>
+              <div className="text-white/80 text-sm mt-1">{item.label}</div>
             </div>
-            <div className="bg-card px-5 py-2.5">
+            <div className="bg-card px-4 py-2">
               <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* SECONDARY KPI — küçük/sade kartlar, İş Takibi son sırada */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {kpis.map((item, i) => (
-          <Link key={i} to={item.path}
-            className="bg-card rounded-xl border border-border/50 shadow-sm p-3.5 hover:shadow-md transition-all">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-2", TONES[item.tone])}>
-              <item.icon size={16} />
-            </div>
-            <div className="text-xl font-bold truncate">{item.value}</div>
-            <div className="text-xs text-muted-foreground truncate">{item.label}</div>
-          </Link>
-        ))}
-      </div>
-
-      {/* YAKLAŞAN SÖZLEŞME BİTİŞLERİ + SON AKTİVİTELER (karışık: bilet + stok) */}
+      {/* YAKLAŞAN SÖZLEŞME BİTİŞLERİ + SON 7 GÜN BİLET (küçük) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
@@ -301,27 +256,52 @@ export default function AdminDashboard() {
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son Aktiviteler
+            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son 7 Gün · Bilet Hareketi
           </h3>
-          {aktiviteler.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Henüz aktivite yok</p></div>
+          {(summary.dailyTrend || []).length === 0 ? (
+            <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
           ) : (
-            <div className="space-y-1.5">
-              {aktiviteler.map(a => (
-                <Link key={a.key} to={a.to} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", TONES[a.tone])}>
-                    <a.icon size={14} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{a.sub}</p>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 bg-muted rounded-full shrink-0 text-muted-foreground">{a.badge}</span>
-                </Link>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                <Legend wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
+                <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      {/* SON AÇIK BİLETLER — en altta */}
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-teal-500" /> Son Açık Biletler
+          </h3>
+          <Link to="/is-takibi/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
+        </div>
+        {openTickets.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Açık bilet yok</p></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {openTickets.slice(0, 8).map(t => {
+              const pc = { kritik: "bg-red-500", yuksek: "bg-orange-500", orta: "bg-amber-400", dusuk: "bg-green-500" }[t.priority] || "bg-gray-400";
+              return (
+                <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", pc)} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{t.title}</p>
+                    {t.customer_name && <p className="text-xs text-muted-foreground truncate">{t.customer_name}</p>}
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-muted rounded-full shrink-0 text-muted-foreground">{statusName(t.status)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="text-center text-xs text-muted-foreground pb-2">

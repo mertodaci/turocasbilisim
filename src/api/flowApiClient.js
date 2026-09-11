@@ -227,15 +227,6 @@ export const auth = {
     const data = await handleResponse(res);
     return data;
   },
-  async register(email, password, full_name, role) {
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, full_name, role }),
-    });
-    const data = await handleResponse(res);
-    return data;
-  },
   async logout() {
     await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
     window.location.href = '/landing';

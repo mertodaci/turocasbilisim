@@ -71,14 +71,6 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const register = async (email, password, full_name, role) => {
-    const data = await auth.register(email, password, full_name, role);
-    setUser(data.user);
-    setIsAuthenticated(true);
-    setAuthError(null);
-    return data;
-  };
-
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
@@ -101,7 +93,6 @@ export const AuthProvider = ({ children }) => {
       extendSession,
       appPublicSettings: null,
       login,
-      register,
       logout,
       navigateToLogin,
       checkUserAuth,

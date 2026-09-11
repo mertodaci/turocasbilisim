@@ -6,10 +6,11 @@ import ContractAlerts from "@/components/dashboard/ContractAlerts";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, Zap, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock } from "lucide-react";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts } from "@/lib/NotificationContext";
+import { kisa } from "@/lib/hakedisUtils";
 
 const TONES = {
   red:    "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900",
@@ -35,6 +36,9 @@ export default function AdminDashboard() {
 
   const ik = ikData?.kpi || {};
   const donem = ikData?.bordro_donem || {};
+  const dogumGunu = ikData?.dogum_gunu || [];
+  const hr = exec?.hr || {};
+  const izinliList = hr.onLeaveTodayList || [];
   const sales = exec?.sales || {};
   const contracts = exec?.contracts || {};
   const isTakibi = exec?.is_takibi || {};
@@ -49,20 +53,21 @@ export default function AdminDashboard() {
   });
 
   const openTickets = summary.openTickets || [];
+  const expiring = contracts.expiring || [];
 
   const aktifSozlesme = (contracts.stats || []).find(s => s.status === "aktif")?.c || 0;
-  const yaklasanSozlesme = (contracts.expiring || []).length;
   const donemDurum = DONEM_DURUM[donem.durum] || "—";
 
-  // ── Modül KPI kartları (her modülden bir kart) ──
+  // ── KPI kartları — İş Takibi bilinçli olarak son 2 kartta ──
   const kpis = [
+    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, color: "from-blue-500 to-blue-700", icon: ScrollText, path: "/sozlesmeler" },
+    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", color: "from-emerald-500 to-emerald-700", icon: DollarSign, path: "/sozlesmeler" },
+    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, color: "from-sky-500 to-sky-700", icon: Building2, path: "/musteriler" },
+    { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
+    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
+    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
     { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/is-takibi/tickets" },
     { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
-    { label: "Aktif Personel", value: ik.aktif_personel ?? exec?.hr?.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
-    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
-    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, color: "from-emerald-500 to-emerald-700", icon: Building2, path: "/musteriler" },
-    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${yaklasanSozlesme} yaklaşan bitiş`, color: "from-blue-500 to-blue-700", icon: ScrollText, path: "/sozlesmeler" },
-    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
   ];
 
   // ── Dikkat gerektiren uyarı çipleri (modüller arası, yalnız > 0) ──
@@ -79,6 +84,12 @@ export default function AdminDashboard() {
     { n: su.geciken_zimmet, label: "geciken zimmet", to: "/stok/zimmet", icon: Clock, tone: "amber" },
   ].filter(a => (a.n || 0) > 0);
 
+  const bekleyenOnaylar = [
+    { n: summary.pendingLeaves || 0, label: "İzin", to: "/ik-izin-yonetimi" },
+    { n: summary.pendingExpenses || 0, label: "Harcama", to: "/ik-harcama-yonetimi" },
+    { n: ik.bekleyen_mesai || 0, label: "Mesai", to: "/ik/mesai" },
+  ];
+
   return (
     <div className="space-y-5">
 
@@ -94,20 +105,32 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* DUYURULAR */}
+      {/* DİKKAT GEREKTİRENLER */}
+      {alerts.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {alerts.map((a, i) => (
+            <Link key={i} to={a.to}
+              className={cn("flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-1 hover:shadow-sm transition-all", TONES[a.tone])}>
+              <a.icon className="w-3.5 h-3.5" /> {a.n} {a.label}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* DUYURU */}
       {activeAnnouncements.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 px-4 py-3 bg-indigo-600 text-white text-xs font-bold uppercase tracking-wider rounded-l-2xl flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5" /> Duyuru
+        <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25">
+          <div className="flex items-stretch">
+            <div className="flex-shrink-0 px-5 py-3.5 bg-white/15 flex items-center gap-2">
+              <Megaphone className="w-5 h-5" />
+              <span className="text-sm font-extrabold uppercase tracking-widest">Duyuru</span>
             </div>
-            <div className="overflow-hidden flex-1 py-3 px-4">
+            <div className="overflow-hidden flex-1 py-3.5 px-5">
               <div className="animate-marquee whitespace-nowrap">
-                {activeAnnouncements.map((a, i) => (
-                  <span key={a.id} className="inline-flex items-center gap-2 mr-12">
-                    {a.title && <span className="font-semibold text-sm text-indigo-700 dark:text-indigo-300">{a.title}:</span>}
-                    <span className="text-sm text-muted-foreground">{a.content}</span>
-                    {i < activeAnnouncements.length - 1 && <span className="text-muted-foreground mx-4">•</span>}
+                {activeAnnouncements.map((a) => (
+                  <span key={a.id} className="inline-flex items-center gap-2 mr-14">
+                    {a.title && <span className="font-bold text-white">{a.title}:</span>}
+                    <span className="text-white/90 text-sm">{a.content}</span>
                   </span>
                 ))}
               </div>
@@ -116,33 +139,66 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* BUGÜN + DİKKAT GEREKTİRENLER — kompakt tek şerit */}
-      <div className="flex items-center flex-wrap gap-x-6 gap-y-2 bg-card border border-border/50 rounded-2xl px-5 py-3">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bugün</span>
-        {[
-          { label: "açılan bilet", value: summary.todayOpened || 0, color: "text-blue-600" },
-          { label: "kapanan bilet", value: summary.todayClosed || 0, color: "text-emerald-600" },
-          { label: "izinli", value: summary.onLeaveToday || 0, color: "text-amber-600" },
-        ].map((item, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <span className={`text-lg font-black ${item.color}`}>{item.value}</span>
-            <span className="text-xs text-muted-foreground">{item.label}</span>
+      {/* BUGÜN — operasyon paneli */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Bugün İzinli */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Umbrella className="w-4 h-4 text-amber-500" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün İzinli</h3>
+            <span className="ml-auto text-lg font-black text-amber-600">{izinliList.length}</span>
           </div>
-        ))}
+          {izinliList.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Bugün izinli personel yok</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {izinliList.slice(0, 10).map((l) => (
+                <span key={l.id} className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">
+                  {l.employee_full_name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {alerts.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto flex-wrap">
-            {alerts.map((a, i) => (
-              <Link key={i} to={a.to}
-                className={cn("flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-1 hover:shadow-sm transition-all", TONES[a.tone])}>
-                <a.icon className="w-3.5 h-3.5" /> {a.n} {a.label}
+        {/* Bugün Doğum Günü */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Cake className="w-4 h-4 text-pink-500" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün Doğum Günü</h3>
+            <span className="ml-auto text-lg font-black text-pink-600">{dogumGunu.length}</span>
+          </div>
+          {dogumGunu.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Bugün doğum günü yok</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {dogumGunu.map((ad, i) => (
+                <span key={i} className="text-xs bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-400 border border-pink-200 dark:border-pink-900 rounded-full px-2 py-0.5">
+                  🎂 {ad}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bekleyen Onaylar */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckSquare className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bekleyen Onaylar</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {bekleyenOnaylar.map((o, i) => (
+              <Link key={i} to={o.to} className="rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors px-2 py-2 text-center">
+                <div className={cn("text-xl font-black", o.n > 0 ? "text-indigo-600" : "text-muted-foreground/50")}>{o.n}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">{o.label}</div>
               </Link>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* MODÜL KPI BANNER */}
+      {/* MODÜL KPI BANNER — 8 kart, tam 4×2 */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {kpis.map((item, i) => (
           <Link key={i} to={item.path}
@@ -162,28 +218,54 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* SON 7 GÜN · BİLET HAREKETİ */}
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
-        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-indigo-500" /> Son 7 Gün · Bilet Hareketi
-        </h3>
-        {(summary.dailyTrend || []).length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">Veri yok</div>
-        ) : (
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
-              <Legend wrapperStyle={{ fontSize: "12px" }} />
-              <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
-              <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      {/* YAKLAŞAN SÖZLEŞME BİTİŞLERİ + SON 7 GÜN BİLET (küçük) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <ScrollText className="w-4 h-4 text-blue-500" /> Yaklaşan Sözleşme Bitişleri
+            </h3>
+            <Link to="/sozlesmeler" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
+          </div>
+          {expiring.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Yaklaşan sözleşme bitişi yok</p></div>
+          ) : (
+            <div className="space-y-2">
+              {expiring.map((c, i) => (
+                <Link key={i} to="/sozlesmeler" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{c.company_name || "—"}</p>
+                    {c.title && <p className="text-xs text-muted-foreground truncate">{c.title}</p>}
+                  </div>
+                  <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son 7 Gün · Bilet Hareketi
+          </h3>
+          {(summary.dailyTrend || []).length === 0 ? (
+            <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                <Legend wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
+                <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
-      {/* SON AÇIK BİLETLER */}
+      {/* SON AÇIK BİLETLER — en altta */}
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -195,7 +277,7 @@ export default function AdminDashboard() {
           <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Açık bilet yok</p></div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {openTickets.slice(0, 10).map(t => {
+            {openTickets.slice(0, 8).map(t => {
               const pc = { kritik: "bg-red-500", yuksek: "bg-orange-500", orta: "bg-amber-400", dusuk: "bg-green-500" }[t.priority] || "bg-gray-400";
               return (
                 <Link key={t.id} to="/is-takibi/tickets" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">

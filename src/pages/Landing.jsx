@@ -45,8 +45,8 @@ export default function Landing() {
       <div className="relative z-20 w-full max-w-sm mx-4">
         <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/25 ring-1 ring-white/10">
           <div className="px-8 pt-10 pb-7 text-center border-b border-white/15">
-            <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm">Turocas</h1>
-            <p className="text-blue-100/90 text-sm mt-2">Turocas Bilişim — Sektöre Özel Yazılım Çözümleri</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm">Turkonix</h1>
+            <p className="text-blue-100/90 text-sm mt-2">Turkonix — Sınırsız İletişim</p>
           </div>
           <div className="px-8 py-6">
             {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-300/40 rounded-xl text-red-100 text-sm text-center backdrop-blur-sm">{error}</div>}

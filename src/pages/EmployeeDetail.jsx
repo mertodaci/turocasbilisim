@@ -522,7 +522,7 @@ export default function EmployeeDetail() {
                 ))}
                 {!!employee?.leave_used_before && (
                   <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30">
-                    <span className="text-sm text-foreground">Önceden Kullanılan (Turocas öncesi)</span>
+                    <span className="text-sm text-foreground">Önceden Kullanılan (Turkonix öncesi)</span>
                     <span className="text-sm font-bold text-red-600">-{employee.leave_used_before} gün</span>
                   </div>
                 )}

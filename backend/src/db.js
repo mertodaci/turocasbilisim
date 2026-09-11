@@ -68,12 +68,15 @@ function migrateLegacyJobTrackingRename() {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
        'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle',
-       'ikb_vip')`).run();
+       'ikb_vip','ikb_dashboard','app_version','reports')`).run();
   } catch { /* role_permissions henüz yoksa sorun değil */ }
   // 'satis' rolü kaldırıldı — mevcut kullanıcılar 'kullanici'ye taşınır.
   try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
   try { db.prepare("DELETE FROM roles WHERE name='satis'").run(); } catch {}
   try { db.prepare("DELETE FROM role_permissions WHERE role_name='satis'").run(); } catch {}
+  // Rebrand: dokunulmamış varsayılan firma ünvanını güncelle (müşteri kendi
+  // adını girdiyse eşleşmez, korunur).
+  try { db.prepare("UPDATE ik_sirket_bilgileri SET unvan='Turkonix — Sınırsız İletişim' WHERE unvan='Turocas Bilişim'").run(); } catch {}
 }
 
 function initDb() {
@@ -479,7 +482,7 @@ function initDb() {
       // disinda HICBIR role bu modul hicbir zaman verilemiyordu, admin
       // ekranindan izin verilse bile etkisizdi.
       'personel_hareketleri',
-      'personal_calendar','reports','employee_report','users','app_version','definitions',
+      'personal_calendar','employee_report','users','definitions',
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_tanimlar',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
@@ -529,8 +532,6 @@ function initDb() {
       'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_sirket',
       // Faz 11: evrak + tutanak + ilan + izin evrak
       'ikb_tutanak','ikb_ilan','ikb_izin_evrak',
-      // Faz 12: dashboard
-      'ikb_dashboard',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -1267,7 +1268,7 @@ function initDb() {
         created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now')),
         UNIQUE(kapsam)
       );
-      INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turocas Bilişim');
+      INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turkonix — Sınırsız İletişim');
       -- Toplu Excel yükleme kayıtları (geri alınabilir)
       CREATE TABLE IF NOT EXISTS ik_toplu_yukleme (
         id TEXT PRIMARY KEY, tur TEXT,        -- temel_bilgi | donem_hakedis
@@ -1519,10 +1520,10 @@ function initDb() {
       'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
       'ikb_puantaj','ikb_puantaj_rapor','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis',
-      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_izin_evrak','ikb_dashboard'];
+      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_izin_evrak'];
     const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_hakedis_ayar','ikb_bordro_yemek'];
-    const IK_RAPOR = ['ikb_puantaj_rapor','ikb_maas_ozet','ikb_dashboard','ikb_personel'];
-    const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor','ikb_dashboard'];
+    const IK_RAPOR = ['ikb_puantaj_rapor','ikb_maas_ozet','ikb_personel'];
+    const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor'];
 
     const ikVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='ik' AND module LIKE 'ikb_%' AND can_view=1 LIMIT 1").get();
     if (!ikVar) {

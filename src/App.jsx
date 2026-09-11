@@ -30,11 +30,10 @@ const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar'));
 const EmployeeReport = lazy(() => import('./pages/EmployeeReport'));
 const OrgChart = lazy(() => import('./pages/OrgChart'));
 const QuickReport = lazy(() => import('./pages/QuickReport'));
+const Yardim = lazy(() => import('./pages/Yardim'));
 const Users = lazy(() => import('./pages/Users'));
 const RolePermissions = lazy(() => import('./pages/RolePermissions'));
-const AppVersion = lazy(() => import('./pages/AppVersion'));
 const Definitions = lazy(() => import('./pages/Definitions'));
-const EmployeeDefinitions = lazy(() => import('./pages/Definitions').then(m => ({ default: m.EmployeeDefinitions })));
 const TrashBin = lazy(() => import('./pages/TrashBin'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const SessionManagement = lazy(() => import('./pages/SessionManagement'));
@@ -101,7 +100,6 @@ const IkOzlukEvrak = lazy(() => import('./pages/ik/IkOzlukEvrak'));
 const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
 const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
 const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
-const IkDashboard = lazy(() => import('./pages/ik/IkDashboard'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
@@ -204,12 +202,11 @@ const AuthenticatedApp = () => {
         <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />
         <Route path="/kart-yonetimi" element={guard("personel_hareketleri", <CardManagement />)} />
         <Route path="/org-sema" element={guard("employees", <OrgChart />)} />
-        <Route path="/hizli-rapor" element={guard("reports", <QuickReport />)} />
+        <Route path="/hizli-rapor" element={guard("quick_report", <QuickReport />)} />
+        <Route path="/yardim" element={<Yardim />} />
         <Route path="/kullanicilar" element={guard("users", <Users />)} />
         <Route path="/yetkilendirme" element={guard("role_permissions", <RolePermissions />)} />
-        <Route path="/versiyon" element={guard("app_version", <AppVersion />)} />
-        <Route path="/tanimlar" element={guard("definitions", <Definitions />)} />
-        <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <EmployeeDefinitions />)} />
+        <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <Definitions />)} />
         <Route path="/cop-kutusu" element={guard("cop_kutusu", <TrashBin />)} />
         <Route path="/denetim-kaydi" element={guard("denetim_kaydi", <AuditLog />)} />
         <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />
@@ -277,7 +274,6 @@ const AuthenticatedApp = () => {
         <Route path="/ik/ilan" element={guard("ikb_ilan", <IkIlan />)} />
         <Route path="/ik/hareket-rapor" element={<Navigate to="/ik/maas-ozet" replace />} />
         <Route path="/ik/izin-evrak" element={guard("ikb_izin_evrak", <IkIzinEvrak />)} />
-        <Route path="/ik/dashboard" element={guard("ikb_dashboard", <IkDashboard />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

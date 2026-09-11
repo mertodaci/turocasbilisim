@@ -3147,10 +3147,11 @@ app.get('/api/ik/hareket-rapor', authMiddleware, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// İK Faz 12: İK / PDKS Dashboard
+// İK / PDKS özet — ekran kaldırıldı, endpoint Yönetim Merkezi (AdminDashboard)
+// tarafından İK KPI kartları + uyarı çipleri için kullanılıyor.
 // ═══════════════════════════════════════════════════════════════════
 app.get('/api/ik/dashboard', authMiddleware, (req, res) => {
-  if (!ikPerm(req, 'can_view', 'ikb_dashboard', 'ikb_puantaj', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  if (!ikPerm(req, 'can_view', 'ikb_puantaj', 'ikb_bordro')) return res.status(403).json({ error: 'Yetkiniz yok' });
   const today = new Date().toISOString().slice(0, 10);
   const mmdd = today.slice(5);
   const d = new Date();

@@ -1,4 +1,4 @@
-// Ücret Pusulası — yeni pencereye temiz yazdırılabilir bordro pusulası (Turocas Bilişim antetli).
+// Ücret Pusulası — yeni pencereye temiz yazdırılabilir bordro pusulası (Turkonix antetli).
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const nf = (v) => (Number(v) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -23,7 +23,7 @@ export function ucretPusulasiYazdir(satir, donem) {
   @media print { body { margin:12mm; } }
 </style></head><body>
   <div class="head">
-    <div><div class="firma">Turocas Bilişim</div><div style="color:#555">İnsan Kaynakları · Ücret Pusulası</div></div>
+    <div><div class="firma">Turkonix — Sınırsız İletişim</div><div style="color:#555">İnsan Kaynakları · Ücret Pusulası</div></div>
     <div style="text-align:right"><h1>${esc(donem?.ay || "")}/${esc(donem?.yil || "")} Dönemi</h1></div>
   </div>
   <div class="meta">

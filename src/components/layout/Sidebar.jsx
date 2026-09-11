@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, Info, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, CalendarClock, Calculator, Lock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { LayoutDashboard, Users, BarChart3, Activity, Menu, X, CalendarDays, Building2, ClipboardList, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, ChevronDown, Wrench, ShieldCheck, ShieldOff, ChevronLeft, ChevronRight, Star, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, UserCircle2, LogOut, HelpCircle, CalendarClock, Calculator, Lock } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 
@@ -45,7 +46,6 @@ export const allNavItems = [
 {
   labelKey: "insan_kaynaklari", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici", "ik"],
   children: [
-    { labelKey: "ikb_dashboard", path: "/ik/dashboard", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
     {
       labelKey: "ik_grp_personel", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici", "ik"],
       children: [
@@ -107,6 +107,7 @@ export const allNavItems = [
         { labelKey: "employee_report", path: "/calisan-raporu", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_puantaj_rapor", path: "/ik/puantaj-rapor", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_maas_ozet", path: "/ik/maas-ozet", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "quick_report", path: "/hizli-rapor", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] },
       ]
     },
   ]
@@ -126,27 +127,13 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "reports", path: null, icon: BarChart3, roles: ["admin", "yonetici", "kullanici", "ik"],
-  children: [
-
-    { labelKey: "quick_report", path: "/hizli-rapor", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] }
-  ]
-},
-{
   labelKey: "system_admin", path: null, icon: ShieldCheck, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"],
   children: [
-    { labelKey: "definitions", path: "/tanimlar", icon: Wrench, roles: ["admin", "yonetici", "kullanici", "ik", "stajer", "musteri"] },
-    {
-      labelKey: "system_admin_islem", path: null, icon: ShieldCheck, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"],
-      children: [
-        { labelKey: "users", path: "/kullanicilar", icon: Users, roles: ["admin", "yonetici", "kullanici", "ik", "stajer", "musteri"] },
-        { labelKey: "role_permissions", path: "/yetkilendirme", icon: ShieldCheck, roles: ["admin"] },
-        { labelKey: "oturum_yonetimi", path: "/oturum-yonetimi", icon: ShieldOff, roles: ["admin", "yonetici"] },
-        { labelKey: "announcements", path: "/duyurular", icon: Megaphone, roles: ["admin", "yonetici"] },
-        { labelKey: "cop_kutusu", path: "/cop-kutusu", icon: Trash2, roles: ["admin"] },
-        { labelKey: "app_version", path: "/versiyon", icon: Info, roles: ["admin", "yonetici", "kullanici", "ik", "stajer", "musteri"] },
-      ]
-    },
+    { labelKey: "users", path: "/kullanicilar", icon: Users, roles: ["admin", "yonetici", "kullanici", "ik", "stajer", "musteri"] },
+    { labelKey: "role_permissions", path: "/yetkilendirme", icon: ShieldCheck, roles: ["admin"] },
+    { labelKey: "oturum_yonetimi", path: "/oturum-yonetimi", icon: ShieldOff, roles: ["admin", "yonetici"] },
+    { labelKey: "announcements", path: "/duyurular", icon: Megaphone, roles: ["admin", "yonetici"] },
+    { labelKey: "cop_kutusu", path: "/cop-kutusu", icon: Trash2, roles: ["admin"] },
     { labelKey: "denetim_kaydi", path: "/denetim-kaydi", icon: ScrollText, roles: ["admin"] },
   ]
 },
@@ -206,10 +193,9 @@ function getAllLeafItems() {
   return items;
 }
 
-function SidebarUserMenu({ collapsed }) {
-  const { user, logout } = useAuth();
-  const [open, setOpen] = useState(false);
-  useEffect(() => { if (open) { const t = setTimeout(() => setOpen(false), 5000); return () => clearTimeout(t); } }, [open]);
+// Profil bloğu — menünün en üstünde (avatar + isim + rol), /profil'e link.
+function SidebarProfile({ collapsed }) {
+  const { user } = useAuth();
 
   const { data: employeeRecord } = useQuery({
     queryKey: ["sidebar-employee", user?.email],
@@ -218,74 +204,53 @@ function SidebarUserMenu({ collapsed }) {
     select: (data) => data[0],
   });
 
-  const roleLabels = { admin: "Admin", yonetici: "Yönetici", kullanici: "Kullanıcı" };
+  const roleLabels = { admin: "Admin", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri" };
   const roleLabel = roleLabels[user?.role] || user?.role || "";
+  const name = user?.full_name || user?.email || "Kullanıcı";
 
-  return (
-    <div className="relative">
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 bottom-full mb-2 w-56 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
-            <div className="px-4 py-3 border-b">
-              <p className="text-sm font-semibold truncate">{user?.full_name || "Kullanıcı"}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-              <p className="text-xs text-primary font-medium mt-0.5">{roleLabel}</p>
-            </div>
-            <div className="p-1">
-              <Link
-                to="/profil"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors"
-              >
-                <UserCircle2 className="w-4 h-4 text-muted-foreground" />
-                Profilim
-              </Link>
-              <button
-                onClick={() => { setOpen(false); logout(); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Çıkış Yap
-              </button>
-            </div>
-          </div>
-        </>
+  const body = (
+    <Link
+      to="/profil"
+      className={cn(
+        "flex items-center gap-3 mx-3 mb-2 px-2 py-2 rounded-xl hover:bg-sidebar-accent transition-colors",
+        collapsed && "mx-1 px-0 justify-center"
       )}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-sidebar-accent transition-colors",
-          collapsed && "justify-center"
+    >
+      <div className="w-9 h-9 rounded-xl bg-sidebar-primary/20 flex items-center justify-center overflow-hidden shrink-0">
+        {employeeRecord?.avatar_url ? (
+          <img src={employeeRecord.avatar_url} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <UserCircle2 className="w-5 h-5 text-sidebar-primary" />
         )}
-      >
-        <div className="w-7 h-7 rounded-lg bg-sidebar-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-          {employeeRecord?.avatar_url ? (
-            <img src={employeeRecord.avatar_url} alt={user?.full_name} className="w-full h-full object-cover" />
-          ) : (
-            <UserCircle2 className="w-4 h-4 text-sidebar-primary" />
-          )}
+      </div>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight text-sidebar-primary truncate">{name}</p>
+          <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/50 leading-tight truncate">{roleLabel}</p>
         </div>
-        {!collapsed && (
-          <>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-xs font-semibold leading-tight text-sidebar-foreground truncate">{user?.full_name || user?.email}</p>
-              <p className="text-[10px] text-sidebar-foreground/50 leading-tight">{roleLabel}</p>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-sidebar-foreground/50 shrink-0" />
-          </>
-        )}
-      </button>
-    </div>
+      )}
+    </Link>
+  );
+
+  if (!collapsed) return body;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{body}</TooltipTrigger>
+      <TooltipContent side="right" className="bg-slate-900 text-white border-slate-800">{name}</TooltipContent>
+    </Tooltip>
   );
 }
 
 export default function Sidebar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("sidebar_collapsed") === "1"; } catch { return false; }
+  });
   const [expandedMenus, setExpandedMenus] = useState({});
   const [favorites, setFavorites] = useState([]);
+  const [flyout, setFlyout] = useState(null); // { key, top } — daraltılmış grup uçan alt-menüsü
+  const flyoutTimer = useRef(null);
   const [isMobileViewport, setIsMobileViewport] = useState(
     typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
@@ -296,7 +261,7 @@ export default function Sidebar() {
     window.addEventListener("resize", checkViewport);
     return () => window.removeEventListener("resize", checkViewport);
   }, []);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { unreadMessageCount } = useMessages();
   const { unreadTodoCount } = useTodos();
   const { pendingLeaveCount } = useLeave();
@@ -321,6 +286,25 @@ export default function Sidebar() {
     if (!user) return;
     flowApi.auth.getFavorites().then(setFavorites).catch(() => setFavorites([]));
   }, [user]);
+
+  useEffect(() => {
+    try { localStorage.setItem("sidebar_collapsed", collapsed ? "1" : "0"); } catch { /* storage yoksa sorun değil */ }
+  }, [collapsed]);
+
+  // Gezinince / menü genişleyince uçan alt-menüyü kapat.
+  useEffect(() => { setFlyout(null); }, [location.pathname]);
+  useEffect(() => { if (!collapsed) setFlyout(null); }, [collapsed]);
+
+  const openFlyout = (key, el) => {
+    clearTimeout(flyoutTimer.current);
+    const r = el.getBoundingClientRect();
+    setFlyout({ key, top: r.top });
+  };
+  const scheduleCloseFlyout = () => {
+    clearTimeout(flyoutTimer.current);
+    flyoutTimer.current = setTimeout(() => setFlyout(null), 150);
+  };
+  const cancelCloseFlyout = () => clearTimeout(flyoutTimer.current);
 
   const toggleFavorite = async (e, labelKey) => {
     e.preventDefault();
@@ -355,11 +339,6 @@ export default function Sidebar() {
   }, [collapsed, isMobileViewport]);
 
   const toggleMenu = (labelKey) => {
-    if (collapsed) {
-      setCollapsed(false);
-      setExpandedMenus({ [labelKey]: true });
-      return;
-    }
     setExpandedMenus((prev) => ({ ...prev, [labelKey]: !prev[labelKey] }));
   };
 
@@ -379,7 +358,7 @@ export default function Sidebar() {
         className={cn(
           "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative",
           isChildActive
-            ? "bg-sidebar-primary/15 text-sidebar-primary"
+            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-sm shadow-fuchsia-500/20"
             : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
         )}>
         <child.icon className="w-4 h-4 shrink-0" />
@@ -426,14 +405,50 @@ export default function Sidebar() {
       </div>
     );
   };
+
+  // Daraltılmış grup uçan alt-menüsü — beyaz kart, alt-gruplar bölüm başlığı olur.
+  const renderFlyoutTree = (items) => items.map((it) => {
+    if (it.children && it.children.length > 0) {
+      return (
+        <div key={it.labelKey} className="mt-1 first:mt-0">
+          <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">{t(it.labelKey)}</p>
+          <div>{renderFlyoutTree(it.children)}</div>
+        </div>
+      );
+    }
+    const active = location.pathname === it.path;
+    return (
+      <Link key={it.path} to={it.path}
+        onClick={() => { setFlyout(null); setMobileOpen(false); }}
+        className={cn(
+          "flex items-center gap-2.5 mx-1 px-2.5 py-2 rounded-lg text-sm transition-colors",
+          active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
+        )}>
+        <it.icon className="w-4 h-4 shrink-0" />
+        <span className="truncate">{t(it.labelKey)}</span>
+      </Link>
+    );
+  });
+  const flyoutItem = flyout ? navItems.find(i => i.labelKey === flyout.key) : null;
+
   return (
-    <>
+    <TooltipProvider delayDuration={0} disableHoverableContent>
       <button onClick={() => setMobileOpen(true)}
         className="fixed top-4 left-4 z-50 bg-sidebar text-sidebar-foreground p-2 rounded-lg shadow-lg" style={{display: window.innerWidth < 768 ? 'block' : 'none'}}>
         <Menu className="w-5 h-5" />
       </button>
 
       {isMobileViewport && mobileOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setMobileOpen(false)} />}
+
+      {!isMobileViewport && (
+        <button
+          onClick={() => { setCollapsed((v) => !v); setExpandedMenus({}); setFlyout(null); }}
+          className="fixed top-5 z-[60] hidden md:flex w-6 h-6 rounded-full bg-sidebar border border-sidebar-border shadow-md items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          style={{ left: collapsed ? "3.25rem" : "15.25rem", transitionProperty: "left, color", transitionDuration: "300ms" }}
+          title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}>
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
+      )}
 
       <aside className={cn(
         "fixed top-0 left-0 h-full bg-sidebar text-sidebar-foreground z-50 flex flex-col transition-all duration-300 overflow-y-auto scrollbar-thin",
@@ -442,12 +457,12 @@ export default function Sidebar() {
       )}>
         <div className={cn("p-4 flex items-center justify-between", collapsed && "justify-center")}>
           <div className="flex items-center gap-3">
-            <Link to="/" className="w-9 h-9 rounded-xl bg-sidebar-primary flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity" onClick={() => setMobileOpen(false)}>
-              <Activity className="w-5 h-5 text-sidebar-primary-foreground" />
+            <Link to="/" className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity" onClick={() => setMobileOpen(false)}>
+              <Activity className="w-5 h-5 text-white" />
             </Link>
             {!collapsed && (
               <div>
-                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">Turocas</Link>
+                <Link to="/" className="text-base font-bold tracking-tight hover:opacity-80 transition-opacity">Turkonix</Link>
               </div>
             )}
           </div>
@@ -458,14 +473,7 @@ export default function Sidebar() {
           )}
         </div>
 
-        <div className={cn("hidden md:flex px-3 mb-2", collapsed ? "justify-center" : "justify-end")}>
-          <button
-            onClick={() => { setCollapsed(!collapsed); if (!collapsed) setExpandedMenus({}); }}
-            className="p-1.5 rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-            title={collapsed ? "Menuyu Genislet" : "Menuyu Daralt"}>
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
+        <SidebarProfile collapsed={collapsed} />
 
         {!collapsed && favoriteItems.length > 0 && (
           <div className="px-3 mb-3">
@@ -473,12 +481,11 @@ export default function Sidebar() {
             <div className="space-y-0.5">
               {favoriteItems.map((item) => {
                 const isActive = location.pathname === item.path;
-                const isFav = favorites.includes(item.labelKey);
                 return (
                   <Link key={item.labelKey} to={item.path} onClick={() => setMobileOpen(false)}
                     className={cn(
                       "group flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all",
-                      isActive ? "bg-sidebar-primary/20 text-sidebar-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      isActive ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     )}>
                     <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
                     {t(item.labelKey)}
@@ -510,54 +517,73 @@ export default function Sidebar() {
             const showSupportBadge = item.labelKey === "support_center" && supportTotal > 0;
             const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
             const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
+            const anyBadge = showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showJTBadge || showStokBadge;
 
             return (
               <div key={item.labelKey}>
                 {hasChildren ? (
-                  <button onClick={() => toggleMenu(item.labelKey)}
-                    title={collapsed ? t(item.labelKey) : undefined}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 relative text-xs",
-                      collapsed && "justify-center px-2",
-                      isActive || isMenuExpanded ?
-                        "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/25" :
-                        "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                    )}>
-                    <item.icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && (
-                      <>
-                        <span>{t(item.labelKey)}</span>
-                        {showTodoBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">{myWorkspaceTotal}</span>}
-                        {showHrBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount + pendingExpenseIKCount}</span>}
-                        {showMyLeaveBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount}</span>}
-                        {showSupportBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{supportTotal}</span>}
-                        {showJTBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
-                        {showStokBadge && <span className="ml-auto flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
-                        <ChevronDown className={cn("ml-auto w-4 h-4 transition-transform shrink-0", isMenuExpanded && "rotate-180")} />
-                      </>
-                    )}
-                    {collapsed && (showTodoBadge || showHrBadge || showMyLeaveBadge || showSupportBadge || showJTBadge || showStokBadge) && (
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
-                    )}
-                  </button>
+                  collapsed ? (
+                    <button
+                      onMouseEnter={(e) => openFlyout(item.labelKey, e.currentTarget)}
+                      onMouseLeave={scheduleCloseFlyout}
+                      onClick={(e) => (flyout?.key === item.labelKey ? setFlyout(null) : openFlyout(item.labelKey, e.currentTarget))}
+                      className={cn(
+                        "w-full flex items-center justify-center px-2 py-3 rounded-xl transition-all duration-200 relative",
+                        isActive || flyout?.key === item.labelKey
+                          ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25"
+                          : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      )}>
+                      <item.icon className="w-5 h-5 shrink-0" />
+                      {anyBadge && <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />}
+                    </button>
+                  ) : (
+                    <button onClick={() => toggleMenu(item.labelKey)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 relative text-xs",
+                        isActive || isMenuExpanded ?
+                          "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25" :
+                          "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      )}>
+                      <item.icon className="w-5 h-5 shrink-0" />
+                      <span>{t(item.labelKey)}</span>
+                      {showTodoBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full">{myWorkspaceTotal}</span>}
+                      {showHrBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full">{pendingLeaveCount + pendingExpenseIKCount}</span>}
+                      {showSupportBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full">{supportTotal}</span>}
+                      {showJTBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-teal-500 text-white text-xs font-bold rounded-full">{assignedTicketCount}</span>}
+                      {showStokBadge && <span className="ml-auto flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-xs font-bold rounded-full">{stokUyariCount}</span>}
+                      <ChevronDown className={cn("ml-auto w-4 h-4 transition-transform shrink-0", isMenuExpanded && "rotate-180")} />
+                    </button>
+                  )
                 ) : (
-                  <Link to={item.path} onClick={() => setMobileOpen(false)}
-                    title={collapsed ? t(item.labelKey) : undefined}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative",
-                      collapsed && "justify-center px-2",
-                      isActive ?
-                        "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/25" :
-                        "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                    )}>
-                    <item.icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && (
-                      <>
-                        {t(item.labelKey)}
-                        {showMessageBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadMessageCount}</span>}
-                      </>
-                    )}
-                  </Link>
+                  collapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link to={item.path} onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex items-center justify-center px-2 py-3 rounded-xl transition-all duration-200 relative",
+                            isActive ?
+                              "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25" :
+                              "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                          )}>
+                          <item.icon className="w-5 h-5 shrink-0" />
+                          {showMessageBadge && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="bg-slate-900 text-white border-slate-800">{t(item.labelKey)}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Link to={item.path} onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative",
+                        isActive ?
+                          "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-fuchsia-500/25" :
+                          "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                      )}>
+                      <item.icon className="w-5 h-5 shrink-0" />
+                      {t(item.labelKey)}
+                      {showMessageBadge && <span className="ml-auto flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadMessageCount}</span>}
+                    </Link>
+                  )
                 )}
                 {hasChildren && isMenuExpanded && !collapsed && (
                   <div className="space-y-1 pl-4 mt-1 border-l-2 border-sidebar-accent">
@@ -569,13 +595,58 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className={cn("px-2 py-2 border-t border-sidebar-border/30", collapsed && "px-1")}>
-          <SidebarUserMenu collapsed={collapsed} />
-          {!collapsed && (
-            <p className="text-[10px] text-sidebar-foreground/30 text-center mt-2">Turocas v3.0</p>
-          )}
+        <div className={cn("px-2 py-2 border-t border-sidebar-border/30 space-y-1", collapsed && "px-1")}>
+          {(collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/yardim" onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center px-2 py-2.5 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-slate-900 text-white border-slate-800">Yardım</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Link to="/yardim" onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+              <HelpCircle className="w-4 h-4 shrink-0" />
+              <span>Yardım</span>
+            </Link>
+          ))}
+          {(collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={logout}
+                  className="w-full flex items-center justify-center px-2 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors">
+                  <LogOut className="w-4 h-4 shrink-0" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-slate-900 text-white border-slate-800">Çıkış</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors">
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Çıkış</span>
+            </button>
+          ))}
         </div>
       </aside>
-    </>
+
+      {flyout && flyoutItem && (
+        <div
+          onMouseEnter={cancelCloseFlyout}
+          onMouseLeave={scheduleCloseFlyout}
+          className="fixed z-[70] w-56 bg-card text-foreground border border-border rounded-xl shadow-2xl py-1.5 overflow-y-auto scrollbar-thin"
+          style={{
+            left: "3.5rem",
+            top: Math.max(8, Math.min(flyout.top, (typeof window !== "undefined" ? window.innerHeight : 800) - 360)),
+            maxHeight: "calc(100vh - 16px)",
+          }}>
+          <p className="px-3 pt-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t(flyoutItem.labelKey)}</p>
+          {renderFlyoutTree(flyoutItem.children)}
+        </div>
+      )}
+    </TooltipProvider>
   );
 }

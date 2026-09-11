@@ -1,6 +1,6 @@
-# Turocas
+# Turkonix
 
-Turocas Bilişim iç kurumsal yönetim uygulaması. Personel/İK süreçleri, PDKS (RFID kart ile
+Turkonix — Sınırsız İletişim iç kurumsal yönetim uygulaması. Personel/İK süreçleri, PDKS (RFID kart ile
 kapı erişim takibi), İş Takibi (proje/ticket yönetimi), mesajlaşma, izin/masraf talepleri,
 müşteri yönetimi ve daha fazlasını tek bir yerde toplar.
 
@@ -25,7 +25,7 @@ müşteri yönetimi ve daha fazlasını tek bir yerde toplar.
 
 ```bash
 git clone <repo-url>
-cd turocas
+cd turkonix
 
 # Frontend bağımlılıkları
 npm install

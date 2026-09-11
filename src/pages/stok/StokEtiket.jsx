@@ -135,16 +135,17 @@ export default function StokEtiket() {
 
   const demirbasYazdir = async () => {
     if (!demirbasSepet.length) return;
+    const w = window.open("", "_blank", "width=720,height=900");
+    if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
     const isTermal = boyut === "termal";
     let qrImgs;
     try {
       qrImgs = await Promise.all(demirbasSepet.map((l) => QRCode.toDataURL(l.seri_no, { margin: 0, width: 200 })));
     } catch {
       toast.error("QR kod üretilemedi");
+      w.close();
       return;
     }
-    const w = window.open("", "_blank", "width=720,height=900");
-    if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
     const labelsHtml = demirbasSepet.map((l, i) => `<div class="lbl">
       <img class="qr-img" src="${qrImgs[i]}" />
       <div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="sicil">${l.seri_no}</div></div>

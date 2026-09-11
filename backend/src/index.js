@@ -2008,11 +2008,15 @@ app.post('/api/stok/zimmet', authMiddleware, (req, res) => {
   if (!depo) return res.status(404).json({ error: 'Depo bulunamadı' });
   try {
     const yetersiz = [];
+    const gorulenSicil = new Set(); // aynı zimmet isteği içinde ayni sicil birden fazla satirda kullanilamaz
     for (const s of temiz) {
       const urun = db.prepare('SELECT * FROM stok_urunler WHERE id=?').get(s.urun_id);
       if (!urun) { yetersiz.push(`${s.urun_id}: ürün bulunamadı`); continue; }
       if (urun.urun_tipi !== 'demirbas') { yetersiz.push(`${urun.ad}: demirbaş değil — Zimmet'e giremez, Çıkış fişi kullanın`); continue; }
       if (!s.seri_no) { yetersiz.push(`${urun.ad}: sicil no seçilmeli`); continue; }
+      const anahtar = `${s.urun_id}::${s.seri_no}`;
+      if (gorulenSicil.has(anahtar)) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: bu zimmette birden fazla satırda kullanılmış`); continue; }
+      gorulenSicil.add(anahtar);
       const icerideMi = db.prepare("SELECT COALESCE(SUM(CASE WHEN tip='giris' THEN 1 ELSE -1 END),0) n FROM stok_hareketler WHERE urun_id=? AND depo_id=? AND seri_no=?").get(s.urun_id, depo_id, s.seri_no).n > 0;
       if (!icerideMi) { yetersiz.push(`${urun.ad} · SN ${s.seri_no}: bu depoda içeride değil`); continue; }
       const blokeliMi = db.prepare("SELECT 1 FROM stok_rezervasyonlar WHERE urun_id=? AND depo_id=? AND seri_no=? AND durum='acik'").get(s.urun_id, depo_id, s.seri_no);

@@ -20,6 +20,11 @@ const TIP_CFG = {
   iade: { baslik: "Tedarikçiye İade Fişi", icon: Undo2, renk: "text-orange-600", aciklama: "Hatalı / fazla / arızalı malın tedarikçiye geri gönderilmesi. Kaynak depodan FIFO ile düşer, cari ekstreye alacak yazılır." },
 };
 
+// Girişte demirbaş için sicil no artık kullanıcıdan istenmiyor -- onaylanınca
+// (aslında burada, fişe eklenirken) her fiziksel birim için otomatik üretilir.
+// Aynı saniyede üretilen birden fazla sicilin çakışmaması için birim sırası eklenir.
+const sicilNoUret = (urunKodu, idx) => `${urunKodu || "SN"}-${Date.now()}-${idx}`;
+
 const bosSatir = () => ({
   urun_id: "", urun_adi: "", urun_kodu: "", barkod: "", birim: "", carpan: 1, miktar: 1, birim_fiyat: 0,
   kaynak_raf_id: "", hedef_raf_id: "", icerik_aciklamasi: "", seri_no: "",
@@ -148,11 +153,21 @@ export default function FisForm({ tip }) {
       h.kaynak_depo_id = header.kaynak_depo_id || null; h.kaynak_depo_adi = depoAdi(header.kaynak_depo_id);
       h.hedef_depo_id = header.hedef_depo_id || null; h.hedef_depo_adi = depoAdi(header.hedef_depo_id);
     }
-    const satirlar = lines.map((l) => ({
-      ...l,
-      kaynak_raf_adi: l.kaynak_raf_id ? (rafById(l.kaynak_raf_id)?.ad || rafById(l.kaynak_raf_id)?.kod || "") : "",
-      hedef_raf_adi: l.hedef_raf_id ? (rafById(l.hedef_raf_id)?.ad || rafById(l.hedef_raf_id)?.kod || "") : "",
-    }));
+    const satirlar = lines.flatMap((l) => {
+      const base = {
+        ...l,
+        kaynak_raf_adi: l.kaynak_raf_id ? (rafById(l.kaynak_raf_id)?.ad || rafById(l.kaynak_raf_id)?.kod || "") : "",
+        hedef_raf_adi: l.hedef_raf_id ? (rafById(l.hedef_raf_id)?.ad || rafById(l.hedef_raf_id)?.kod || "") : "",
+      };
+      // Girişte demirbaş: tek satırda girilen toplam adet, her biri kendi
+      // sicil no'suna sahip ayrı ayrı satırlara bölünüyor (kullanıcı 5 adet
+      // için 5 satır girmek zorunda kalmasın).
+      if (tip === "giris" && l.urun_id && isSerili(l.urun_id)) {
+        const adet = Math.max(1, Math.round((Number(l.miktar) || 1) * (Number(l.carpan) || 1)));
+        return Array.from({ length: adet }, (_, idx) => ({ ...base, miktar: 1, carpan: 1, seri_no: sicilNoUret(l.urun_kodu, idx) }));
+      }
+      return [base];
+    });
     return { fis: h, satirlar };
   };
 
@@ -167,6 +182,7 @@ export default function FisForm({ tip }) {
     if (!lines.some((l) => l.urun_id && Number(l.miktar) > 0)) return "En az bir ürün satırı (miktar > 0) girin";
     for (const l of lines) {
       if (!l.urun_id || !isSerili(l.urun_id)) continue;
+      if (tip === "giris") continue; // miktar birden fazla olabilir, sicil no'lar otomatik üretilir
       if ((Number(l.miktar) || 0) * (Number(l.carpan) || 1) !== 1) return `${l.urun_adi}: seri no takipli — satır 1 ana birim olmalı (her adet ayrı satır)`;
       if (!l.seri_no || !l.seri_no.trim()) return `${l.urun_adi}: seri no zorunlu`;
     }
@@ -343,14 +359,20 @@ export default function FisForm({ tip }) {
               </div>
             </div>
             {l.urun_id && isSerili(l.urun_id) && (
-              <div className="flex items-center gap-2">
-                <Label className="text-xs shrink-0 text-amber-600">Sicil No *</Label>
-                <Input placeholder="Elle yazın, barkod okutun ya da otomatik üretin" value={l.seri_no}
-                  onChange={(e) => setLine(i, { seri_no: e.target.value })} />
-                <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setLine(i, { seri_no: `${l.urun_kodu || "SN"}-${Date.now().toString().slice(-6)}` })}>
-                  Otomatik Üret
-                </Button>
-              </div>
+              tip === "giris" ? (
+                <p className="text-xs text-amber-600">
+                  Demirbaş — onaylanınca {Math.max(1, Math.round((Number(l.miktar) || 1) * (Number(l.carpan) || 1)))} adet için sicil no otomatik üretilecek.
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs shrink-0 text-amber-600">Sicil No *</Label>
+                  <Input placeholder="Elle yazın, barkod okutun ya da otomatik üretin" value={l.seri_no}
+                    onChange={(e) => setLine(i, { seri_no: e.target.value })} />
+                  <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setLine(i, { seri_no: `${l.urun_kodu || "SN"}-${Date.now().toString().slice(-6)}` })}>
+                    Otomatik Üret
+                  </Button>
+                </div>
+              )
             )}
             {tip === "cikis" && (
               <Input placeholder="Açıklama / içerik (KUTULU/KUTUSUZ vb.)" value={l.icerik_aciklamasi} onChange={(e) => setLine(i, { icerik_aciklamasi: e.target.value })} />

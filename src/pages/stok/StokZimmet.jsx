@@ -282,7 +282,15 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
               <Button size="sm" variant="outline" onClick={ekleSatir} disabled={!depoId}><Plus className="w-3.5 h-3.5 mr-1" /> Satır Ekle</Button>
             </div>
             {!depoId && <p className="text-xs text-muted-foreground">Önce depo seçin.</p>}
-            {depoId && satirlar.map((s, i) => (
+            {depoId && satirlar.map((s, i) => {
+              // Aynı zimmet formundaki BAŞKA satırlarda seçilmiş sicil no'lar bu
+              // satırın listesinden çıkarılır -- aynı fiziksel demirbaş bir
+              // zimmete iki kez eklenemez.
+              const digerSatirlardaSecili = new Set(
+                satirlar.filter((_, idx) => idx !== i).filter((x) => x.urun_id === s.urun_id).map((x) => x.seri_no).filter(Boolean)
+              );
+              const musaitSicilListesi = (seriListeleri[s.urun_id] || []).filter((sn) => !digerSatirlardaSecili.has(sn));
+              return (
               <div key={i} className="border rounded-xl p-2.5 space-y-2 bg-muted/10">
                 <div className="grid grid-cols-12 gap-2 items-end">
                   <div className="col-span-7">
@@ -294,15 +302,16 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
                   <div className="col-span-4">
                     <Label className="mb-1 block text-[11px]">Sicil No</Label>
                     <SearchableSelect value={s.seri_no} onChange={(v) => setSatir(i, { seri_no: v })}
-                      options={(seriListeleri[s.urun_id] || []).map((sn) => ({ value: sn, label: sn }))}
-                      placeholder={(seriListeleri[s.urun_id] || []).length ? "Sicil no seç" : "Bu depoda müsait yok"} />
+                      options={musaitSicilListesi.map((sn) => ({ value: sn, label: sn }))}
+                      placeholder={musaitSicilListesi.length ? "Sicil no seç" : "Bu depoda müsait yok"} />
                   </div>
                   <div className="col-span-1 flex justify-end">
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => silSatir(i)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t">

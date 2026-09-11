@@ -62,10 +62,11 @@ export default function StokMobil() {
   };
 
   const ekle = (u) => {
+    const serili = u.seri_no_takip === 1 || u.seri_no_takip === true;
     setLines((ls) => {
       const i = ls.findIndex((l) => l.urun_id === u.id);
       if (i >= 0) return ls.map((l, idx) => idx === i ? { ...l, miktar: l.miktar + 1 } : l);
-      return [{ urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, birim: u.ana_birim || "ADET", miktar: 1, birim_fiyat: mode === "giris" ? (u.alis_fiyati || 0) : (u.satis_fiyati || 0) }, ...ls];
+      return [{ urun_id: u.id, urun_adi: u.ad, urun_kodu: u.kod, birim: u.ana_birim || "ADET", miktar: 1, seri_no_takip: serili, birim_fiyat: mode === "giris" ? (u.alis_fiyati || 0) : (u.satis_fiyati || 0) }, ...ls];
     });
   };
 
@@ -155,9 +156,19 @@ export default function StokMobil() {
     const fis = mode === "giris"
       ? { tip: "giris", hedef_depo_id: depoId, hedef_depo_adi: depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() }
       : { tip: "cikis", kaynak_depo_id: depoId, kaynak_depo_adi: depoAdi, hedef_saha_id: sahaId || null, hedef_saha_adi: sahalar.find((s) => s.id === sahaId)?.ad, hedef_depo_id: sahaId ? null : depoId, hedef_depo_adi: sahaId ? null : depoAdi, sebep_kodu: sebepKodu, belge_no: "MOBIL-" + Date.now() };
+    // Girişte demirbaş: kullanıcı tek satırda toplam adedi girer, her fiziksel
+    // birim kendi sicil no'suyla ayrı satıra bölünür (masaüstü FisForm.jsx ile
+    // aynı mantık — bkz. sicilNoUret).
+    const genisletilmis = satirlar.flatMap((l) => {
+      if (mode === "giris" && l.seri_no_takip) {
+        const adet = Math.max(1, Math.round(l.miktar));
+        return Array.from({ length: adet }, (_, idx) => ({ ...l, miktar: 1, carpan: 1, seri_no: `${l.urun_kodu || "SN"}-${Date.now()}-${idx}` }));
+      }
+      return [{ ...l, carpan: 1 }];
+    });
     setSaving(true);
     try {
-      const saved = await flowApi.stok.createFis(fis, satirlar.map((l) => ({ ...l, carpan: 1 })));
+      const saved = await flowApi.stok.createFis(fis, genisletilmis);
       await flowApi.stok.onayla(saved.id);
       toast.success(`${saved.fis_no} onaylandı`);
       setLines([]);
@@ -229,6 +240,7 @@ export default function StokMobil() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{l.urun_adi}</p>
                   <p className="text-xs text-muted-foreground">{l.urun_kodu} · {l.birim}</p>
+                  {mode === "giris" && l.seri_no_takip && <p className="text-[10px] text-amber-600">Demirbaş — her adet ayrı sicil no alacak</p>}
                 </div>
                 <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQ(i, -1)}><Minus className="w-4 h-4" /></Button>
                 <Input type="number" className="h-9 w-16 text-center shrink-0" value={l.miktar} onChange={(e) => setQV(i, e.target.value)} />

@@ -6,7 +6,7 @@ import ContractAlerts from "@/components/dashboard/ContractAlerts";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake } from "lucide-react";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, Warehouse, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts } from "@/lib/NotificationContext";
@@ -33,6 +33,8 @@ export default function AdminDashboard() {
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: announcements = [] } = useQuery({ queryKey: ["announcements-active"], queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }) });
+  const { data: stokDeger } = useQuery({ queryKey: ["stok-degerleme-admin"], queryFn: () => flowApi.stok.rapor("degerleme"), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
+  const { data: stokPanel } = useQuery({ queryKey: ["stok-dashboard-admin"], queryFn: () => flowApi.stok.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
 
   const ik = ikData?.kpi || {};
   const donem = ikData?.bordro_donem || {};
@@ -63,6 +65,9 @@ export default function AdminDashboard() {
 
   const aktifSozlesme = (contracts.stats || []).find(s => s.status === "aktif")?.c || 0;
   const donemDurum = DONEM_DURUM[donem.durum] || "—";
+  const stokUrunSayisi = new Set((stokDeger?.rows || []).map(r => r.urun_id)).size;
+  const stokBugunGiris = stokPanel?.bugun_giris?.n || 0;
+  const stokBugunCikis = stokPanel?.bugun_cikis?.n || 0;
 
   // ── KPI kartları — İş Takibi bilinçli olarak son 2 kartta ──
   const kpis = [
@@ -72,6 +77,8 @@ export default function AdminDashboard() {
     { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
     { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
     { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
+    { label: "Stok Değeri", value: `${kisa(stokDeger?.toplam_deger || 0)} ₺`, sub: `${stokUrunSayisi} ürün`, color: "from-amber-500 to-amber-700", icon: Warehouse, path: "/stok/raporlar" },
+    { label: "Bugünkü Stok Hareketi", value: stokBugunGiris + stokBugunCikis, sub: `${stokBugunGiris} giriş · ${stokBugunCikis} çıkış`, color: "from-cyan-500 to-cyan-700", icon: ArrowLeftRight, path: "/stok/fisler" },
     { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/is-takibi/tickets" },
     { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
   ];
@@ -208,7 +215,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* MODÜL KPI BANNER — 8 kart, tam 4×2 */}
+      {/* MODÜL KPI BANNER — İş Takibi son sırada */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {kpis.map((item, i) => (
           <Link key={i} to={item.path}

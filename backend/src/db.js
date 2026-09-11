@@ -536,7 +536,7 @@ function initDb() {
       // Faz 8: Zimmet / El Aletleri
       'stok_zimmet', 'stok_zimmet_yerleri',
       // Faz 9-11: Mobil, Etiket, Excel, Dashboard
-      'stok_mobil','stok_etiket','stok_excel','stok_dashboard',
+      'stok_mobil','stok_etiket','stok_demirbas_sorgula','stok_excel','stok_dashboard',
       // Faz 13: QNB e-Belge
       'stok_qnb',
       // ── İK / Özlük / Bordro modülü (önek: ikb_) ──────────────────
@@ -1509,7 +1509,7 @@ function initDb() {
     };
     const HEP = ['stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf','stok_sahalar','stok_tedarikciler',
       'stok_giris','stok_cikis','stok_transfer','stok_fisler','stok_sayim','stok_parti_takibi',
-      'stok_raporlar','stok_satinalma','stok_zimmet','stok_dashboard','stok_mobil','stok_etiket','stok_excel'];
+      'stok_raporlar','stok_satinalma','stok_zimmet','stok_dashboard','stok_mobil','stok_etiket','stok_demirbas_sorgula','stok_excel'];
     const RAPORLAR = ['stok_raporlar','stok_parti_takibi','stok_dashboard','stok_fisler'];
     // Sadece bu bloğun ilk çalışmasında (depo_yetkilisi'nin hiç yetkisi yoksa) uygula.
     const dyVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='depo_yetkilisi' AND can_view=1 LIMIT 1").get();

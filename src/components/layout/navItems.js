@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch } from "lucide-react";
 
 // Tek doğruluk kaynağı: uygulamanın tüm navigasyon ağacı. BottomNav.jsx
 // (alt bar + uçan alt-menüler) ve GlobalSearch.jsx (⌘K hızlı atlama) buradan
@@ -132,6 +132,7 @@ export const allNavItems = [
         { labelKey: "stok_satinalma", path: "/stok/satin-alma", icon: ShoppingCart, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_zimmet", path: "/stok/zimmet", icon: HardHat, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_etiket", path: "/stok/etiket", icon: Tags, roles: ["admin", "yonetici", "kullanici"] },
+        { labelKey: "stok_demirbas_sorgula", path: "/stok/demirbas-sorgula", icon: ScanSearch, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_excel", path: "/stok/excel", icon: FileUp, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_qnb", path: "/stok/qnb", icon: FileCode2, roles: ["admin", "yonetici", "kullanici"] },
       ]

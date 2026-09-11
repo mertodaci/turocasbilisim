@@ -63,6 +63,7 @@ export const MODULES = [
   { key: "stok_dashboard",      label: "Stok Kontrol Merkezi",   path: "/stok" },
   { key: "stok_mobil",          label: "Mobil Hızlı İşlem",      path: "/stok/mobil" },
   { key: "stok_etiket",         label: "Etiket Bas",             path: "/stok/etiket" },
+  { key: "stok_demirbas_sorgula", label: "Demirbaş Sorgula",     path: "/stok/demirbas-sorgula" },
   { key: "stok_excel",          label: "Excel Stok Yükleme",     path: "/stok/excel" },
   { key: "stok_qnb",            label: "QNB e-Belge",            path: "/stok/qnb" },
   // ── İK / Özlük / Bordro (önek ikb_) — Faz 1 ──

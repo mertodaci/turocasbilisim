@@ -25,7 +25,7 @@ const CATEGORIES = [
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map"] },
   { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler"] },
   { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
-  { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_excel"] },
+  { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_demirbas_sorgula", "stok_excel"] },
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
   { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_iade", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },
   { label: "Stok — Raporlar", keys: ["stok_raporlar"] },

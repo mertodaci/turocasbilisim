@@ -1992,6 +1992,37 @@ app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Demirbaş Sorgula: bir sicil no'nun tüm gecmisini (hangi urun, su an hangi
+// depoda, acik bir zimmeti var mi, tum hareket + zimmet gecmisi) tek ekranda
+// gostermek icin. QR etiket okutulunca dusulecek ekranin veri kaynagi.
+app.get('/api/stok/demirbas-sorgula', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_demirbas_sorgula', 'can_view'))) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const seriNo = String(req.query.seri_no || '').trim();
+  if (!seriNo) return res.status(400).json({ error: 'Sicil no zorunlu' });
+  try {
+    const hareketler = db.prepare('SELECT * FROM stok_hareketler WHERE seri_no=? ORDER BY created_date').all(seriNo);
+    if (!hareketler.length) return res.status(404).json({ error: 'Bu sicil no ile hiçbir kayıt bulunamadı' });
+    const urun = db.prepare('SELECT id, ad, kod, urun_tipi, ana_birim FROM stok_urunler WHERE id=?').get(hareketler[0].urun_id);
+    const depoNet = new Map();
+    for (const h of hareketler) {
+      const cur = depoNet.get(h.depo_id) || { depo_id: h.depo_id, depo_adi: h.depo_adi, net: 0 };
+      cur.net += h.tip === 'giris' ? 1 : -1;
+      depoNet.set(h.depo_id, cur);
+    }
+    const mevcutDepo = [...depoNet.values()].find((d) => d.net > 0) || null;
+    const acikRez = db.prepare(`SELECT r.*, s.zimmet_id FROM stok_rezervasyonlar r
+      LEFT JOIN stok_zimmet_satirlari s ON s.rezervasyon_id = r.id
+      WHERE r.seri_no=? AND r.durum='acik'`).get(seriNo);
+    let acikZimmet = null;
+    if (acikRez?.zimmet_id) acikZimmet = db.prepare('SELECT zimmet_no, personel_adi, yer_adi, teslim_tarihi, termin_tarihi FROM stok_zimmetler WHERE id=?').get(acikRez.zimmet_id);
+    const zimmetGecmisi = db.prepare(`SELECT s.miktar, s.iade_miktar, s.created_date, s.updated_date,
+        z.zimmet_no, z.personel_adi, z.yer_adi, z.teslim_tarihi, z.iade_tarihi, z.durum
+      FROM stok_zimmet_satirlari s JOIN stok_zimmetler z ON z.id = s.zimmet_id
+      WHERE s.seri_no=? ORDER BY s.created_date DESC`).all(seriNo);
+    res.json({ seri_no: seriNo, urun, mevcut_depo: mevcutDepo, acik_zimmet: acikZimmet, hareketler, zimmet_gecmisi: zimmetGecmisi });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // STOK Faz 15: Zimmet — miktar bazlı malzeme + kişi/yer hedefi + kısmi iade.
 // Bloke mekanizması stok_rezervasyonlar'ı kullanır (kullanılabilir stok hesabı

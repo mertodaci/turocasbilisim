@@ -44,6 +44,12 @@ export default function AdminDashboard() {
   const isTakibi = exec?.is_takibi || {};
   const su = stokUyari || {};
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+  const firstName = user?.full_name?.split(" ")[0] || "";
+  const dayName = format(new Date(), "EEEE", { locale: tr });
+  const dateStr = format(new Date(), "d MMMM yyyy", { locale: tr });
+
   const activeAnnouncements = announcements.filter(a => {
     const dateOk = (!a.start_date || a.start_date <= format(new Date(), "yyyy-MM-dd")) &&
       (!a.end_date || a.end_date >= format(new Date(), "yyyy-MM-dd"));
@@ -97,11 +103,15 @@ export default function AdminDashboard() {
       <ContractAlerts />
 
       {/* BAŞLIK */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">Yönetim Merkezi</h1>
-        <div className="flex items-center gap-2 bg-card border border-border px-4 py-2 rounded-xl text-xs text-muted-foreground">
-          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          Canlı · {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">{greeting}, {firstName}</p>
+          <h1 className="text-2xl font-bold mt-0.5">Yönetim Merkezi</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
+          <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
         </div>
       </div>
 

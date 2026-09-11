@@ -5,6 +5,7 @@ import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, Clipboa
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
+import turkonixLogo from "@/assets/turkonix-logo.png";
 
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
@@ -246,9 +247,14 @@ function ProfileMenu() {
 export default function TopBar() {
   return (
     <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
-      <div className="text-sm font-semibold text-foreground truncate shrink-0 hidden xl:block">
-        THIS IS OUR HOME
-      </div>
+      <Link to="/" className="flex items-center gap-2 shrink-0">
+        <img
+          src={turkonixLogo}
+          alt="Turkonix"
+          className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
+        />
+        <span className="hidden sm:inline text-base font-bold tracking-tight text-foreground">Turkonix</span>
+      </Link>
       <GlobalSearch />
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <WeatherWidget />

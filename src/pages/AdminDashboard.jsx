@@ -22,6 +22,17 @@ const TONES = {
   slate:  "bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800",
 };
 
+const ICON_TONES = {
+  red: "text-red-600", rose: "text-rose-600", amber: "text-amber-600", orange: "text-orange-600",
+  blue: "text-blue-600", violet: "text-violet-600", slate: "text-slate-600",
+};
+
+const CHIP_TONES = {
+  red: "bg-red-100 text-red-800", rose: "bg-rose-100 text-rose-800", amber: "bg-amber-100 text-amber-800",
+  orange: "bg-orange-100 text-orange-800", blue: "bg-blue-100 text-blue-800", violet: "bg-violet-100 text-violet-800",
+  slate: "bg-slate-200 text-slate-800",
+};
+
 const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yok: "Oluşmadı" };
 
 export default function AdminDashboard() {
@@ -77,18 +88,19 @@ export default function AdminDashboard() {
     { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
   ];
 
-  // ── Dikkat gerektiren uyarı çipleri (modüller arası, yalnız > 0) ──
+  // ── Dikkat gerektiren uyarılar (modüller arası, yalnız > 0) — her biri
+  // sözleşme satırlarıyla aynı "ikon + açıklayıcı cümle" formatında ──
   const alerts = [
-    { n: summary.overdueTickets, label: "geciken bilet", to: "/is-takibi/tickets", icon: AlertTriangle, tone: "red" },
-    { n: summary.pendingLeaves, label: "bekleyen izin", to: "/ik-izin-yonetimi", icon: Umbrella, tone: "amber" },
-    { n: summary.pendingExpenses, label: "bekleyen harcama", to: "/ik-harcama-yonetimi", icon: DollarSign, tone: "blue" },
-    { n: ik.bekleyen_mesai, label: "bekleyen mesai onayı", to: "/ik/mesai", icon: Clock, tone: "violet" },
-    { n: ik.tutarsiz_personel, label: "tutarsız personel", to: "/calisanlar?f=bordro", icon: UserX, tone: "orange" },
-    { n: ik.eksik_evrakli_izin, label: "eksik izin evrakı", to: "/ik/izin-evrak", icon: FileClock, tone: "amber" },
-    { n: su.kritik?.length, label: "kritik stok", to: "/stok", icon: PackageX, tone: "rose" },
-    { n: su.skt_gecen?.length, label: "SKT geçen parti", to: "/stok/partiler", icon: AlertTriangle, tone: "rose" },
-    { n: su.bekleyen_fis, label: "bekleyen stok fişi", to: "/stok/fisler", icon: ClipboardList, tone: "slate" },
-    { n: su.geciken_zimmet, label: "geciken zimmet", to: "/stok/zimmet", icon: Clock, tone: "amber" },
+    { n: summary.overdueTickets, desc: (n) => `${n} bilet gecikmiş durumda:`, to: "/is-takibi/tickets", icon: AlertTriangle, tone: "red" },
+    { n: summary.pendingLeaves, desc: (n) => `${n} izin talebi onay bekliyor:`, to: "/ik-izin-yonetimi", icon: Umbrella, tone: "amber" },
+    { n: summary.pendingExpenses, desc: (n) => `${n} harcama talebi onay bekliyor:`, to: "/ik-harcama-yonetimi", icon: DollarSign, tone: "blue" },
+    { n: ik.bekleyen_mesai, desc: (n) => `${n} mesai kaydı onay bekliyor:`, to: "/ik/mesai", icon: Clock, tone: "violet" },
+    { n: ik.tutarsiz_personel, desc: (n) => `${n} personel kaydı tutarsız görünüyor:`, to: "/calisanlar?f=bordro", icon: UserX, tone: "orange" },
+    { n: ik.eksik_evrakli_izin, desc: (n) => `${n} izin evrakı eksik:`, to: "/ik/izin-evrak", icon: FileClock, tone: "amber" },
+    { n: su.kritik?.length, desc: (n) => `${n} ürün kritik stok seviyesinde:`, to: "/stok", icon: PackageX, tone: "rose", items: su.kritik, itemLabel: (it) => `${it.urun_adi} (${it.depo_adi})` },
+    { n: su.skt_gecen?.length, desc: (n) => `${n} parti son kullanma tarihini geçmiş:`, to: "/stok/partiler", icon: AlertTriangle, tone: "rose", items: su.skt_gecen, itemLabel: (it) => `${it.urun_adi} (${it.depo_adi})` },
+    { n: su.bekleyen_fis, desc: (n) => `${n} stok fişi onay bekliyor:`, to: "/stok/fisler", icon: ClipboardList, tone: "slate" },
+    { n: su.geciken_zimmet, desc: (n) => `${n} zimmet iade tarihini geçmiş:`, to: "/stok/zimmet", icon: Clock, tone: "amber" },
   ].filter(a => (a.n || 0) > 0);
 
   const bekleyenOnaylar = [
@@ -99,6 +111,41 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-5">
+
+      {/* BAŞLIK */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-sm text-muted-foreground">{greeting}, {firstName}</p>
+          <h1 className="text-2xl font-bold mt-0.5">Yönetim Merkezi</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
+          <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
+        </div>
+      </div>
+
+      {/* DUYURU */}
+      {activeAnnouncements.length > 0 && (
+        <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25">
+          <div className="flex items-stretch">
+            <div className="flex-shrink-0 px-5 py-3.5 bg-white/15 flex items-center gap-2">
+              <Megaphone className="w-5 h-5" />
+              <span className="text-sm font-extrabold uppercase tracking-widest">Duyuru</span>
+            </div>
+            <div className="overflow-hidden flex-1 py-3.5 px-5">
+              <div className="animate-marquee whitespace-nowrap">
+                {activeAnnouncements.map((a) => (
+                  <span key={a.id} className="inline-flex items-center gap-2 mr-14">
+                    {a.title && <span className="font-bold text-white">{a.title}:</span>}
+                    <span className="text-white/90 text-sm">{a.content}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DİKKAT GEREKTİRENLER — sözleşme + stok + bilet + İK tek panelde */}
       {(sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0 || alerts.length > 0) && (
@@ -133,51 +180,17 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
-            {alerts.length > 0 && (
-              <div className={cn("flex items-center gap-2 flex-wrap pt-1", (sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0) && "border-t border-red-200/60 dark:border-red-900/40 mt-1")}>
-                {alerts.map((a, i) => (
-                  <Link key={i} to={a.to}
-                    className={cn("flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-1 hover:shadow-sm transition-all bg-white dark:bg-card", TONES[a.tone])}>
-                    <a.icon className="w-3.5 h-3.5" /> {a.n} {a.label}
+            {alerts.map((a, i) => (
+              <div key={i} className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", (i > 0 || sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0) && "pt-1 border-t border-red-200/60 dark:border-red-900/40 mt-1")}>
+                <a.icon className={cn("w-4 h-4 shrink-0", ICON_TONES[a.tone])} />
+                <Link to={a.to} className="text-sm font-semibold text-foreground hover:underline shrink-0">{a.desc(a.n)}</Link>
+                {a.items?.slice(0, 10).map((it, j) => (
+                  <Link key={j} to={a.to} className={cn("inline-block px-2 py-0.5 rounded-md text-xs font-medium hover:underline", CHIP_TONES[a.tone])}>
+                    {a.itemLabel(it)}
                   </Link>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* BAŞLIK */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">{greeting}, {firstName}</p>
-          <h1 className="text-2xl font-bold mt-0.5">Yönetim Merkezi</h1>
-          <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
-          <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
-        </div>
-      </div>
-
-      {/* DUYURU */}
-      {activeAnnouncements.length > 0 && (
-        <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25">
-          <div className="flex items-stretch">
-            <div className="flex-shrink-0 px-5 py-3.5 bg-white/15 flex items-center gap-2">
-              <Megaphone className="w-5 h-5" />
-              <span className="text-sm font-extrabold uppercase tracking-widest">Duyuru</span>
-            </div>
-            <div className="overflow-hidden flex-1 py-3.5 px-5">
-              <div className="animate-marquee whitespace-nowrap">
-                {activeAnnouncements.map((a) => (
-                  <span key={a.id} className="inline-flex items-center gap-2 mr-14">
-                    {a.title && <span className="font-bold text-white">{a.title}:</span>}
-                    <span className="text-white/90 text-sm">{a.content}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}

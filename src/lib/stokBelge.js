@@ -88,7 +88,7 @@ export function fisBelgeYazdir(fis, opt = {}) {
   <table>
     <thead><tr>
       <th class="c">#</th><th>Ürün Kodu</th><th>Ürün Adı</th>
-      ${seriVar ? "<th>Seri No</th>" : ""}
+      ${seriVar ? "<th>Sicil No</th>" : ""}
       <th>Raf</th><th class="r">Miktar</th><th class="r">Ana Birim</th><th class="r">B.Fiyat</th><th class="r">Tutar</th>
     </tr></thead>
     <tbody>${satirRows || `<tr><td colspan="${seriVar ? 9 : 8}" class="c mut">Satır yok</td></tr>`}</tbody>

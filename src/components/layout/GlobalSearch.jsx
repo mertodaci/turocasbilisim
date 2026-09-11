@@ -63,10 +63,10 @@ export default function GlobalSearch() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="hidden md:flex flex-1 max-w-xl mx-auto items-center gap-2.5 px-4 h-10 rounded-2xl border border-border bg-muted/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
+        className="hidden md:flex w-52 lg:w-64 shrink-0 items-center gap-2 px-3 h-9 rounded-xl border border-border bg-muted/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
       >
         <Search className="w-4 h-4 shrink-0" />
-        <span className="flex-1 text-left truncate">Aramak istediğiniz kişi, müşteri, talep veya dokümanı yazın...</span>
+        <span className="flex-1 text-left truncate">Ara...</span>
         <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-md border border-border bg-card text-[10px] font-semibold text-muted-foreground shrink-0">⌘K</kbd>
       </button>
       <button

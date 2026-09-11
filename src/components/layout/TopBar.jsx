@@ -13,9 +13,9 @@ import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from 
 import { useQuery } from "@tanstack/react-query";
 
 const themes = [
-  { value: "light", icon: Sun },
-  { value: "dark", icon: Moon },
-  { value: "system", icon: Monitor },
+  { value: "light", icon: Sun, label: "Açık" },
+  { value: "dark", icon: Moon, label: "Koyu" },
+  { value: "system", icon: Monitor, label: "Sistem" },
 ];
 
 function NotificationBell() {
@@ -115,25 +115,43 @@ function NotificationBell() {
   );
 }
 
+// Tema seçici — tek ikon buton, tıklayınca aşağı açılan menüde 3 seçenek
+// (NotificationBell/ProfileMenu ile aynı açılır-panel deseni).
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const current = themes.find((t) => t.value === theme) || themes[2];
 
   return (
-    <div className="flex items-center gap-0.5 bg-muted rounded-xl p-1">
-      {themes.map(({ value, icon: Icon }) => (
-        <button
-          key={value}
-          onClick={() => setTheme(value)}
-          className={cn(
-            "p-1.5 rounded-lg transition-all",
-            theme === value
-              ? "bg-card shadow text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Icon className="w-4 h-4" />
-        </button>
-      ))}
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        title="Görünüm"
+      >
+        <current.icon className="w-5 h-5" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-40 bg-card border rounded-xl shadow-xl z-50 overflow-hidden p-1">
+            {themes.map(({ value, icon: Icon, label }) => (
+              <button
+                key={value}
+                onClick={() => { setTheme(value); setOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                  theme === value ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -247,16 +265,16 @@ function ProfileMenu() {
 export default function TopBar() {
   return (
     <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
-      <Link to="/" className="flex items-center gap-2 shrink-0">
+      <Link to="/" className="flex items-center gap-2.5 shrink-0">
         <img
           src={turkonixLogo}
           alt="Turkonix"
-          className="h-8 w-auto object-contain dark:brightness-0 dark:invert"
+          className="h-10 w-auto object-contain dark:brightness-0 dark:invert"
         />
-        <span className="hidden sm:inline text-base font-bold tracking-tight text-foreground">Turkonix</span>
+        <span className="hidden sm:inline text-lg font-extrabold tracking-tight text-foreground">Turkonix</span>
       </Link>
-      <GlobalSearch />
       <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <GlobalSearch />
         <WeatherWidget />
         <ThemeToggle />
         <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">

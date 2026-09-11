@@ -11,7 +11,13 @@ export const allNavItems = [
 {
   labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
   children: [
-    { labelKey: "is_takibi_tanimlar", path: "/is-takibi/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+    {
+      labelKey: "is_takibi_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "is_takibi_bilet_durumlari", path: "/is-takibi/bilet-durumlari", icon: CheckSquare, roles: ["admin", "yonetici"] },
+        { labelKey: "is_takibi_bilet_tipleri", path: "/is-takibi/bilet-tipleri", icon: Tags, roles: ["admin", "yonetici"] },
+      ]
+    },
     {
       labelKey: "is_takibi_islem", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
       children: [

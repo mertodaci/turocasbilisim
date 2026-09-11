@@ -137,20 +137,6 @@ export const allNavItems = [
   ]
 },
 {
-  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
-  children: [
-    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
-    { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
-  ]
-},
-{
-  labelKey: "sozlesme_yonetimi", path: null, icon: ScrollText, roles: ["admin", "yonetici", "ik"],
-  children: [
-    { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
-    { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
-  ]
-},
-{
   labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
   children: [
     {
@@ -174,6 +160,20 @@ export const allNavItems = [
         { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
       ]
     },
+  ]
+},
+{
+  labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
+  children: [
+    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
+    { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
+  ]
+},
+{
+  labelKey: "sozlesme_yonetimi", path: null, icon: ScrollText, roles: ["admin", "yonetici", "ik"],
+  children: [
+    { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
   ]
 },
 {

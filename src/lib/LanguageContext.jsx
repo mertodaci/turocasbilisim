@@ -73,7 +73,7 @@ const translations = {
     stok_yonetimi: "Stok / Depo Yönetimi",
     stok_tanim: "Tanım",
     stok_islem: "İşlem",
-    stok_rapor: "Rapor",
+    stok_rapor: "Raporlar",
     stok_dashboard: "Kontrol Merkezi",
     stok_mobil: "Mobil Hızlı İşlem",
     stok_etiket: "Toplu QR/Barkod Yazdırma",

@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
-import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog } from "lucide-react";
+import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
+import { flowApi } from "@/api/flowApiClient";
+import GlobalSearch from "./GlobalSearch";
 
 
 import {
@@ -207,17 +209,84 @@ function WeatherWidget() {
   );
 }
 
+// Sağ üstteki kullanıcı bloğu (avatar + isim + rol) — tıklayınca Profilim /
+// Çıkış Yap içeren küçük panel açılır. Önceki turlarda sidebar'da yaşayan
+// profil bloğu + kullanıcı menüsünün birleşimi; sidebar kalktığı için doğal
+// yeri artık burası.
+function ProfileMenu() {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (open) { const timer = setTimeout(() => setOpen(false), 6000); return () => clearTimeout(timer); } }, [open]);
+
+  const { data: employeeRecord } = useQuery({
+    queryKey: ["topbar-employee", user?.email],
+    queryFn: () => flowApi.entities.Employee.filter({ email: user.email }),
+    enabled: !!user?.email,
+    select: (data) => data[0],
+  });
+
+  const roleLabels = { admin: "Sistem Yöneticisi", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri" };
+  const roleLabel = roleLabels[user?.role] || user?.role || "";
+  const name = user?.full_name || user?.email || "Kullanıcı";
+  const initials = name.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-muted transition-colors">
+        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-primary">
+          {employeeRecord?.avatar_url ? (
+            <img src={employeeRecord.avatar_url} alt={name} className="w-full h-full object-cover" />
+          ) : initials}
+        </div>
+        <div className="hidden sm:block text-left leading-tight">
+          <p className="text-sm font-semibold text-foreground truncate max-w-[9rem]">{name}</p>
+          <p className="text-[11px] text-muted-foreground truncate max-w-[9rem]">{roleLabel}</p>
+        </div>
+        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block shrink-0" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-56 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="px-4 py-3 border-b">
+              <p className="text-sm font-semibold truncate">{name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-xs text-primary font-medium mt-0.5">{roleLabel}</p>
+            </div>
+            <div className="p-1">
+              <Link to="/profil" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted transition-colors">
+                <UserCircle2 className="w-4 h-4 text-muted-foreground" />
+                Profilim
+              </Link>
+              <button onClick={() => { setOpen(false); logout(); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                <LogOut className="w-4 h-4" />
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function TopBar() {
   return (
-    <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 gap-2 relative z-50">
-      <div className="text-sm font-semibold text-foreground truncate min-w-0 hidden md:block">
+    <div className="h-14 border-b bg-card/80 backdrop-blur-sm flex items-center gap-3 px-4 md:px-6 relative z-50">
+      <div className="text-sm font-semibold text-foreground truncate shrink-0 hidden xl:block">
         THIS IS OUR HOME
       </div>
+      <GlobalSearch />
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <WeatherWidget />
         <LanguageSelector />
         <ThemeToggle />
+        <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">
+          <HelpCircle className="w-5 h-5" />
+        </Link>
         <NotificationBell />
+        <ProfileMenu />
       </div>
     </div>
   );

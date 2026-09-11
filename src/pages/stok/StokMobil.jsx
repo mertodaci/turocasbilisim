@@ -170,7 +170,7 @@ export default function StokMobil() {
 
   const oneriListesi = (
     oneriler.length > 0 && (
-      <div className="absolute z-30 top-[calc(100%+4px)] left-0 right-0 bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto">
+      <div className="absolute z-50 top-[calc(100%+4px)] left-0 right-0 bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto">
         {oneriler.map((u) => (
           <button key={u.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted text-sm border-b last:border-0"
             onMouseDown={(e) => e.preventDefault()} onClick={() => oneriSec(u)}>

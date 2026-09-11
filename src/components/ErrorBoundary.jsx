@@ -6,10 +6,26 @@ import { Component } from "react";
 // uygulamayi beyaz ekrana dusuruyordu, kullanicinin elinde sayfayi yenilemekten
 // baska bir secenek kalmiyordu. Bu bilesen render hatalarini yakalar ve
 // kullaniciya "bir sorun oldu" ekrani + yenile butonu gosterir.
+
+// Her sayfa React.lazy() ile ayri bir JS parcasi (chunk) olarak yukleniyor.
+// Yeni bir surum deploy edildiginde eski chunk dosyalari sunucudan silinir;
+// deploy'dan once acilmis bir sekme daha sonra baska bir sayfaya gecmeye
+// calisirsa, o eski chunk'i cekmeye calisip 404 alir -- bu gercek bir
+// uygulama hatasi degil, sadece sayfanin tazelenmesi gerektigini gosterir.
+// Boyle bir hata "beklenmedik sorun" ekrani yerine tek seferlik otomatik
+// bir yenilemeyle sessizce cozulur (RELOAD_KEY, ayni oturumda sonsuz
+// yenileme donguesune girmeyi engeller).
+const CHUNK_HATASI_REGEX = /dynamically imported module|Importing a module script failed|Loading chunk .* failed|error loading dynamically imported module/i;
+const RELOAD_KEY = "stok-chunk-reload-denendi";
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
+  }
+
+  componentDidMount() {
+    try { sessionStorage.removeItem(RELOAD_KEY); } catch { /* sessionStorage yoksa yok say */ }
   }
 
   static getDerivedStateFromError() {
@@ -18,6 +34,14 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error("[ErrorBoundary] yakalanmamis hata:", error, info);
+    if (CHUNK_HATASI_REGEX.test(String(error?.message || ""))) {
+      try {
+        if (!sessionStorage.getItem(RELOAD_KEY)) {
+          sessionStorage.setItem(RELOAD_KEY, "1");
+          window.location.reload();
+        }
+      } catch { /* sessionStorage'a erisilemezse asagidaki normal hata ekrani gosterilir */ }
+    }
   }
 
   render() {

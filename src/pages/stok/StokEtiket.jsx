@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import JsBarcode from "jsbarcode";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,24 +57,39 @@ export default function StokEtiket() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["stok_etiket_fisleri"] }); toast.success("Etiket listesi kaydedildi"); },
   });
 
+  const barkodResmi = (deger) => {
+    if (!deger) return null;
+    try {
+      const canvas = document.createElement("canvas");
+      JsBarcode(canvas, deger, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 60 });
+      return canvas.toDataURL("image/png");
+    } catch {
+      return null;
+    }
+  };
+
   const yazdir = () => {
     if (!sepet.length) return;
     const w = window.open("", "_blank", "width=720,height=900");
     if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
     const labels = sepet.flatMap((s) => Array.from({ length: s.adet }, () => s));
     const isTermal = boyut === "termal";
+    const labelsHtml = labels.map((l) => {
+      const deger = l.barkod || l.urun_kodu || "";
+      const img = barkodResmi(deger);
+      return `<div class="lbl"><div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="kod">${l.urun_kodu || ""}</div></div>
+      <div>${img ? `<img class="bar-img" src="${img}" />` : ""}<div class="barnum">${deger || "-"}</div></div></div>`;
+    }).join("");
     w.document.write(`<html><head><title>Etiketler</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
       body{margin:0;padding:${isTermal ? 0 : "8px"};display:flex;flex-wrap:wrap;gap:${isTermal ? 0 : "6px"}}
       .lbl{width:${isTermal ? "40mm" : "220px"};height:${isTermal ? "30mm" : "120px"};border:1px solid #000;padding:${isTermal ? "2mm" : "8px"};display:flex;flex-direction:column;justify-content:space-between}
       .ad{font-size:${isTermal ? "9px" : "12px"};font-weight:600;line-height:1.2;overflow:hidden}
       .kod{font-size:${isTermal ? "8px" : "11px"};color:#333}
-      .bar{font-family:'Libre Barcode 128',monospace;font-size:${isTermal ? "22px" : "34px"};letter-spacing:0;text-align:center;border-top:1px solid #ccc;padding-top:2px}
+      .bar-img{display:block;width:100%;height:${isTermal ? "14mm" : "40px"};object-fit:contain}
       .barnum{font-size:${isTermal ? "8px" : "11px"};text-align:center;letter-spacing:2px}
       @media print{.lbl{page-break-inside:avoid}${isTermal ? "@page{size:40mm 30mm;margin:0;}" : ""}}
-    </style></head><body>${labels.map((l) => `
-      <div class="lbl"><div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="kod">${l.urun_kodu || ""}</div></div>
-      <div><div class="barnum">${l.barkod || l.urun_kodu || "-"}</div></div></div>`).join("")}</body></html>`);
+    </style></head><body>${labelsHtml}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); }, 300);
     kaydetM.mutate();

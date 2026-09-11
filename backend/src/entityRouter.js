@@ -199,6 +199,14 @@ function checkPermission(db, role, tableName, action) {
     if (permX && permX[action]) return true;
   }
 
+  // customers tablosu hem "Müşteriler" hem Stok modülünün "Tedarikçiler" ekranı
+  // tarafından paylaşılıyor (aynı cari kartı) -- stok_tedarikciler yetkisi verilmiş
+  // bir rol de bu tabloya erişebilsin, customers yetkisi ayrıca istenmesin.
+  if (tableName === 'customers') {
+    const permTedarikci = db.prepare('SELECT * FROM role_permissions WHERE role_name = ? AND module = ?').get(role, 'stok_tedarikciler');
+    if (permTedarikci && permTedarikci[action]) return true;
+  }
+
   // Tek yetki kaynağı: role_permissions tablosu
   const perm = db.prepare(
     'SELECT * FROM role_permissions WHERE role_name = ? AND module = ?'

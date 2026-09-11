@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   User, Calendar, Clock, MessageSquare,
-  Send, Lock, Unlock, Tag, CheckCircle2, History, ArrowRight, X, Paperclip, FileText, ExternalLink, Loader2, Maximize2, Minimize2, Pencil, Trash2, Workflow, Flag, ChevronDown
+  Send, Lock, Unlock, Tag, CheckCircle2, History, ArrowRight, X, Paperclip, FileText, ExternalLink, Loader2, Maximize2, Minimize2, Pencil, Trash2, Workflow, Flag
 } from "lucide-react";
 import JTTicketFormDialog from "./JTTicketFormDialog";
 import { cn } from "@/lib/utils";
@@ -75,71 +75,6 @@ const FLOW_GROUP_ORDER = ["talep", "analiz", "gelistirme", "test_onay", "tamamla
 const FLOW_GROUP_LABEL = { talep: "Talep", analiz: "Analiz", gelistirme: "Geliştirme", test_onay: "Test / Onay", tamamlanan: "Tamamlanan", diger: "Diğer" };
 const normFlowGroup = (gk) => FLOW_GROUP_ORDER.includes(gk) ? gk : "diger";
 
-const nrm = (x) => String(x || "").trim().toLocaleLowerCase("tr");
-// Harcanan Efor: durum fazi -> ekip. gelistirme = Yazilim; analiz + test = Analiz;
-// onay (test_onay grubunda adinda "onay" gecen durumlar) = kimseye yazilmaz (Diger).
-const PHASE_TEAM = { analiz: "analiz", gelistirme: "yazilim", test_onay: "analiz", talep: "diger", tamamlanan: "diger", diger: "diger" };
-// test_onay grubunda: adinda "onay" varsa -> Diger, yoksa (test) -> Analiz
-const teamOfPhase = (group, label) => {
-  if (group === "test_onay") return nrm(label).includes("onay") ? "diger" : "analiz";
-  return PHASE_TEAM[group] || "diger";
-};
-// Panoya ozel: bir bilet ilgili duruma tasinirken o ekibin elle girilmis
-// "Harcanan Zaman"i bossa yumusak uyari (zorunlu degil). "match" = hedef durumun
-// key'inde (alt cizgi -> bosluk) YA DA adinda aranan normalize alt dize.
-const EFFORT_WARN_BOARDS = [
-  { board: "ybs teknik destek", rules: [
-    { match: "analiz onay",      team: "analiz",  label: "Analiz" },
-    { match: "test",             team: "yazilim", label: "Yazılım" },
-  ]},
-  { board: "abys om", rules: [
-    { match: "analiz tamamland", team: "analiz",  label: "Analiz" },
-    { match: "analiz test",      team: "yazilim", label: "Yazılım" },
-    { match: "kurum test",       team: "yazilim", label: "Yazılım" },
-  ]},
-];
-const TEAM_LABEL = { analiz: "Analiz", yazilim: "Yazılım", diger: "Diğer" };
-const TEAM_TAG = {
-  analiz:  "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
-  yazilim: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  diger:   "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-};
-const fmtDur = (ms) => {
-  const m = Math.max(0, Math.round(ms / 60000));
-  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mi = m % 60;
-  if (d) return `${d}g ${h}s`;
-  if (h) return `${h}s ${mi}d`;
-  return `${mi}d`;
-};
-// Kisi bazinda girilen gercek harcanan zaman -> "1 sa 30 dk" / "45 dk" / "10 sa"
-const fmtHours = (h) => {
-  const total = Math.round((Number(h) || 0) * 60);
-  const hh = Math.floor(total / 60), mm = total % 60;
-  if (!hh && !mm) return "0 sa";
-  return [hh ? `${hh} sa` : "", mm ? `${mm} dk` : ""].filter(Boolean).join(" ");
-};
-// hours (REAL) -> { saat, dakika } string alanlari (form icin)
-const splitHours = (h) => {
-  const total = Math.round((Number(h) || 0) * 60);
-  return {
-    saat: Math.floor(total / 60) ? String(Math.floor(total / 60)) : "",
-    dakika: total % 60 ? String(total % 60) : "",
-  };
-};
-// Merkez ekip uyeligi: position/department metninde "yazilim"/"analiz" geciyor mu
-// (JTKanbanBoard.jsx'teki isDeveloper/isAnalyst ile ayni yaklasim).
-const empRoleText = (e) => `${e?.position || ""} ${e?.department || ""}`.toLocaleLowerCase("tr");
-const isTeamMember = (e, team) => {
-  const s = empRoleText(e);
-  return team === "yazilim"
-    ? (s.includes("yazilim") || s.includes("yazılım"))
-    : (s.includes("analiz") || s.includes("analist"));
-};
-// yyyy-mm-dd -> "dd.MM.yyyy"
-const fmtLogDate = (s) => { if (!s) return ""; const d = new Date(s); return Number.isNaN(+d) ? String(s) : format(d, "dd.MM.yyyy"); };
-
-
-
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 export default function JTTicketDetailDialog({ ticket, employees, projects, customers = [], open, onOpenChange, isMusteri = false, canEdit = true }) {
   const queryClient = useQueryClient();
@@ -149,12 +84,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
   const [parentSearch, setParentSearch] = useState("");
   const [relatedSearch, setRelatedSearch] = useState("");
   const [showRelatedForm, setShowRelatedForm] = useState(false);
-  const [effortOpen, setEffortOpen] = useState(false);
-  const emptyPlan = { planned_hours: "", assignee_id: "", assignee_name: "", note: "" };
-  const [planTeam, setPlanTeam] = useState(null); // 'analiz' | 'yazilim' | null
-  const [planForm, setPlanForm] = useState(emptyPlan);
-  const emptyLog = { team: null, person_id: "", person_name: "", saat: "", dakika: "", work_date: new Date().toISOString().slice(0, 10), note: "" };
-  const [logEditing, setLogEditing] = useState(null); // { id?, team, person_id, person_name, hours, work_date, note } | null
 
   const linkRelatedMutation = useMutation({
     mutationFn: async ({ parentId, relatedIds }) => {
@@ -330,31 +259,12 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
     queryKey: ["me"],
     queryFn: () => flowApi.auth.me(),
   });
-  // Plan (job_effort_plans) alt-satiri + Planla dialogu: yalniz yonetici + admin.
-  const isPlanManager = currentUser?.role === "admin" || currentUser?.role === "yonetici";
-
-  const { data: effortPlans = [] } = useQuery({
-    queryKey: ["tq-effort-plans", ticket?.id],
-    queryFn: () => flowApi.entities.JTEffortPlan.filter({ ticket_id: ticket?.id }),
-    enabled: !!ticket?.id && isPlanManager,
-  });
-  const planFor = (team) => effortPlans.find(p => p.team === team) || null;
-
   const { data: currentEmployee } = useQuery({
     queryKey: ["employee-me", currentUser?.email],
     queryFn: () => flowApi.entities.Employee.filter({ email: currentUser?.email }),
     enabled: !!currentUser?.email,
     select: (data) => data[0],
   });
-
-  const { data: effortLogs = [] } = useQuery({
-    queryKey: ["tq-effort-logs", ticket?.id],
-    queryFn: () => flowApi.entities.JTEffortLog.filter({ ticket_id: ticket?.id }),
-    enabled: !!ticket?.id,
-  });
-  const myEmployeeId = currentEmployee?.id;
-  const isAssignedToTicket = !!myEmployeeId && localAssignedIds.includes(myEmployeeId);
-  const logsFor = (team) => effortLogs.filter(l => l.team === team);
 
   const addCommentMutation = useMutation({
     mutationFn: (data) => flowApi.entities.JTComment.create(data),
@@ -430,112 +340,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
     },
   });
 
-  // Efor planı formunu, seçilen ekibin mevcut kaydından doldur
-  useEffect(() => {
-    if (!planTeam) return;
-    const p = effortPlans.find(x => x.team === planTeam);
-    setPlanForm(p ? {
-      planned_hours: p.planned_hours ?? "",
-      assignee_id: p.assignee_id || "",
-      assignee_name: p.assignee_name || "",
-      note: p.note || "",
-    } : { planned_hours: "", assignee_id: "", assignee_name: "", note: "" });
-  }, [planTeam, effortPlans]);
-
-  // Merkez yazılım / analiz ekibi listesi (Planla + Harcanan Zaman dialoglari).
-  const teamEmployees = (team) => team
-    ? employees
-        .filter(e => e.show_in_job_tracking == 1 || e.show_in_job_tracking === true)
-        .filter(e => isTeamMember(e, team))
-        .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || ""), "tr"))
-    : [];
-  const planTeamEmployees = teamEmployees(planTeam);
-
-  const savePlanMutation = useMutation({
-    mutationFn: () => {
-      const existing = planFor(planTeam);
-      const payload = {
-        ticket_id: ticket.id,
-        team: planTeam,
-        planned_hours: planForm.planned_hours === "" ? null : Number(planForm.planned_hours),
-        planned_start: null,
-        assignee_id: planForm.assignee_id || null,
-        assignee_name: planForm.assignee_name || null,
-        end_at: null,
-        note: planForm.note || null,
-      };
-      return existing
-        ? flowApi.entities.JTEffortPlan.update(existing.id, payload)
-        : flowApi.entities.JTEffortPlan.create(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tq-effort-plans", ticket.id] });
-      setPlanTeam(null);
-      toast.success("Efor planı kaydedildi");
-    },
-    onError: (err) => toast.error(err?.message || "Kaydedilemedi"),
-  });
-
-  const deletePlanMutation = useMutation({
-    mutationFn: () => flowApi.entities.JTEffortPlan.delete(planFor(planTeam).id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tq-effort-plans", ticket.id] });
-      setPlanTeam(null);
-      toast.success("Efor planı silindi");
-    },
-    onError: (err) => toast.error(err?.message || "Silinemedi"),
-  });
-
-  const saveLogMutation = useMutation({
-    mutationFn: () => {
-      const dk = (Number(logEditing.saat) || 0) * 60 + (Number(logEditing.dakika) || 0);
-      const payload = {
-        ticket_id: ticket.id,
-        team: logEditing.team,
-        person_id: logEditing.person_id,
-        person_name: logEditing.person_name,
-        hours: dk > 0 ? dk / 60 : null,
-        work_date: logEditing.work_date || null,
-        note: logEditing.note || null,
-      };
-      return logEditing.id
-        ? flowApi.entities.JTEffortLog.update(logEditing.id, payload)
-        : flowApi.entities.JTEffortLog.create(payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tq-effort-logs", ticket.id] });
-      setLogEditing(null);
-      toast.success("Harcanan zaman kaydedildi");
-    },
-    onError: (err) => toast.error(err?.message || "Kaydedilemedi"),
-  });
-
-  const deleteLogMutation = useMutation({
-    mutationFn: (id) => flowApi.entities.JTEffortLog.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tq-effort-logs", ticket.id] });
-      toast.success("Efor kaydı silindi");
-    },
-    onError: (err) => toast.error(err?.message || "Silinemedi"),
-  });
-
-  const openNewLog = (team) => {
-    const plan = planFor(team);
-    const isAdmin = currentUser?.role === "admin";
-    // Plan atananı yoksa, o ekibe ait Sorumlu Kişi'yi otomatik seç
-    const assignedMember = employees.find(
-      e => localAssignedIds.includes(e.id) && isTeamMember(e, team)
-    );
-    const fbId = plan?.assignee_id || assignedMember?.id || "";
-    const fbName = plan?.assignee_name || assignedMember?.full_name || "";
-    setLogEditing({
-      ...emptyLog,
-      team,
-      person_id: isAdmin ? fbId : (myEmployeeId || ""),
-      person_name: isAdmin ? fbName : (currentEmployee?.full_name || ""),
-    });
-  };
-
   const handleAddComment = () => {
     if (!commentContent.trim()) return;
     addCommentMutation.mutate({
@@ -550,22 +354,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
   };
 
   const handleStatusChange = (newStatus) => {
-    // Panoya ozel: ilgili ekibin "Harcanan Zaman"i bossa yumusak uyari.
-    const boardName = nrm(
-      boards.find(b => b.id === (localBoardId || ticket?.board_id))?.name || ticket?.board_name
-    );
-    const warnCfg = EFFORT_WARN_BOARDS.find(c => boardName.includes(c.board));
-    if (warnCfg) {
-      const label = getStatusCfg(newStatus).label;
-      const nLabel = nrm(label);
-      const nKey = nrm(newStatus).replace(/_/g, " ");
-      const rule = warnCfg.rules.find(r => nLabel.includes(r.match) || nKey.includes(r.match));
-      if (rule && (effortHours[rule.team] || 0) === 0) {
-        if (!window.confirm(
-          `${rule.label} ekibi için "Harcanan Zaman" girilmemiş. Yine de durumu "${label}" yapmak istiyor musunuz?`
-        )) return;
-      }
-    }
     const finalStatus = statuses.find(s => s.key === newStatus);
     const updateData = { status: newStatus };
     if (finalStatus?.is_final) updateData.resolved_at = new Date().toISOString();
@@ -677,53 +465,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
     const path = [trans[0].m[1].trim()];
     for (const x of trans) { const to = x.m[2].trim(); if (to !== path[path.length - 1]) path.push(to); }
     return path;
-  })();
-
-  // Harcanan Efor: durum gecmisinden faz bazli sure (takvim suresi) hesabi
-  const effort = (() => {
-    const nameToGroup = new Map(), keyToGroup = new Map();
-    for (const s of statuses) {
-      const g = normFlowGroup(s.group_key);
-      nameToGroup.set(nrm(s.name), g);
-      keyToGroup.set(s.key, g);
-    }
-    const groupOfLabel = (l) => nameToGroup.get(nrm(l)) || "diger";
-    const groupOfKey = (k) => keyToGroup.get(k) || "diger";
-
-    const re = /Durum değiştirildi:\s*(.+?)\s*→\s*(.+)/;
-    const trans = (comments || [])
-      .filter(c => c.comment_type === 'system')
-      .map(c => ({ t: +new Date(c.created_date), m: String(c.content || "").match(re), who: c.author_name }))
-      .filter(x => x.m && Number.isFinite(x.t))
-      .map(x => ({ t: x.t, fromL: x.m[1].trim(), toL: x.m[2].trim(), who: x.who }))
-      .sort((a, b) => a.t - b.t);
-
-    const t0 = +new Date(ticket?.created_date) || (trans[0]?.t ?? Date.now());
-    const now = Date.now();
-    const curLabel = getStatusCfg(localStatus || ticket?.status).label;
-
-    const bounds = [t0, ...trans.map(x => x.t), now];
-    const segments = [];
-    for (let i = 0; i < bounds.length - 1; i++) {
-      let group, label;
-      if (trans.length === 0) { group = groupOfKey(localStatus || ticket?.status); label = curLabel; }
-      else if (i === 0) { group = groupOfLabel(trans[0].fromL); label = trans[0].fromL; }
-      else { group = groupOfLabel(trans[i - 1].toL); label = trans[i - 1].toL; }
-      const dur = Math.max(0, bounds[i + 1] - bounds[i]);
-      segments.push({ group, label, dur, team: teamOfPhase(group, label), from: bounds[i], to: bounds[i + 1], who: i > 0 ? trans[i - 1].who : "" });
-    }
-
-    const acc = { analiz: 0, yazilim: 0, diger: 0 };
-    for (const s of segments) acc[s.team] += s.dur;
-    return { analizMs: acc.analiz, yazilimMs: acc.yazilim, digerMs: acc.diger, segments, hasHistory: trans.length > 0 };
-  })();
-
-  // Analiz/Yazilim icin artik takvim suresi degil, kisilerin girdigi
-  // gercek saatlerin toplami gosterilir. Diger/beklemede otomatik kalir.
-  const effortHours = (() => {
-    const acc = { analiz: 0, yazilim: 0 };
-    for (const l of effortLogs) if (acc[l.team] !== undefined) acc[l.team] += Number(l.hours) || 0;
-    return acc;
   })();
 
   // "Islem Gecmisi" sekmesi icin: gercek sistem yorumlarina ek olarak,
@@ -1237,118 +978,8 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
               </Tabs>
             </div>
 
-            {/* SAĞ sütun: harcanan efor / ekler / detaylar / ilişkili / etiketler — kendi kaydırması */}
+            {/* SAĞ sütun: ekler / detaylar / ilişkili / etiketler — kendi kaydırması */}
             <div className="min-w-0 min-h-0 shrink-0 lg:shrink lg:overflow-y-auto p-4 flex flex-col gap-3 order-3 lg:order-none lg:border-l border-border/60">
-              {/* Harcanan Efor (Analiz/Yazilim: kisilerin girdigi gercek saat; Diger: durum gecmisinden otomatik) -- musteri haric tum ic kullanicilar gorur; Plan yalniz yonetici/admin */}
-              {!isMusteri && (
-                <div className={`rounded-xl border p-3 space-y-2 order-5 ${PASTEL.indigo}`}>
-                  <button
-                    type="button"
-                    onClick={() => setEffortOpen(o => !o)}
-                    className="w-full flex items-center justify-between gap-2"
-                  >
-                    <span className={`text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5 ${PASTEL_LABEL.indigo}`}>
-                      <Clock className="w-3.5 h-3.5" /> Harcanan Efor
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${effortOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  <div className="space-y-2 text-sm">
-                    {[
-                      { team: "analiz", emoji: "🔎", label: "Analiz" },
-                      { team: "yazilim", emoji: "💻", label: "Yazılım" },
-                    ].map((row) => {
-                      const p = planFor(row.team);
-                      const canLogHere = currentUser?.role === "admin" || isAssignedToTicket;
-                      return (
-                        <div key={row.team} className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">{row.emoji} <span className="text-muted-foreground">{row.label}</span></span>
-                            <span className="font-semibold tabular-nums">{fmtHours(effortHours[row.team])}</span>
-                          </div>
-                          {isPlanManager && (
-                            <div className="flex items-center justify-between gap-2 pl-5 text-[11px] text-muted-foreground">
-                              <span className="truncate">
-                                {p ? (
-                                  <>Plan: {p.planned_hours != null && p.planned_hours !== "" ? `${p.planned_hours} sa` : "—"}
-                                    {p.assignee_name ? ` · ${p.assignee_name}` : ""}</>
-                                ) : "Plan yok"}
-                              </span>
-                              <button type="button" onClick={() => setPlanTeam(row.team)} className="shrink-0 text-indigo-600 hover:underline">
-                                {p ? "Düzenle" : "Planla"}
-                              </button>
-                            </div>
-                          )}
-                          <div className="pl-5 space-y-1">
-                            {logsFor(row.team).map((l) => {
-                              const canManage = currentUser?.role === "admin" || l.person_id === myEmployeeId;
-                              return (
-                                <div key={l.id} className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                                  <span className="truncate">
-                                    {l.person_name || "—"} · <span className="font-medium text-foreground">{fmtHours(l.hours)}</span>
-                                    {l.work_date ? ` · ${fmtLogDate(l.work_date)}` : ""}
-                                    {l.note ? ` · ${l.note}` : ""}
-                                  </span>
-                                  {canManage && (
-                                    <span className="flex items-center gap-1 shrink-0">
-                                      <button type="button" onClick={() => setLogEditing({ id: l.id, team: l.team, person_id: l.person_id, person_name: l.person_name, ...splitHours(l.hours), work_date: l.work_date || "", note: l.note || "" })}>
-                                        <Pencil className="w-3 h-3 hover:text-foreground" />
-                                      </button>
-                                      <button type="button" onClick={() => deleteLogMutation.mutate(l.id)}>
-                                        <Trash2 className="w-3 h-3 hover:text-red-600" />
-                                      </button>
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {canLogHere && (
-                              <button type="button" onClick={() => openNewLog(row.team)} className="text-indigo-600 hover:underline text-[11px]">
-                                + Harcanan Zaman
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {effort.digerMs > 0 && (
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Müşteri Talep / Diğer</span>
-                        <span className="tabular-nums">{fmtDur(effort.digerMs)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-border/40 font-semibold">
-                      <span>Toplam Efor</span>
-                      <span className="tabular-nums">{fmtHours((effortHours.analiz || 0) + (effortHours.yazilim || 0))}</span>
-                    </div>
-                  </div>
-                  {effortOpen && (
-                    <div className="pt-2 mt-1 border-t border-border/40 space-y-2">
-                      {!effort.hasHistory && (
-                        <p className="text-xs text-muted-foreground">Henüz durum değişikliği yok — süre mevcut durumda geçiyor.</p>
-                      )}
-                      {effort.segments.map((s, i) => {
-                        const team = s.team;
-                        return (
-                          <div key={i} className="text-xs">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium truncate">{s.label}</span>
-                              <span className="tabular-nums shrink-0">{fmtDur(s.dur)}</span>
-                            </div>
-                            <div className="text-muted-foreground flex items-center flex-wrap gap-1.5 mt-0.5">
-                              <span className={`px-1 rounded ${TEAM_TAG[team]}`}>{TEAM_LABEL[team]}</span>
-                              <span>
-                                {format(new Date(s.from), "dd.MM HH:mm")} → {s.to >= Date.now() - 60000 ? "şimdi" : format(new Date(s.to), "dd.MM HH:mm")}
-                              </span>
-                              {s.who && <span>· {s.who}</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Ekler */}
               {(() => {
                 const allAttachments = [
@@ -1606,156 +1237,6 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
         />
       )}
 
-      {!isMusteri && isPlanManager && planTeam && (
-        <Dialog open onOpenChange={(o) => { if (!o) setPlanTeam(null); }}>
-          <DialogContent className="max-w-md rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>{planTeam === "analiz" ? "Analiz" : "Yazılım"} Ekibi — Efor Planı</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-1">
-              <div>
-                <Label>Planlanan Efor (saat)</Label>
-                <Input type="number" min="0" step="0.5" className="mt-1"
-                  value={planForm.planned_hours}
-                  onChange={(e) => setPlanForm(f => ({ ...f, planned_hours: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Çalışan</Label>
-                <Select
-                  value={planForm.assignee_id || "none"}
-                  onValueChange={(v) => {
-                    if (v === "none") { setPlanForm(f => ({ ...f, assignee_id: "", assignee_name: "" })); }
-                    else {
-                      const emp = planTeamEmployees.find(e => e.id === v);
-                      setPlanForm(f => ({ ...f, assignee_id: v, assignee_name: emp?.full_name || "" }));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Seç..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Yok —</SelectItem>
-                    {planTeamEmployees.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {planTeamEmployees.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {planTeam === "analiz" ? "Analiz" : "Yazılım"} ekibinde İş Takibi'de görünen çalışan yok
-                    (Çalışanlar ekranında pozisyon/departman bilgisi "{planTeam === "analiz" ? "analiz" : "yazılım"}" içermeli).
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label>Not (ops.)</Label>
-                <Textarea className="mt-1 min-h-[60px]"
-                  value={planForm.note}
-                  onChange={(e) => setPlanForm(f => ({ ...f, note: e.target.value }))} />
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {planFor(planTeam) ? (
-                  <Button variant="ghost" className="text-red-600 hover:text-red-700"
-                    onClick={() => deletePlanMutation.mutate()} disabled={deletePlanMutation.isPending}>
-                    Sil
-                  </Button>
-                ) : <span />}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setPlanTeam(null)}>İptal</Button>
-                  <Button onClick={() => savePlanMutation.mutate()} disabled={savePlanMutation.isPending}>Kaydet</Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {logEditing && (
-        <Dialog open onOpenChange={(o) => { if (!o) setLogEditing(null); }}>
-          <DialogContent className="max-w-sm rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>{logEditing.team === "analiz" ? "Analiz" : "Yazılım"} — Harcanan Zaman</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 mt-1">
-              <div>
-                <Label>Kişi</Label>
-                {currentUser?.role === "admin" ? (() => {
-                  const opts = teamEmployees(logEditing.team);
-                  const list = logEditing.person_id && !opts.some(e => e.id === logEditing.person_id)
-                    ? [{ id: logEditing.person_id, full_name: logEditing.person_name || logEditing.person_id }, ...opts]
-                    : opts;
-                  return (
-                    <Select
-                      value={logEditing.person_id || "none"}
-                      onValueChange={(v) => {
-                        if (v === "none") { setLogEditing(f => ({ ...f, person_id: "", person_name: "" })); }
-                        else {
-                          const emp = list.find(e => e.id === v);
-                          setLogEditing(f => ({ ...f, person_id: v, person_name: emp?.full_name || "" }));
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Seç..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— Seç —</SelectItem>
-                        {list.map((e) => (
-                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  );
-                })() : (
-                  <p className="text-sm font-medium mt-1.5">{logEditing.person_name || currentEmployee?.full_name}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Saat</Label>
-                  <Input type="number" min="0" step="1" className="mt-1"
-                    value={logEditing.saat}
-                    onChange={(e) => setLogEditing(f => ({ ...f, saat: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Dakika</Label>
-                  <Input type="number" min="0" max="59" step="5" className="mt-1"
-                    value={logEditing.dakika}
-                    onChange={(e) => setLogEditing(f => ({ ...f, dakika: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Tarih</Label>
-                  <Input type="date" className="mt-1"
-                    value={logEditing.work_date}
-                    onChange={(e) => setLogEditing(f => ({ ...f, work_date: e.target.value }))} />
-                </div>
-              </div>
-              <div>
-                <Label>Not (ops.)</Label>
-                <Textarea className="mt-1 min-h-[60px]"
-                  value={logEditing.note}
-                  onChange={(e) => setLogEditing(f => ({ ...f, note: e.target.value }))} />
-              </div>
-              <div className="flex items-center justify-between gap-2 pt-1">
-                {logEditing.id ? (
-                  <Button variant="ghost" className="text-red-600 hover:text-red-700"
-                    onClick={() => { deleteLogMutation.mutate(logEditing.id); setLogEditing(null); }} disabled={deleteLogMutation.isPending}>
-                    Sil
-                  </Button>
-                ) : <span />}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setLogEditing(null)}>İptal</Button>
-                  <Button
-                    onClick={() => saveLogMutation.mutate()}
-                    disabled={saveLogMutation.isPending || !logEditing.person_id || !((Number(logEditing.saat) || 0) || (Number(logEditing.dakika) || 0))}
-                  >
-                    Kaydet
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 }

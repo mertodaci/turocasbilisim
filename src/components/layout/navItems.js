@@ -26,7 +26,12 @@ export const allNavItems = [
         { labelKey: "is_takibi_kanban", path: "/is-takibi/kanban", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
       ]
     },
-    { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
+    {
+      labelKey: "is_takibi_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "kullanici"],
+      children: [
+        { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
+      ]
+    },
   ]
 },
 {

@@ -5,6 +5,16 @@ import { Camera } from "lucide-react";
 
 const READER_ID = "stok-camera-scan-reader";
 
+// html5-qrcode'un stop() metodu, tarayici zaten calismiyorsa (ornegin
+// start() basarisiz olduysa) Promise reddetmek yerine SENKRON hata
+// firlatiyor -- .catch() bu durumu yakalamiyor, try/catch sarmali gerekiyor.
+function safeStop(scanner) {
+  if (!scanner) return;
+  try {
+    scanner.stop().catch(() => {});
+  } catch { /* zaten calismiyordu, yapilacak bir sey yok */ }
+}
+
 /**
  * Telefon/tablet kamerasıyla QR/barkod okutma dialog'u.
  * Props: open, onOpenChange, onScan(kod) -- başarılı okumada çağrılır, dialog kendi kapanır.
@@ -44,10 +54,9 @@ export default function CameraScanDialog({ open, onOpenChange, onScan }) {
         (decodedText) => {
           if (durduruldu) return;
           durduruldu = true;
-          scanner.stop().catch(() => {}).finally(() => {
-            onScan(decodedText);
-            onOpenChange(false);
-          });
+          safeStop(scanner);
+          onScan(decodedText);
+          onOpenChange(false);
         },
         () => {} // tarama karesi başarısız -- normal, sessiz geç
       ).catch((err) => setHata("Kamera açılamadı: " + String(err?.message || err)));
@@ -56,7 +65,7 @@ export default function CameraScanDialog({ open, onOpenChange, onScan }) {
     return () => {
       durduruldu = true;
       cancelAnimationFrame(frame);
-      scannerRef.current?.stop().catch(() => {});
+      safeStop(scannerRef.current);
       scannerRef.current = null;
     };
   }, [open]); // eslint-disable-line

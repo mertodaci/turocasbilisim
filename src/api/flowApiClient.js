@@ -322,6 +322,7 @@ export const stok = {
   async zimmetOzet() { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet-ozet`, { credentials: 'include' })); },
   async zimmetGetir(id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/${id}`, { credentials: 'include' })); },
   async zimmetSeriNoListesi(urun_id, depo_id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet/seri-no-listesi?urun_id=${urun_id}&depo_id=${depo_id}`, { credentials: 'include' })); },
+  async demirbasSicilListesi(urun_id) { return handleResponse(await fetch(`${BASE_URL}/api/stok/demirbas-sicil-listesi?urun_id=${urun_id}`, { credentials: 'include' })); },
   async zimmetList(filtre = {}) {
     const p = new URLSearchParams(Object.entries(filtre).filter(([, v]) => v != null && v !== ''));
     return handleResponse(await fetch(`${BASE_URL}/api/stok/zimmet?${p}`, { credentials: 'include' }));

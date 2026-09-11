@@ -1931,6 +1931,19 @@ app.get('/api/stok/cari-ekstre', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Bir demirbaşın bugüne kadar görülmüş tüm sicil no'ları (nerede/kimde olduğuna
+// bakmaksızın) — QR etiket basımı/yeniden basımı için. Sadece Giriş anında
+// atanmış sicil no'ları döndürür (stok_hareketler'de en az bir kaydı olan).
+app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'stok_etiket', 'can_view'))) return res.status(403).json({ error: 'Yetkiniz yok' });
+  const { urun_id } = req.query;
+  if (!urun_id) return res.status(400).json({ error: 'Ürün zorunlu' });
+  try {
+    const rows = db.prepare("SELECT DISTINCT seri_no FROM stok_hareketler WHERE urun_id=? AND seri_no IS NOT NULL AND seri_no<>'' ORDER BY seri_no").all(urun_id);
+    res.json(rows.map((r) => r.seri_no));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // STOK Faz 15: Zimmet — miktar bazlı malzeme + kişi/yer hedefi + kısmi iade.
 // Bloke mekanizması stok_rezervasyonlar'ı kullanır (kullanılabilir stok hesabı

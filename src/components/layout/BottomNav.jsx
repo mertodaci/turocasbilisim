@@ -148,7 +148,7 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-xl rounded-2xl px-2 py-1.5 flex items-center gap-1 overflow-x-auto max-w-[95vw]">
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-xl rounded-2xl px-2 py-1.5 flex items-center gap-1 overflow-x-auto max-w-[95vw]">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const hasChildren = item.children && item.children.length > 0;

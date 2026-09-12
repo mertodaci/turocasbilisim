@@ -19,7 +19,6 @@ const FIELD_TO_CATEGORY = {
   contract_type: "sozlesme_turu",
   type: "bilet_tipi",
   customer_type: "musteri_tipi",
-  customer_detail: "musteri_detayi",
   city: "sehir",
   district: "sehir",
 };

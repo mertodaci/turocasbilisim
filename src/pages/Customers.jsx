@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Link } from "react-router-dom";
-import { Plus, Search, Building2, MapPin, Users, Briefcase, Trash2, Pencil, ChevronRight, TrendingUp, UserCheck, Activity } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Users, Briefcase, Trash2, Pencil, ChevronRight, UserCheck, Activity } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import CustomerFormDialog from "@/components/customers/CustomerFormDialog";
@@ -18,7 +18,6 @@ const DEFAULT_STATUSES = [
 
 const TYPE_CFG = {
   musteri: { label:"Müşteri",       cls:"bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800" },
-  aday:    { label:"Aday Müşteri",  cls:"bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800" },
 };
 
 const customerTypeLabels = { belediye:"Belediye", il_ozel_idaresi:"İl Özel İdaresi", kamu_kurumu:"Kamu Kurumu", su_idaresi:"Su İdaresi", ozel_sektor:"Özel Sektör", sivil_toplum:"STK", diger:"Diğer" };
@@ -39,7 +38,6 @@ async function createJobTrackingDefaults(customerId, customerName) {
 export default function Customers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktif");
-  const [potentialFilter, setPotentialFilter] = useState("all"); // all | musteri | aday
   const [typeFilter, setTypeFilter] = useState("all");
   const [specialFilter, setSpecialFilter] = useState("none"); // none | potansiyel | is_takibi
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,7 +90,6 @@ export default function Customers() {
   const stats = useMemo(() => ({
     total: customers.length,
     active: customers.filter(c=>c.status==="aktif"||!c.status).length,
-    potential: customers.filter(c=>c.is_potential==1||c.is_potential===true).length,
     passive: customers.filter(c=>c.status==="pasif").length,
     is_takibi: customers.filter(c=>c.use_job_tracking==1||c.use_job_tracking===true).length,
   }), [customers]);
@@ -103,14 +100,10 @@ export default function Customers() {
       c.city?.toLowerCase().includes(search.toLowerCase()) ||
       c.top_manager?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter==="hepsi" || c.status===statusFilter || (!c.status && statusFilter==="aktif");
-    const isAday = c.is_potential==1||c.is_potential===true;
-    const matchPotential = potentialFilter==="all"
-      || (potentialFilter==="aday" && isAday)
-      || (potentialFilter==="musteri" && !isAday);
     const matchSpecial = specialFilter==="none"
       || (specialFilter==="is_takibi" && (c.use_job_tracking==1||c.use_job_tracking===true));
     const matchType = typeFilter==="all" || c.customer_type===typeFilter;
-    return matchSearch && matchStatus && matchPotential && matchType && matchSpecial;
+    return matchSearch && matchStatus && matchType && matchSpecial;
   });
 
   const filteredSorted = [...filtered].sort((a,b) => (a.company_name||'').localeCompare(b.company_name||'', 'tr'));
@@ -135,10 +128,9 @@ export default function Customers() {
       {/* KPI KARTLARI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label:"Aktif Müşteri", val:stats.active, icon:UserCheck, color:"bg-emerald-500", onClick:()=>{ setStatusFilter("aktif"); setPotentialFilter("all"); setSpecialFilter("none"); } },
-          { label:"Aday Müşteri", val:stats.potential, icon:TrendingUp, color:"bg-amber-500", onClick:()=>{ setPotentialFilter("aday"); setStatusFilter("hepsi"); setSpecialFilter("none"); } },
-          { label:"Pasif Müşteri", val:stats.passive, icon:Activity, color:"bg-slate-500", onClick:()=>{ setStatusFilter("pasif"); setPotentialFilter("all"); setSpecialFilter("none"); } },
-          { label:"İş Takibi Aktif", val:stats.is_takibi, icon:Briefcase, color:"bg-purple-500", onClick:()=>{ setSpecialFilter("is_takibi"); setStatusFilter("hepsi"); setPotentialFilter("all"); } },
+          { label:"Aktif Müşteri", val:stats.active, icon:UserCheck, color:"bg-emerald-500", onClick:()=>{ setStatusFilter("aktif"); setSpecialFilter("none"); } },
+          { label:"Pasif Müşteri", val:stats.passive, icon:Activity, color:"bg-slate-500", onClick:()=>{ setStatusFilter("pasif"); setSpecialFilter("none"); } },
+          { label:"İş Takibi Aktif", val:stats.is_takibi, icon:Briefcase, color:"bg-purple-500", onClick:()=>{ setSpecialFilter("is_takibi"); setStatusFilter("hepsi"); } },
         ].map(({label,val,icon:Icon,color,onClick})=>(
           <button key={label} onClick={onClick}
             className="bg-card border border-border/50 rounded-2xl p-4 text-left hover:shadow-md transition-all hover:-translate-y-0.5 shadow-sm">
@@ -165,12 +157,6 @@ export default function Customers() {
             <option value="aktif">Aktif</option>
             <option value="pasif">Pasif</option>
           </select>
-          <select value={potentialFilter} onChange={e=>setPotentialFilter(e.target.value)}
-            className="text-sm border border-border/50 rounded-xl px-3 py-1.5 bg-card text-foreground focus:outline-none">
-            <option value="all">Müşteri + Aday</option>
-            <option value="musteri">Müşteri</option>
-            <option value="aday">Aday Müşteri</option>
-          </select>
         </div>
       </div>
 
@@ -191,19 +177,18 @@ export default function Customers() {
           {filteredSorted.map((c, idx) => {
             const initials = c.company_name?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()||"?";
             const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-            const isAday = c.is_potential==1||c.is_potential===true;
-            const typeCfg = isAday ? TYPE_CFG.aday : TYPE_CFG.musteri;
+            const typeCfg = TYPE_CFG.musteri;
             const typeLabel = customerTypeLabels[c.customer_type];
 
             return (
               <div key={c.id} className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all group overflow-hidden flex">
                 {/* Sol accent seridi */}
-                <div className={cn("w-1.5 shrink-0", isAday ? "bg-gradient-to-b from-amber-400 to-orange-400" : "bg-gradient-to-b from-emerald-400 to-teal-500")} />
+                <div className="w-1.5 shrink-0 bg-gradient-to-b from-emerald-400 to-teal-500" />
                 <div className="flex-1 min-w-0 flex flex-col">
                 {/* KART ÜSTÜ */}
                 <div className="p-5 pb-3">
                   <div className="flex items-start justify-between mb-3">
-                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-base shrink-0 shadow-sm", isAday ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-gradient-to-br from-emerald-500 to-teal-600")}>
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-base shrink-0 shadow-sm bg-gradient-to-br from-emerald-500 to-teal-600">
                       {initials}
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -238,13 +223,7 @@ export default function Customers() {
                       <span className="truncate">{c.top_manager}</span>
                     </div>
                   )}
-                  {c.project_manager && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Briefcase className="w-3.5 h-3.5 shrink-0 text-muted-foreground/60"/>
-                      <span className="truncate">{c.project_manager}</span>
-                    </div>
-                  )}
-                  {!c.city && !c.top_manager && !c.project_manager && (
+                  {!c.city && !c.top_manager && (
                     <p className="text-xs text-muted-foreground/40">Bilgi girilmemiş</p>
                   )}
                 </div>

@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Plus, Pencil, Trash2, Phone, Mail,
   Star, AlertCircle, Shield, Wrench, User, Puzzle,
-  Briefcase, HardDrive, FileText, ExternalLink, FileCheck,
-  Building2, Tag, ChevronDown, MapPin, Wallet
+  HardDrive, FileText, ExternalLink, FileCheck,
+  Building2, ChevronDown, MapPin, Wallet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,16 +56,6 @@ const customerTypeLabels = {
   su_idaresi: "Su İdaresi",
   ozel_sektor: "Özel Sektör",
   sivil_toplum: "Sivil Toplum",
-  diger: "Diğer",
-};
-
-const customerDetailLabels = {
-  yazilim: "Yazılım",
-  donanim: "Donanım",
-  danismanlik: "Danışmanlık",
-  bakim_destek: "Bakım & Destek",
-  egitim: "Eğitim",
-  entegrasyon: "Entegrasyon",
   diger: "Diğer",
 };
 
@@ -324,21 +314,18 @@ export default function CustomerDetail() {
       {/* Ust Kart */}
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
         {/* Renkli accent seridi */}
-        <div className={cn("h-1.5 w-full", customer.is_potential ? "bg-gradient-to-r from-amber-400 to-orange-400" : "bg-gradient-to-r from-primary to-blue-500")} />
+        <div className="h-1.5 w-full bg-gradient-to-r from-primary to-blue-500" />
         <div className="p-6">
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             {/* Sol: Kimlik */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start gap-4">
-                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-sm", customer.is_potential ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-gradient-to-br from-primary to-blue-600")}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-sm bg-gradient-to-br from-primary to-blue-600">
                   <span className="text-2xl font-bold text-white">{initials}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-2xl font-bold text-foreground leading-tight">{customer.company_name}</h1>
-                    <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", customer.is_potential ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700")}>
-                      {customer.is_potential ? "Aday Musteri" : "Musteri"}
-                    </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">
                     {customer.city && (
@@ -392,12 +379,6 @@ export default function CustomerDetail() {
                     {customerTypeLabels[customer.customer_type] || customer.customer_type}
                   </span>
                 )}
-                {customer.customer_detail && (
-                  <span className="inline-flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-lg">
-                    <Tag className="w-3.5 h-3.5" />
-                    {customerDetailLabels[customer.customer_detail] || customer.customer_detail}
-                  </span>
-                )}
               </div>
 
               {customer.notes && (
@@ -408,7 +389,6 @@ export default function CustomerDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5 pt-5 border-t border-border/40">
                 {[
                   { label: "Adres", value: customer.address, icon: MapPin },
-                  { label: "Parti", value: customer.party, icon: Tag },
                 ]
                   .filter((x) => x.value)
                   .map((x, i) => {
@@ -435,32 +415,6 @@ export default function CustomerDetail() {
                   <Pencil className="w-3.5 h-3.5" /> Duzenle
                 </Button>
               </div>
-              {(customer.project_manager || customer.deploy_responsible) && (
-                <div className="bg-muted/30 rounded-xl p-3 space-y-3">
-                  {customer.project_manager && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <HardDrive className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">Proje Sorumlusu</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{customer.project_manager}</p>
-                      </div>
-                    </div>
-                  )}
-                  {customer.deploy_responsible && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center shrink-0">
-                        <Briefcase className="w-4 h-4 text-amber-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">Deploy Sorumlusu</p>
-                        <p className="text-sm font-semibold text-foreground truncate">{customer.deploy_responsible}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>

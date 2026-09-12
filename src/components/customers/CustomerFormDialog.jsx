@@ -9,22 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 const empty = {
-  company_name: "", customer_type: "", customer_detail: "",
-  project_manager: "", deploy_responsible: "", city: "",
+  company_name: "", customer_type: "", city: "",
   status: "aktif", notes: "", use_job_tracking: false,
-  district: "", party: "", top_manager: "", address: "", is_potential: 0,
+  district: "", top_manager: "", address: "",
 };
 
 export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading, customer }) {
   const [form, setForm] = useState(empty);
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employees-active"],
-    queryFn: () => flowApi.entities.Employee.filter({ status: "aktif" }, "full_name", 200),
-    enabled: open,
-  });
   const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
-  const { data: customerDetailOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_detayi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_detayi", is_active: true }) });
   const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }) });
 
   useEffect(() => {
@@ -40,7 +33,7 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{customer ? "Müşteriyi Düzenle" : "Yeni Müşteri"}</DialogTitle>
         </DialogHeader>
@@ -62,22 +55,15 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Müşteri Detayı</Label>
-                <Select value={form.customer_detail} onValueChange={(v) => set("customer_detail", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{customerDetailOptions.map((o) => <SelectItem key={o.id || o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                <Label>Durum</Label>
+                <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aktif">Aktif</SelectItem>
+                    <SelectItem value="pasif">Pasif</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Durum</Label>
-              <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="aktif">Aktif</SelectItem>
-                  <SelectItem value="pasif">Pasif</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -103,47 +89,6 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
             </div>
           </div>
 
-          {/* Detaylar */}
-          <div className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detaylar</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Proje Yöneticisi</Label>
-                <Select value={form.project_manager} onValueChange={(v) => set("project_manager", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Deploy Sorumlusu</Label>
-                <Select value={form.deploy_responsible} onValueChange={(v) => set("deploy_responsible", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Satis Bilgileri */}
-          <div className="pt-2 border-t border-border/40">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Satış Bilgileri</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Müşteri Tipi</Label>
-                <Select value={String(form.is_potential ?? 0)} onValueChange={(v) => set("is_potential", parseInt(v, 10))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Müşteri</SelectItem>
-                    <SelectItem value="1">Aday Müşteri</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Parti</Label>
-                <Input value={form.party} onChange={(e) => set("party", e.target.value)} placeholder="Parti" />
-              </div>
-            </div>
-          </div>
           {/* Notlar */}
           <div className="space-y-1.5">
             <Label>Notlar</Label>

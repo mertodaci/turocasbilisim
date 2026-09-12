@@ -23,7 +23,7 @@ const CATEGORIES = [
   { label: "İş Takibi",         keys: ["is_takibi", "is_takibi_dashboard", "is_takibi_projeler", "is_takibi_biletler", "is_takibi_kanban", "is_takibi_bilet_durumlari", "is_takibi_bilet_tipleri"] },
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "quick_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map"] },
-  { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler"] },
+  { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler", "sozlesme_turleri", "sozlesme_urunler", "sozlesme_moduller"] },
   { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
   { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_demirbas_sorgula", "stok_excel"] },
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },

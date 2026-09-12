@@ -47,6 +47,9 @@ const LeaveAllowances = lazy(() => import('./pages/LeaveAllowances'));
 const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
+const SozlesmeTurleri = lazy(() => import('./pages/SozlesmeTurleri'));
+const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
+const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
 const SozlesmeForm = lazy(() => import('./pages/SozlesmeForm'));
 const JobTrackingV3 = lazy(() => import('./pages/JobTrackingV3'));
 const JobTrackingDashboard = lazy(() => import('./pages/JobTrackingDashboard'));
@@ -208,6 +211,9 @@ const AuthenticatedApp = () => {
         <Route path="/calisan-raporu" element={guard("employee_report", <EmployeeReport />)} />
         <Route path="/hakedisler" element={guard("hakedisler", <Hakedisler />)} />
         <Route path="/sozlesmeler" element={guard("sozlesmeler", <Sozlesmeler />)} />
+        <Route path="/sozlesme-turleri" element={guard("sozlesme_turleri", <SozlesmeTurleri />)} />
+        <Route path="/sozlesme-urunler" element={guard("sozlesme_urunler", <SozlesmeUrunler />)} />
+        <Route path="/sozlesme-moduller" element={guard("sozlesme_moduller", <SozlesmeModuller />)} />
         <Route path="/sozlesmeler/yeni" element={guard("sozlesmeler", <SozlesmeForm />)} />
         <Route path="/sozlesmeler/:id" element={guard("sozlesmeler", <SozlesmeForm />)} />
         <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />

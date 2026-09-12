@@ -39,6 +39,9 @@ export const MODULES = [
   { key: "quick_report",        label: "Hizli Raporlama",        path: "/hizli-rapor" },
   { key: "sozlesmeler",         label: "Sözleşmeler",            path: "/sozlesmeler" },
   { key: "hakedisler",          label: "Hakediş",                path: "/hakedisler" },
+  { key: "sozlesme_turleri",    label: "Sözleşme Türleri",       path: "/sozlesme-turleri" },
+  { key: "sozlesme_urunler",    label: "Ürünler",                path: "/sozlesme-urunler" },
+  { key: "sozlesme_moduller",   label: "Modüller",               path: "/sozlesme-moduller" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
   { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
   { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },

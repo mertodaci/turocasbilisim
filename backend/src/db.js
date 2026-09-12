@@ -82,6 +82,23 @@ function migrateLegacyJobTrackingRename() {
       }
     }
   } catch (e) { console.warn('[migrate] is_takibi_tanimlar bölünme kopyası:', e.message); }
+  // Genel Tanımlar'dan Sözleşme Türleri / Ürünler / Modüller ayrı ekranlara
+  // taşındı (Sözleşme Yönetimi > Tanım altında) — eski `ik_tanimlar` yetkisi
+  // olan roller yeni 3 anahtara da kopyalanır (erişim kaybı olmasın).
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const oldPerms = db.prepare("SELECT role_name, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE module='ik_tanimlar'").all();
+    for (const p of oldPerms) {
+      for (const newModule of ['sozlesme_turleri', 'sozlesme_urunler', 'sozlesme_moduller']) {
+        const exists = db.prepare("SELECT id FROM role_permissions WHERE role_name=? AND module=?").get(p.role_name, newModule);
+        if (!exists) {
+          db.prepare("INSERT INTO role_permissions (id, role_name, module, can_view, can_add, can_edit, can_delete, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?)")
+            .run(uuidv4(), p.role_name, newModule, p.can_view, p.can_add, p.can_edit, p.can_delete, now, now);
+        }
+      }
+    }
+  } catch (e) { console.warn('[migrate] sözleşme türleri/ürün/modül ayrımı kopyası:', e.message); }
   try {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
@@ -569,7 +586,7 @@ function initDb() {
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_bilet_durumlari','is_takibi_bilet_tipleri',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
-      'hakedisler','sozlesmeler','oturum_yonetimi',
+      'hakedisler','sozlesmeler','sozlesme_turleri','sozlesme_urunler','sozlesme_moduller','oturum_yonetimi',
       // ── Stok / Depo Yönetimi modülü ──────────────────────────────
       // Faz 1: Tanımlar
       'stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf',

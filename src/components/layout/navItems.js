@@ -206,8 +206,21 @@ export const allNavItems = [
 {
   labelKey: "sozlesme_yonetimi", path: null, icon: ScrollText, roles: ["admin", "yonetici", "ik"],
   children: [
-    { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
-    { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
+    {
+      labelKey: "sozlesme_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
+      children: [
+        { labelKey: "sozlesme_turleri", path: "/sozlesme-turleri", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "sozlesme_urunler", path: "/sozlesme-urunler", icon: Package, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "sozlesme_moduller", path: "/sozlesme-moduller", icon: Package, roles: ["admin", "yonetici", "ik"] },
+      ]
+    },
+    {
+      labelKey: "sozlesme_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"],
+      children: [
+        { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
+      ]
+    },
   ]
 },
 {

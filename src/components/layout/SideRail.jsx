@@ -14,7 +14,7 @@ import { allNavItems } from "./navItems";
 // ikisi bağımsız çalışan iki ayrı navigasyon). Dar hâlde yalnız ikonlar;
 // hamburger'e tıklayınca tüm çubuk etiketli geniş panele dönüşür, alt
 // gruplar accordion olarak açılır/kapanır. Yalnızca masaüstünde görünür.
-export default function SideRail({ expanded, setExpanded }) {
+export default function SideRail({ expanded, setExpanded, side = "left" }) {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadMessageCount } = useMessages();
@@ -127,7 +127,8 @@ export default function SideRail({ expanded, setExpanded }) {
   return (
     <>
       <nav className={cn(
-        "hidden md:flex fixed left-0 top-20 bottom-0 z-40 bg-card border-r border-border flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
+        "hidden md:flex fixed top-20 bottom-0 z-40 bg-card flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
+        side === "right" ? "right-0 border-l border-border" : "left-0 border-r border-border",
         expanded ? "w-64" : "w-16"
       )}>
         <button

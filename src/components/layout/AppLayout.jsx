@@ -42,11 +42,14 @@ function AppBreadcrumb() {
 
   return (
     <div className="mb-4 flex items-center gap-2">
-      <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-        <ArrowLeft className="w-4 h-4" />
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-muted rounded-lg px-2 py-1 -ml-2 transition-colors shrink-0"
+      >
+        <ArrowLeft className="w-4 h-4" /> Geri
       </button>
       <Breadcrumb>
-        <BreadcrumbList>
+        <BreadcrumbList className="text-base text-foreground/70">
           {trail.map((labelKey, idx) => {
             const isLast = idx === trail.length - 1;
             const label = isLast && dynamicLabel ? dynamicLabel : t(labelKey);
@@ -55,7 +58,7 @@ function AppBreadcrumb() {
               <span key={labelKey} className="flex items-center gap-1.5 sm:gap-2.5">
                 <BreadcrumbItem>
                   {isLast || !path ? (
-                    <BreadcrumbPage>{label}</BreadcrumbPage>
+                    <BreadcrumbPage className="font-semibold">{label}</BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink asChild>
                       <Link to={path}>{label}</Link>

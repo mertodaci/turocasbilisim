@@ -1,5 +1,9 @@
-import { Users, Building2 } from "lucide-react";
+import { Users, Building2, CalendarDays } from "lucide-react";
 import { DefinitionsScreen } from "@/components/definitions/DefinitionsScreen";
+import IkSubeler from "@/pages/ik/IkSubeler";
+import IkBolumler from "@/pages/ik/IkBolumler";
+import LeaveTypeManager from "@/components/leave/LeaveTypeManager";
+import LeaveAllowanceManager from "@/components/leave/LeaveAllowanceManager";
 
 const CATEGORIES = [
   { key: "departman",      label: "Departmanlar",      group: "Çalışan" },
@@ -9,14 +13,23 @@ const CATEGORIES = [
   { key: "musteri_tipi",   label: "Müşteri Tipleri",   group: "Müşteri" },
   { key: "musteri_detayi", label: "Müşteri Detayları", group: "Müşteri" },
   { key: "sehir",          label: "Şehirler",           group: "Müşteri" },
+  { key: "subeler",        label: "Şubeler / Lokasyonlar", group: "Organizasyon", component: IkSubeler },
+  { key: "bolumler",       label: "Bölümler",             group: "Organizasyon", component: IkBolumler },
+  { key: "izin_turleri",   label: "İzin Türleri ve Kuralları", group: "İzin", component: LeaveTypeManager },
+  { key: "izin_haklari",   label: "İzin Hakları Yönetimi",     group: "İzin", component: LeaveAllowanceManager },
 ];
 
 const GROUPS = [
-  { key: "Çalışan",    icon: Users,      color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30",   border: "border-blue-200 dark:border-blue-800" },
-  { key: "Müşteri",    icon: Building2,  color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800" },
+  { key: "Çalışan",      icon: Users,        color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30",   border: "border-blue-200 dark:border-blue-800" },
+  { key: "Müşteri",      icon: Building2,    color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800" },
+  { key: "Organizasyon", icon: Building2,    color: "text-teal-500",   bg: "bg-teal-50 dark:bg-teal-950/30",   border: "border-teal-200 dark:border-teal-800" },
+  { key: "İzin",         icon: CalendarDays, color: "text-amber-500",  bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800" },
 ];
 
-// Tek "Genel Tanımlar" ekranı: çalışan + müşteri parametrik tanımları.
+// Tek "Genel Tanımlar" ekranı: çalışan + müşteri parametrik tanımları +
+// (pilot) Şubeler/Bölümler/İzin Türleri/İzin Hakları Yönetimi buraya
+// gömülü sekmeler olarak katlandı — bu 4'ünün kendi route'u/yetki
+// anahtarı hâlâ duruyor (App.jsx), yalnızca nav'dan kaldırıldılar.
 // Sözleşme Türleri / Ürünler / Modüller kendi ayrı Tanım ekranlarına
 // taşındı (bkz. SozlesmeTurleri.jsx / SozlesmeUrunler.jsx /
 // SozlesmeModuller.jsx), Sözleşme Yönetimi menüsü altında.
@@ -27,7 +40,7 @@ export default function Definitions() {
       groups={GROUPS}
       categories={CATEGORIES}
       title="Genel Tanımlar"
-      subtitle="Çalışan ve müşteri tanımlarını yönetin"
+      subtitle="Çalışan, müşteri, organizasyon ve izin tanımlarını yönetin"
     />
   );
 }

@@ -287,7 +287,9 @@ export function DefinitionsScreen({ groups, categories, title, subtitle }) {
               </div>
             </div>
             <div className="p-6">
-              <CategoryPanel key={activeCategory} category={activeCategory} showColor={activeCategory === "aktivite_tipi"} />
+              {activeCategoryObj?.component
+                ? <activeCategoryObj.component />
+                : <CategoryPanel key={activeCategory} category={activeCategory} showColor={activeCategory === "aktivite_tipi"} />}
             </div>
           </div>
         </div>

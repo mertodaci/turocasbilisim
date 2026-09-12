@@ -78,17 +78,10 @@ export default function IkSubeler() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-primary" /> Şubeler / Lokasyonlar
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Personelin bağlı olduğu işyeri/lokasyonlar. QR puantajda konum doğrulaması için IP aralığı ve GPS koordinatı + sapma metresi tanımlanır (Wi-Fi/IP eşleşirse konum sorulmaz).</p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <Input className="max-w-xs" placeholder="Ad / yetkili / adres ara" value={q} onChange={(e) => setQ(e.target.value)} />
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Şube</Button>
       </div>
-
-      <Input className="max-w-xs" placeholder="Ad / yetkili / adres ara" value={q} onChange={(e) => setQ(e.target.value)} />
 
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-x-auto">
         {isLoading ? (

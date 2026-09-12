@@ -25,7 +25,6 @@ const CATEGORIES = [
 const GROUPS = [
   { key: "Çalışan",    icon: Users,      color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30",   border: "border-blue-200 dark:border-blue-800" },
   { key: "Müşteri",    icon: Building2,  color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", border: "border-purple-200 dark:border-purple-800" },
-  { key: "Aktivite",   icon: Activity,   color: "text-green-500",  bg: "bg-green-50 dark:bg-green-950/30",  border: "border-green-200 dark:border-green-800" },
   { key: "Sözleşme",   icon: FileText,   color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30", border: "border-orange-200 dark:border-orange-800" },
   { key: "Ürün-Modül", icon: Package,    color: "text-teal-500",   bg: "bg-teal-50 dark:bg-teal-950/30",   border: "border-teal-200 dark:border-teal-800" },
 ];

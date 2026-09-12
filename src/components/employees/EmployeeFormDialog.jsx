@@ -29,6 +29,7 @@ const emptyForm = {
   university: "", education_department: "", graduation_date: "",
   education_history: [],
   education_documents: [],
+  certificates: [],
   // Özlük & Ücret (Bordro) — employees tablosunda tutulur, ayrı ekran yok
   sube_id: "", bolum_id: "", meslek_kodu: "", kanun_no: "", emekli_mi: 0,
   personel_adresi: "",
@@ -65,8 +66,10 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 3000) });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingCertIdx, setUploadingCertIdx] = useState(null);
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
+  const certInputRefs = useRef({});
 
   useEffect(() => {
     if (employee) {
@@ -96,6 +99,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
           ? employee.education_history
           : (employee.university ? [{ university: employee.university, department: employee.education_department || "", graduation_date: employee.graduation_date || "" }] : []),
         education_documents: employee.education_documents || [],
+        certificates: employee.certificates || [],
         sube_id: employee.sube_id || "",
         bolum_id: employee.bolum_id || "",
         meslek_kodu: employee.meslek_kodu || "",
@@ -164,6 +168,25 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
   const removeDoc = (idx) => {
     setForm((prev) => ({ ...prev, education_documents: prev.education_documents.filter((_, i) => i !== idx) }));
+  };
+
+  const handleCertDocUpload = async (idx, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCertIdx(idx);
+    try {
+      const url = await uploadFile(file);
+      setForm((prev) => {
+        const updated = [...prev.certificates];
+        updated[idx] = { ...updated[idx], document_url: `${BASE_URL}${url}`, document_name: file.name };
+        return { ...prev, certificates: updated };
+      });
+    } catch (err) {
+      alert('Belge yuklenemedi: ' + err.message);
+    } finally {
+      setUploadingCertIdx(null);
+      e.target.value = "";
+    }
   };
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -444,6 +467,102 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                   ))}
                   {(!form.education_history || form.education_history.length === 0) && (
                     <p className="text-xs text-muted-foreground italic">Henuz universite eklenmedi.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sertifikalar & Eğitimler */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Sertifikalar & Eğitimler</Label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, certificates: [...(form.certificates || []), { name: "", institution: "", date: "", document_url: "", document_name: "" }] })}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    + Sertifika/Eğitim Ekle
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {(form.certificates || []).map((cert, idx) => (
+                    <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Sertifika/Eğitim</span>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, certificates: form.certificates.filter((_, i) => i !== idx) })}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <Input
+                        placeholder="Sertifika / eğitim adı"
+                        value={cert.name}
+                        onChange={(e) => {
+                          const updated = [...form.certificates];
+                          updated[idx] = { ...updated[idx], name: e.target.value };
+                          setForm({ ...form, certificates: updated });
+                        }}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Kurum"
+                          value={cert.institution}
+                          onChange={(e) => {
+                            const updated = [...form.certificates];
+                            updated[idx] = { ...updated[idx], institution: e.target.value };
+                            setForm({ ...form, certificates: updated });
+                          }}
+                        />
+                        <Input
+                          type="date"
+                          value={cert.date}
+                          onChange={(e) => {
+                            const updated = [...form.certificates];
+                            updated[idx] = { ...updated[idx], date: e.target.value };
+                            setForm({ ...form, certificates: updated });
+                          }}
+                        />
+                      </div>
+                      {cert.document_url ? (
+                        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
+                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <a href={cert.document_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex-1 truncate">{cert.document_name || "Belge"}</a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...form.certificates];
+                              updated[idx] = { ...updated[idx], document_url: "", document_name: "" };
+                              setForm({ ...form, certificates: updated });
+                            }}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => certInputRefs.current[idx]?.click()}
+                          disabled={uploadingCertIdx === idx}
+                          className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50"
+                        >
+                          {uploadingCertIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          {uploadingCertIdx === idx ? "Yukleniyor..." : "Belge Ekle"}
+                        </button>
+                      )}
+                      <input
+                        ref={(el) => { certInputRefs.current[idx] = el; }}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => handleCertDocUpload(idx, e)}
+                      />
+                    </div>
+                  ))}
+                  {(!form.certificates || form.certificates.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic">Henuz sertifika/eğitim eklenmedi.</p>
                   )}
                 </div>
               </div>

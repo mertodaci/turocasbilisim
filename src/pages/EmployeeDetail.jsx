@@ -206,8 +206,9 @@ export default function EmployeeDetail() {
       )}
 
       <Tabs defaultValue="genel">
-        <TabsList className={cn("grid w-full", isPrivileged && employee.hire_date ? "grid-cols-2" : "grid-cols-1")}>
+        <TabsList className={cn("grid w-full", isPrivileged && employee.hire_date ? "grid-cols-3" : "grid-cols-2")}>
           <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
+          <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
         </TabsList>
 
@@ -383,72 +384,129 @@ export default function EmployeeDetail() {
           )}
 
         </div>
-
-        {/* Mezuniyet Bilgileri */}
-        {(() => {
-          const history = employee.education_history?.length
-            ? employee.education_history
-            : (employee.university ? [{ university: employee.university, department: employee.education_department, graduation_date: employee.graduation_date }] : []);
-          if (!history.length) return null;
-          return (
-            <div className="mt-5 pt-5 border-t border-border/50">
-              <div className="flex items-center gap-2 mb-3">
-                <GraduationCap className="w-4 h-4 text-indigo-500" />
-                <h4 className="text-sm font-semibold text-foreground">Üniversite Bilgileri</h4>
-              </div>
-              <div className="space-y-3">
-                {history.map((edu, idx) => (
-                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-xl">
-                    {edu.university && (
-                      <div>
-                        <p className="text-[11px] text-muted-foreground">Üniversite</p>
-                        <p className="text-sm font-medium">{edu.university}</p>
-                      </div>
-                    )}
-                    {edu.department && (
-                      <div>
-                        <p className="text-[11px] text-muted-foreground">Bölüm</p>
-                        <p className="text-sm font-medium">{edu.department}</p>
-                      </div>
-                    )}
-                    {edu.graduation_date && (
-                      <div>
-                        <p className="text-[11px] text-muted-foreground">Mezuniyet Tarihi</p>
-                        <p className="text-sm font-medium">{format(new Date(edu.graduation_date), "d MMMM yyyy", { locale: tr })}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Belgeler */}
-        {employee.education_documents?.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-border/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Paperclip className="w-4 h-4 text-muted-foreground" />
-              <h4 className="text-sm font-semibold text-foreground">Belgeler</h4>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {employee.education_documents.map((doc, idx) => (
-                <a
-                  key={idx}
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs bg-muted/60 hover:bg-muted rounded-lg px-3 py-1.5 text-foreground transition-colors border border-border/50"
-                >
-                  <Paperclip className="w-3 h-3 text-muted-foreground" />
-                  {doc.name}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
+        </TabsContent>
+
+        <TabsContent value="egitim" className="space-y-6 mt-4">
+        <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+          <h3 className="text-sm font-semibold text-foreground mb-4">Eğitim</h3>
+
+          {(() => {
+            const history = employee.education_history?.length
+              ? employee.education_history
+              : (employee.university ? [{ university: employee.university, department: employee.education_department, graduation_date: employee.graduation_date }] : []);
+            const certificates = employee.certificates || [];
+            const documents = employee.education_documents || [];
+
+            if (!history.length && !certificates.length && !documents.length) {
+              return <p className="text-sm text-muted-foreground">Eğitim bilgisi girilmemiş.</p>;
+            }
+
+            return (
+              <>
+                {/* Üniversite Bilgileri */}
+                {history.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <GraduationCap className="w-4 h-4 text-indigo-500" />
+                      <h4 className="text-sm font-semibold text-foreground">Üniversite Bilgileri</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {history.map((edu, idx) => (
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-xl">
+                          {edu.university && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Üniversite</p>
+                              <p className="text-sm font-medium">{edu.university}</p>
+                            </div>
+                          )}
+                          {edu.department && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Bölüm</p>
+                              <p className="text-sm font-medium">{edu.department}</p>
+                            </div>
+                          )}
+                          {edu.graduation_date && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Mezuniyet Tarihi</p>
+                              <p className="text-sm font-medium">{format(new Date(edu.graduation_date), "d MMMM yyyy", { locale: tr })}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sertifikalar & Eğitimler */}
+                {certificates.length > 0 && (
+                  <div className={history.length > 0 ? "mt-5 pt-5 border-t border-border/50" : ""}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <GraduationCap className="w-4 h-4 text-emerald-500" />
+                      <h4 className="text-sm font-semibold text-foreground">Sertifikalar & Eğitimler</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {certificates.map((cert, idx) => (
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-xl">
+                          {cert.name && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Sertifika / Eğitim</p>
+                              <p className="text-sm font-medium">{cert.name}</p>
+                            </div>
+                          )}
+                          {cert.institution && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Kurum</p>
+                              <p className="text-sm font-medium">{cert.institution}</p>
+                            </div>
+                          )}
+                          {cert.date && (
+                            <div>
+                              <p className="text-[11px] text-muted-foreground">Tarih</p>
+                              <p className="text-sm font-medium">{format(new Date(cert.date), "d MMMM yyyy", { locale: tr })}</p>
+                            </div>
+                          )}
+                          {cert.document_url && (
+                            <div className="sm:col-span-3">
+                              <a href={cert.document_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                                <Paperclip className="w-3 h-3" /> {cert.document_name || "Belgeyi Görüntüle"}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Belgeler */}
+                {documents.length > 0 && (
+                  <div className={(history.length > 0 || certificates.length > 0) ? "mt-5 pt-5 border-t border-border/50" : ""}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <h4 className="text-sm font-semibold text-foreground">Belgeler</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {documents.map((doc, idx) => (
+                        <a
+                          key={idx}
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs bg-muted/60 hover:bg-muted rounded-lg px-3 py-1.5 text-foreground transition-colors border border-border/50"
+                        >
+                          <Paperclip className="w-3 h-3 text-muted-foreground" />
+                          {doc.name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
         </TabsContent>
 
       {/* İzin Bilgileri */}

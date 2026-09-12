@@ -17,7 +17,7 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
-  employees: ['education_documents', 'education_history'],
+  employees: ['education_documents', 'education_history', 'certificates'],
   correspondences: ['recipient_ids', 'recipient_names', 'attachments', 'tags'],
   conversations: ['participants', 'last_read_message_id_by_user', 'archived_by', 'deleted_by'],
   messages: ['reactions'],
@@ -290,7 +290,7 @@ function effortLogOwnedBy(row, user) {
 // Tablo bazlı izin verilen kolonlar (SQL injection koruması)
 const ALLOWED_COLUMNS = {
   card_logs: ['direction','seq','card_uid','person_name','employee_id','employee_name','ts','event_time','synced_at','source'],
-  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking','sube_id','bolum_id','meslek_kodu','kanun_no','emekli_mi','personel_adresi','aylik_ucret','saatlik_ucret','dakikalik_ucret','ticket_aylik','sahsi_hesap_aktif','sahsi_hesap_tutar','sahsi_hesap_banka','sahsi_hesap_iban','sahsi_hesap_aciklama','vardiya_id'],
+  employees: ['full_name','email','phone','role','department','position','hire_date','birth_date','address','notes','status','avatar_url','manager_id','customer_id','education_documents','education_history','certificates','tc','gender','app_role','next_leave_entitlement_date','leave_carryover','leave_used_before','marital_status','military_status','disability_status','blood_type','emergency_contact','emergency_phone','iban','bank_name','tax_office','tax_number','sgk_number','education_level','university','university_department','graduation_year','manager_name','highest_education','education_department','graduation_date','exit_date','exit_reason','exit_notes','exit_document','card_uid','show_in_job_tracking','sube_id','bolum_id','meslek_kodu','kanun_no','emekli_mi','personel_adresi','aylik_ucret','saatlik_ucret','dakikalik_ucret','ticket_aylik','sahsi_hesap_aktif','sahsi_hesap_tutar','sahsi_hesap_banka','sahsi_hesap_iban','sahsi_hesap_aciklama','vardiya_id'],
   customers: ['name','email','phone','address','city','country','status','notes','contact_person','tax_number','sector','customer_type','municipality_type','customer_detail','population','project_manager','deploy_responsible','company_name','use_job_tracking','district','party','top_manager','contact_title','follow_status','is_potential','next_visit_date','is_supplier','is_customer','supplier_code','tax_office','payment_method','payment_term_days','gsm','website','working_region'],
   leave_requests: ['employee_id','employee_name','employee_email','leave_type','start_date','end_date','days','reason','status','approver_id','approver_name','approval_date','approval_history','notes'],
   leave_allowances: ['employee_id','employee_name','employee_email','year','total_days','used_days','notes'],

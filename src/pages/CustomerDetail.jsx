@@ -4,7 +4,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Plus, Pencil, Trash2, Phone, Mail,
   Star, AlertCircle, Shield, Wrench, User, Puzzle,
   Briefcase, HardDrive, FileText, ExternalLink, FileCheck,
-  Building2, Users2, Tag, ChevronDown, MapPin, Wallet
+  Building2, Tag, ChevronDown, MapPin, Wallet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,15 +67,6 @@ const customerDetailLabels = {
   egitim: "Eğitim",
   entegrasyon: "Entegrasyon",
   diger: "Diğer",
-};
-
-const populationLabels = {
-  "0_10k": "0–10K",
-  "10k_50k": "10K–50K",
-  "50k_100k": "50K–100K",
-  "100k_500k": "100K–500K",
-  "500k_1m": "500K–1M",
-  "1m_ustu": "1M+",
 };
 
 
@@ -405,12 +396,6 @@ export default function CustomerDetail() {
                   <span className="inline-flex items-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-lg">
                     <Tag className="w-3.5 h-3.5" />
                     {customerDetailLabels[customer.customer_detail] || customer.customer_detail}
-                  </span>
-                )}
-                {customer.population && (
-                  <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg">
-                    <Users2 className="w-3.5 h-3.5" />
-                    {populationLabels[customer.population] || customer.population}
                   </span>
                 )}
               </div>

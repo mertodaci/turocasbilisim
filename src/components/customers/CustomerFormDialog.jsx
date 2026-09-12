@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const empty = {
   company_name: "", customer_type: "", customer_detail: "",
-  population: "", project_manager: "", deploy_responsible: "", city: "",
+  project_manager: "", deploy_responsible: "", city: "",
   status: "aktif", notes: "", use_job_tracking: false,
   district: "", party: "", top_manager: "", address: "", is_potential: 0,
 };
@@ -25,7 +25,6 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
   });
   const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
   const { data: customerDetailOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_detayi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_detayi", is_active: true }) });
-  const { data: populationOptions = [] } = useQuery({ queryKey: ["definitions", "nufus_araligi"], queryFn: () => flowApi.entities.Definition.filter({ category: "nufus_araligi", is_active: true }) });
   const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }) });
 
   useEffect(() => {
@@ -109,26 +108,19 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detaylar</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Nüfus</Label>
-                <Select value={form.population} onValueChange={(v) => set("population", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{populationOptions.map((o) => <SelectItem key={o.id || o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
                 <Label>Proje Yöneticisi</Label>
                 <Select value={form.project_manager} onValueChange={(v) => set("project_manager", v)}>
                   <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
                   <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Deploy Sorumlusu</Label>
-              <Select value={form.deploy_responsible} onValueChange={(v) => set("deploy_responsible", v)}>
-                <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="space-y-1.5">
+                <Label>Deploy Sorumlusu</Label>
+                <Select value={form.deploy_responsible} onValueChange={(v) => set("deploy_responsible", v)}>
+                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
+                  <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

@@ -52,7 +52,7 @@ export default function IkZam() {
   const islemAdi = { yuzde: "Yüzde Zam (%)", sabit: "Sabit Tutar Ekle (₺)", yeni: "Yeni Tutar Yap (₺)" }[f.islem];
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5 max-w-4xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Wand2 className="w-6 h-6 text-primary" /> Özlük & Zam Uygulama Sihirbazı</h1>
         <p className="text-sm text-muted-foreground mt-1">Toplu veya bireysel ücret artışı. Resmî maaş değişince saatlik/dakikalık türetilir; her değişim ücret geçmişine yazılır.</p>

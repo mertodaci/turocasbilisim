@@ -16,6 +16,8 @@ import LeaveFormPrint from "@/components/leave/LeaveFormPrint";
 import LeaveReconciliationForm from "@/components/leave/LeaveReconciliationForm";
 import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
+import { useSetBreadcrumbLabel } from "@/lib/BreadcrumbContext";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const LEAVE_TYPE_LABELS = {
   yillik_izin: "Yıllık İzin", hastalik_izni: "Hastalık İzni", mazeret_izni: "Mazeret İzni",
@@ -78,6 +80,8 @@ export default function EmployeeDetail() {
     mutationFn: ({ id, next }) => flowApi.entities.LeaveRequest.update(id, { is_signed: next }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee-leave-movements", employeeId] }),
   });
+
+  useSetBreadcrumbLabel(employee?.full_name);
 
   const { entitled: entitledTotal, used: totalUsedDays, remaining: leaveBalance, hasHireDate: hasLeaveBalanceData, breakdown } = useLeaveBalance(employee);
 
@@ -200,6 +204,14 @@ export default function EmployeeDetail() {
           onClose={() => setShowReconciliation(false)}
         />
       )}
+
+      <Tabs defaultValue="genel">
+        <TabsList className={cn("grid w-full", isPrivileged && employee.hire_date ? "grid-cols-2" : "grid-cols-1")}>
+          <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
+          {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="genel" className="space-y-6 mt-4">
 
       {/* İşten Çıkış Bilgileri - sadece pasif calisanlar */}
       {employee.status === "pasif" && (employee.exit_date || employee.exit_reason || employee.exit_notes || employee.exit_document) && (
@@ -437,9 +449,11 @@ export default function EmployeeDetail() {
         )}
       </div>
 
+        </TabsContent>
+
       {/* İzin Bilgileri */}
       {isPrivileged && employee.hire_date && (
-        <>
+        <TabsContent value="izin" className="space-y-6 mt-4">
         <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -603,8 +617,10 @@ export default function EmployeeDetail() {
             </table>
           )}
         </div>
-        </>
+        </TabsContent>
       )}
+
+      </Tabs>
 
     </div>
   );

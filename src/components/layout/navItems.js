@@ -240,3 +240,29 @@ export function getAllLeafItems() {
   walk(allNavItems);
   return items;
 }
+
+// Ata-zinciri: verilen path'e eşleşen yaprağa kadar geçilen tüm düğümlerin
+// labelKey'lerini (ata grupları + yaprağın kendisi) sıralı dizi olarak döner.
+// AppLayout'taki breadcrumb bunu kullanır. Eşleşme yoksa [] döner.
+export function getBreadcrumbTrail(pathname) {
+  function walk(list, trail) {
+    for (const item of list) {
+      const nextTrail = [...trail, item.labelKey];
+      if (item.path === pathname) return nextTrail;
+      if (item.children) {
+        const found = walk(item.children, nextTrail);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return walk(allNavItems, []) || [];
+}
+
+// Dinamik detay rotaları (navItems ağacında kendi yaprağı olmayan, ör.
+// /calisan/:id) için: prefix eşleşince ata-zinciri leafPath'in yaprağından
+// hesaplanır, sayfanın kendi dinamik etiketi (BreadcrumbContext) son segmenti
+// değiştirir.
+export const DETAIL_ROUTE_PARENTS = [
+  { prefix: "/calisan/", leafPath: "/calisanlar" },
+];

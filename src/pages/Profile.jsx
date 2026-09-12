@@ -15,6 +15,7 @@ const roleLabels = {
   ik: { label: "İK", color: "bg-emerald-100 text-emerald-700" },
   stajer: { label: "Stajyer", color: "bg-amber-100 text-amber-700" },
   musteri: { label: "Müşteri", color: "bg-slate-200 text-slate-700" },
+  guvenlik: { label: "Güvenlik", color: "bg-slate-200 text-slate-700" },
 };
 
 export default function Profile() {

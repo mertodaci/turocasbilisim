@@ -91,6 +91,15 @@ export const MODULES = [
   { key: "ikb_tutanak",         label: "Tutanak & İhtarlar",     path: "/ik/tutanak" },
   { key: "ikb_ilan",            label: "İlanlar",                path: "/ik/ilan" },
   { key: "ikb_izin_evrak",      label: "İzin & Rapor Evrak Takibi", path: "/ik/izin-evrak" },
+  // ── Devriye Yönetimi ──
+  { key: "devriye_lokasyon",       label: "Lokasyon & Checkpoint",  path: "/devriye/lokasyonlar" },
+  { key: "devriye_vardiya_tanim",  label: "Devriye Vardiya Tanımları", path: "/devriye/vardiyalar" },
+  { key: "devriye_atama",          label: "Vardiya & Devriye Planı", path: "/devriye/atama" },
+  { key: "devriye_personel",       label: "Güvenlik Personeli",     path: "/devriye/personel" },
+  { key: "devriye_qr_saha",        label: "QR Devriye (Saha)",      path: "/devriye/qr-saha" },
+  { key: "devriye_okuma_rapor",    label: "Devriye Raporları",      path: "/devriye/raporlar" },
+  { key: "devriye_saat_rapor",     label: "Olması Gereken Saatler Raporu", path: "/devriye/saat-raporu" },
+  { key: "devriye_qr_yazdir",      label: "QR Yazdır & Test Merkezi", path: "/devriye/qr-yazdir" },
 ];
 
 const none = () => Object.fromEntries(MODULES.map(m => [m.key, { view: false, add: false, edit: false, delete: false }]));
@@ -102,6 +111,7 @@ export const DEFAULT_PERMISSIONS = {
   kullanici: { ...none(), dashboard:{view:true,add:false,edit:false,delete:false}, customers:{view:true,add:false,edit:false,delete:false}, messages:{view:true,add:true,edit:true,delete:true}, todos:{view:true,add:true,edit:true,delete:true}, my_leave_requests:{view:true,add:true,edit:false,delete:true}, personal_calendar:{view:true,add:false,edit:false,delete:false}, customer_map:{view:true,add:false,edit:false,delete:false}, expenses:{view:true,add:true,edit:true,delete:false}, is_takibi:{view:true,add:true,edit:true,delete:false}, is_takibi_dashboard:{view:true,add:false,edit:false,delete:false}, is_takibi_projeler:{view:true,add:false,edit:false,delete:false}, is_takibi_biletler:{view:true,add:true,edit:true,delete:false}, is_takibi_kanban:{view:true,add:false,edit:false,delete:false} },
   stajer: { ...none(), dashboard:{view:true,add:false,edit:false,delete:false}, my_leave_requests:{view:true,add:true,edit:false,delete:false}, messages:{view:true,add:true,edit:false,delete:false}, todos:{view:true,add:true,edit:false,delete:false} },
   musteri: { ...none(), is_takibi:{view:true,add:false,edit:false,delete:false}, is_takibi_dashboard:{view:true,add:false,edit:false,delete:false}, is_takibi_projeler:{view:true,add:false,edit:false,delete:false}, is_takibi_biletler:{view:true,add:true,edit:true,delete:false}, is_takibi_kanban:{view:true,add:false,edit:false,delete:false} },
+  guvenlik: { ...none(), devriye_qr_saha:{view:true,add:true,edit:false,delete:false} },
 };
 
 const RolePermissionsContext = createContext({ MODULES, DEFAULT_PERMISSIONS });

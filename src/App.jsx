@@ -103,6 +103,15 @@ const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
 const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
 const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
 
+const DevriyeLokasyon = lazy(() => import('./pages/devriye/DevriyeLokasyon'));
+const DevriyeVardiyaTanim = lazy(() => import('./pages/devriye/DevriyeVardiyaTanim'));
+const DevriyeAtama = lazy(() => import('./pages/devriye/DevriyeAtama'));
+const DevriyePersonel = lazy(() => import('./pages/devriye/DevriyePersonel'));
+const DevriyeQrSaha = lazy(() => import('./pages/devriye/DevriyeQrSaha'));
+const DevriyeRaporlar = lazy(() => import('./pages/devriye/DevriyeRaporlar'));
+const DevriyeSaatRaporu = lazy(() => import('./pages/devriye/DevriyeSaatRaporu'));
+const DevriyeQrYazdir = lazy(() => import('./pages/devriye/DevriyeQrYazdir'));
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated, authChecked, showSessionWarning, extendSession } = useAuth();
   const { hasPermission } = useRolePermissions();
@@ -272,6 +281,14 @@ const AuthenticatedApp = () => {
         <Route path="/ik/bordro" element={guard("ikb_bordro", <IkBordro />)} />
         <Route path="/ik/maas-ozet" element={guard("ikb_maas_ozet", <IkMaasOzet />)} />
         <Route path="/ik/ay-kapanis" element={guard("ikb_ay_kapanis", <IkAyKapanis />)} />
+        <Route path="/devriye/lokasyonlar" element={guard("devriye_lokasyon", <DevriyeLokasyon />)} />
+        <Route path="/devriye/vardiyalar" element={guard("devriye_vardiya_tanim", <DevriyeVardiyaTanim />)} />
+        <Route path="/devriye/atama" element={guard("devriye_atama", <DevriyeAtama />)} />
+        <Route path="/devriye/personel" element={guard("devriye_personel", <DevriyePersonel />)} />
+        <Route path="/devriye/qr-saha" element={guard("devriye_qr_saha", <DevriyeQrSaha />)} />
+        <Route path="/devriye/raporlar" element={guard("devriye_okuma_rapor", <DevriyeRaporlar />)} />
+        <Route path="/devriye/saat-raporu" element={guard("devriye_saat_rapor", <DevriyeSaatRaporu />)} />
+        <Route path="/devriye/qr-yazdir" element={guard("devriye_qr_yazdir", <DevriyeQrYazdir />)} />
         <Route path="/ik/sirket" element={guard("ikb_sirket", <IkSirket />)} />
         <Route path="/ik/ozluk-evrak" element={guard("ikb_ozluk_evrak", <IkOzlukEvrak />)} />
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />

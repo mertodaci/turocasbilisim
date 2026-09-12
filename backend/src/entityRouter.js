@@ -178,6 +178,11 @@ const TABLE_TO_MODULE = {
   ik_tutanaklar: 'ikb_tutanak',
   ik_ilanlar: 'ikb_ilan',
   ik_izin_evraklari: 'ikb_izin_evrak',
+  // ── Devriye Yönetimi ──
+  devriye_lokasyonlar: 'devriye_lokasyon',
+  devriye_noktalar: 'devriye_lokasyon',
+  devriye_vardiyalar: 'devriye_vardiya_tanim',
+  devriye_atamalar: 'devriye_atama',
 };
 
 function checkPermission(db, role, tableName, action) {
@@ -367,6 +372,11 @@ const ALLOWED_COLUMNS = {
   ik_tutanaklar: ['personel_id','personel_adi','tur','tarih','konu','aciklama','dosya_url','olusturan','is_deleted'],
   ik_ilanlar: ['baslik','bolum_id','bolum_adi','sube_id','sube_adi','durum','baslangic','bitis','detay','yetkili_notu','olusturan','is_deleted'],
   ik_izin_evraklari: ['leave_id','personel_id','personel_adi','evrak_adi','dosya_url','durum','aciklama','is_deleted'],
+  // ── Devriye Yönetimi ──
+  devriye_lokasyonlar: ['ad','aciklama','aktif'],
+  devriye_noktalar: ['lokasyon_id','lokasyon_adi','sira','nokta_adi','olmasi_gereken_saat','qr_token','aktif'],
+  devriye_vardiyalar: ['ad','baslangic','bitis'],
+  devriye_atamalar: ['guvenlik_user_id','guvenlik_adi','lokasyon_id','lokasyon_adi','vardiya_id','vardiya_adi','tarih'],
 };
 
 // Zorunlu alanlar

@@ -218,6 +218,12 @@ app.use('/api/entities/ik_tutanaklar',         createEntityRouter('ik_tutanaklar
 app.use('/api/entities/ik_ilanlar',            createEntityRouter('ik_ilanlar'));
 app.use('/api/entities/ik_izin_evraklari',     createEntityRouter('ik_izin_evraklari'));
 
+// ── Devriye Yönetimi modülü ──
+app.use('/api/entities/devriye_lokasyonlar',   createEntityRouter('devriye_lokasyonlar'));
+app.use('/api/entities/devriye_noktalar',      createEntityRouter('devriye_noktalar'));
+app.use('/api/entities/devriye_vardiyalar',    createEntityRouter('devriye_vardiyalar'));
+app.use('/api/entities/devriye_atamalar',      createEntityRouter('devriye_atamalar'));
+
 // Dosya yükleme
 const multer = require('multer');
 const path = require('path');
@@ -3331,6 +3337,122 @@ app.get('/api/ik/dashboard', authMiddleware, (req, res) => {
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // ── Genel hata yakalayıcı ──────────────────────────────────────────
+// ── Devriye Yönetimi — özel uçlar ──────────────────────────────────────
+// Nokta'nın "olması gereken saat"ine göre okuma zamanının durumu:
+// zamanında (±10dk tolerans), erken, geç. Basit/makul bir varsayım —
+// gerekirse ince ayar yapılabilir.
+function devriyeDurumHesapla(olmasiGerekenSaat, okumaZamani) {
+  if (!olmasiGerekenSaat) return 'zamaninda';
+  const [gh, gm] = olmasiGerekenSaat.split(':').map(Number);
+  const okuma = new Date(okumaZamani);
+  const gerekenDk = gh * 60 + gm;
+  const okumaDk = okuma.getHours() * 60 + okuma.getMinutes();
+  const fark = okumaDk - gerekenDk;
+  const TOLERANS = 10;
+  if (Math.abs(fark) <= TOLERANS) return 'zamaninda';
+  return fark > 0 ? 'gec' : 'erken';
+}
+
+app.get('/api/devriye/bugunku-vardiyalarim', authMiddleware, (req, res) => {
+  try {
+    const bugun = new Date().toISOString().slice(0, 10);
+    const rows = db.prepare(
+      "SELECT * FROM devriye_atamalar WHERE guvenlik_user_id = ? AND tarih = ? ORDER BY created_date"
+    ).all(req.user.id, bugun);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/devriye/qr-oku', authMiddleware, (req, res) => {
+  try {
+    const { qr_token } = req.body;
+    if (!qr_token) return res.status(400).json({ error: 'QR kod okunamadı' });
+    const nokta = db.prepare("SELECT * FROM devriye_noktalar WHERE qr_token = ? AND aktif = 1").get(qr_token);
+    if (!nokta) return res.status(404).json({ error: 'Bu QR koda ait bir devriye noktası bulunamadı' });
+
+    const bugun = new Date().toISOString().slice(0, 10);
+    const atama = db.prepare(
+      "SELECT * FROM devriye_atamalar WHERE guvenlik_user_id = ? AND lokasyon_id = ? AND tarih = ? ORDER BY created_date LIMIT 1"
+    ).get(req.user.id, nokta.lokasyon_id, bugun);
+
+    const now = new Date().toISOString();
+    const durum = atama ? devriyeDurumHesapla(nokta.olmasi_gereken_saat, now) : 'plan_disi';
+    const { randomUUID } = require('crypto');
+    const id = randomUUID();
+    db.prepare(
+      `INSERT INTO devriye_okumalar (id, nokta_id, nokta_adi, lokasyon_id, lokasyon_adi, guvenlik_user_id, guvenlik_adi, atama_id, okuma_zamani, durum)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`
+    ).run(id, nokta.id, nokta.nokta_adi, nokta.lokasyon_id, nokta.lokasyon_adi, req.user.id, req.user.full_name || req.user.email, atama ? atama.id : null, now, durum);
+
+    res.json({ ok: true, nokta_adi: nokta.nokta_adi, durum });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/devriye/rapor', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'devriye_okuma_rapor', 'can_view')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { baslangic, bitis } = req.query;
+    const rows = db.prepare(
+      "SELECT * FROM devriye_okumalar WHERE substr(okuma_zamani,1,10) BETWEEN ? AND ? ORDER BY okuma_zamani DESC"
+    ).all(baslangic, bitis);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/devriye/saat-raporu', authMiddleware, (req, res) => {
+  if (!(req.user?.role === 'admin' || checkPermission(db, req.user?.role, 'devriye_saat_rapor', 'can_view')))
+    return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { tarih, lokasyon_id, guvenlik_id, durum } = req.query;
+    const gun = tarih || new Date().toISOString().slice(0, 10);
+
+    let noktaSql = "SELECT * FROM devriye_noktalar WHERE aktif = 1";
+    const noktaParams = [];
+    if (lokasyon_id && lokasyon_id !== 'all') { noktaSql += " AND lokasyon_id = ?"; noktaParams.push(lokasyon_id); }
+    const noktalar = db.prepare(noktaSql).all(...noktaParams);
+
+    let atamaSql = "SELECT * FROM devriye_atamalar WHERE tarih = ?";
+    const atamaParams = [gun];
+    if (lokasyon_id && lokasyon_id !== 'all') { atamaSql += " AND lokasyon_id = ?"; atamaParams.push(lokasyon_id); }
+    if (guvenlik_id && guvenlik_id !== 'all') { atamaSql += " AND guvenlik_user_id = ?"; atamaParams.push(guvenlik_id); }
+    const atamalar = db.prepare(atamaSql).all(...atamaParams);
+
+    const detay = [];
+    for (const nokta of noktalar) {
+      const ilgiliAtamalar = atamalar.filter(a => a.lokasyon_id === nokta.lokasyon_id);
+      if (ilgiliAtamalar.length === 0) continue;
+      for (const a of ilgiliAtamalar) {
+        const okuma = db.prepare(
+          "SELECT * FROM devriye_okumalar WHERE nokta_id = ? AND atama_id = ? ORDER BY okuma_zamani LIMIT 1"
+        ).get(nokta.id, a.id);
+        const satirDurum = okuma ? okuma.durum : 'okutmadi';
+        detay.push({
+          lokasyon_adi: nokta.lokasyon_adi, guvenlik_adi: a.guvenlik_adi, sira: nokta.sira,
+          nokta_adi: nokta.nokta_adi, olmasi_gereken_saat: nokta.olmasi_gereken_saat,
+          okuma_zamani: okuma ? okuma.okuma_zamani : null, durum: satirDurum,
+        });
+      }
+    }
+    const filtreli = durum && durum !== 'all' ? detay.filter(d => d.durum === durum) : detay;
+    const sayaclar = {
+      zamaninda: detay.filter(d => d.durum === 'zamaninda').length,
+      gec: detay.filter(d => d.durum === 'gec').length,
+      erken: detay.filter(d => d.durum === 'erken').length,
+      okutmadi: detay.filter(d => d.durum === 'okutmadi').length,
+    };
+    res.json({ detay: filtreli, sayaclar, atama_var: atamalar.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // try/catch'i olmayan senkron route handler'larda bir hata fırlarsa Express'in
 // varsayılan işleyicisi devreye girer ve (NODE_ENV=production değilse) stack
 // trace'i istemciye sızdırır. Bu handler her durumda temiz bir JSON döndürür.

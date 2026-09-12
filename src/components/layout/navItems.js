@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, Package, Warehouse, Rows3, MapPin, MapPinned, PackageSearch, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera } from "lucide-react";
 
 // Tek doğruluk kaynağı: uygulamanın tüm navigasyon ağacı. BottomNav.jsx
 // (alt bar + uçan alt-menüler) ve GlobalSearch.jsx (⌘K hızlı atlama) buradan
@@ -65,6 +65,34 @@ export const allNavItems = [
       labelKey: "pdks_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
       children: [
         { labelKey: "personel_hareketleri", path: "/personel-hareketleri", icon: Clock, roles: ["admin", "yonetici", "ik"] },
+      ]
+    },
+  ]
+},
+{
+  labelKey: "devriye_yonetimi", path: null, icon: Radar, roles: ["admin", "yonetici", "guvenlik"],
+  children: [
+    {
+      labelKey: "devriye_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "devriye_lokasyon", path: "/devriye/lokasyonlar", icon: MapPin, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_vardiya_tanim", path: "/devriye/vardiyalar", icon: Clock, roles: ["admin", "yonetici"] },
+      ]
+    },
+    {
+      labelKey: "devriye_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "guvenlik"],
+      children: [
+        { labelKey: "devriye_atama", path: "/devriye/atama", icon: CalendarDays, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_personel", path: "/devriye/personel", icon: Users, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_qr_saha", path: "/devriye/qr-saha", icon: QrCode, roles: ["admin", "yonetici", "guvenlik"] },
+      ]
+    },
+    {
+      labelKey: "devriye_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "devriye_okuma_rapor", path: "/devriye/raporlar", icon: FileSpreadsheet, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_saat_rapor", path: "/devriye/saat-raporu", icon: BarChart3, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_qr_yazdir", path: "/devriye/qr-yazdir", icon: Camera, roles: ["admin"] },
       ]
     },
   ]

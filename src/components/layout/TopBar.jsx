@@ -216,7 +216,7 @@ function ProfileMenu() {
     select: (data) => data[0],
   });
 
-  const roleLabels = { admin: "Sistem Yöneticisi", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri" };
+  const roleLabels = { admin: "Sistem Yöneticisi", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri", guvenlik: "Güvenlik" };
   const roleLabel = roleLabels[user?.role] || user?.role || "";
   const name = user?.full_name || user?.email || "Kullanıcı";
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";

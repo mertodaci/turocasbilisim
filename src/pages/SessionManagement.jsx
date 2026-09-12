@@ -13,6 +13,7 @@ const ROLE_LABELS = {
   kullanici: "Kullanıcı",
   stajer: "Stajer",
   musteri: "Müşteri",
+  guvenlik: "Güvenlik",
 };
 
 // "Su an aktif" gostergesi icin esik: son 10 dakika icinde istek atmissa

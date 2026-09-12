@@ -285,6 +285,59 @@ function initDb() {
       created_date TEXT DEFAULT (datetime('now')),
       updated_date TEXT DEFAULT (datetime('now'))
     );
+    -- ── Devriye Yönetimi modülü ──────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS devriye_lokasyonlar (
+      id TEXT PRIMARY KEY,
+      ad TEXT NOT NULL,
+      aciklama TEXT,
+      aktif INTEGER DEFAULT 1,
+      created_date TEXT DEFAULT (datetime('now')),
+      updated_date TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS devriye_noktalar (
+      id TEXT PRIMARY KEY,
+      lokasyon_id TEXT NOT NULL,
+      lokasyon_adi TEXT,
+      sira INTEGER DEFAULT 1,
+      nokta_adi TEXT NOT NULL,
+      olmasi_gereken_saat TEXT,   -- 'HH:MM'
+      qr_token TEXT UNIQUE,
+      aktif INTEGER DEFAULT 1,
+      created_date TEXT DEFAULT (datetime('now')),
+      updated_date TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS devriye_vardiyalar (
+      id TEXT PRIMARY KEY,
+      ad TEXT NOT NULL,
+      baslangic TEXT,   -- 'HH:MM'
+      bitis TEXT,        -- 'HH:MM'
+      created_date TEXT DEFAULT (datetime('now')),
+      updated_date TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS devriye_atamalar (
+      id TEXT PRIMARY KEY,
+      guvenlik_user_id TEXT NOT NULL,
+      guvenlik_adi TEXT,
+      lokasyon_id TEXT NOT NULL,
+      lokasyon_adi TEXT,
+      vardiya_id TEXT NOT NULL,
+      vardiya_adi TEXT,
+      tarih TEXT NOT NULL,  -- 'YYYY-MM-DD'
+      created_date TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS devriye_okumalar (
+      id TEXT PRIMARY KEY,
+      nokta_id TEXT NOT NULL,
+      nokta_adi TEXT,
+      lokasyon_id TEXT,
+      lokasyon_adi TEXT,
+      guvenlik_user_id TEXT NOT NULL,
+      guvenlik_adi TEXT,
+      atama_id TEXT,
+      okuma_zamani TEXT DEFAULT (datetime('now')),
+      durum TEXT,  -- zamaninda | gec | erken | plan_disi
+      created_date TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   const migrations = [
@@ -556,6 +609,9 @@ function initDb() {
       'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_sirket',
       // Faz 11: evrak + tutanak + ilan + izin evrak
       'ikb_tutanak','ikb_ilan','ikb_izin_evrak',
+      // ── Devriye Yönetimi modülü ───────────────────────────────────
+      'devriye_lokasyon','devriye_vardiya_tanim','devriye_atama','devriye_personel',
+      'devriye_qr_saha','devriye_okuma_rapor','devriye_saat_rapor','devriye_qr_yazdir',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -1559,6 +1615,27 @@ function initDb() {
       IKP('sube_yoneticisi', IK_SUBE, 1, 0, 1, 0);
     }
   } catch(e) { console.error('ik rol seed:', e.message); }
+
+  // ── Devriye Yönetimi: guvenlik rolü + varsayılan yetkileri (idempotent) ──
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const insRole = db.prepare("INSERT OR IGNORE INTO roles (id, name, label, description) VALUES (lower(hex(randomblob(16))), ?, ?, ?)");
+    insRole.run('guvenlik', 'Güvenlik', 'Sahada QR devriye okuma');
+
+    const DP = (role, mods, v, a, e, d) => {
+      for (const m of mods) {
+        const exists = db.prepare('SELECT id FROM role_permissions WHERE role_name=? AND module=?').get(role, m);
+        if (!exists) db.prepare('INSERT INTO role_permissions (id, role_name, module, can_view, can_add, can_edit, can_delete, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?)').run(uuidv4(), role, m, v, a, e, d, now, now);
+        else db.prepare('UPDATE role_permissions SET can_view=?, can_add=?, can_edit=?, can_delete=?, updated_date=? WHERE id=?').run(v, a, e, d, now, exists.id);
+      }
+    };
+    const devVar = db.prepare("SELECT 1 FROM role_permissions WHERE role_name='guvenlik' AND can_view=1 LIMIT 1").get();
+    if (!devVar) {
+      DP('guvenlik', ['devriye_qr_saha'], 1, 1, 0, 0);
+      DP('yonetici', ['devriye_lokasyon','devriye_vardiya_tanim','devriye_atama','devriye_personel','devriye_okuma_rapor','devriye_saat_rapor','devriye_qr_yazdir'], 1, 1, 1, 1);
+    }
+  } catch(e) { console.error('devriye rol seed:', e.message); }
 
   console.log('✅ Veritabanı tabloları hazır');
 }

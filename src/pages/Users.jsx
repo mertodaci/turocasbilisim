@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, X, ToggleLeft, ToggleRight } from "lucide-react";
+import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, X, ToggleLeft, ToggleRight, Radar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -17,6 +17,7 @@ const ROLE_CONFIG = {
   kullanici:{ label:"Kullanıcı", bg:"bg-blue-500",   light:"bg-blue-50 border-blue-200 text-blue-700",   icon: User },
   stajer:   { label:"Stajer",    bg:"bg-green-500",  light:"bg-green-50 border-green-200 text-green-700", icon: GraduationCap },
   musteri:  { label:"Müşteri",   bg:"bg-orange-500", light:"bg-orange-50 border-orange-200 text-orange-700", icon: UsersIcon },
+  guvenlik: { label:"Güvenlik",  bg:"bg-slate-500",  light:"bg-slate-50 border-slate-200 text-slate-700", icon: Radar },
 };
 
 const getInitials = (name) => name?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "?";

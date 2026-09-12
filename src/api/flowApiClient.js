@@ -125,6 +125,10 @@ const ENTITY_MAP = {
   IkIzinEvrak:       'ik_izin_evraklari',
   IkVergiAyar:       'ik_vergi_ayarlari',
   IkGelirVergisiDilim: 'ik_gelir_vergisi_dilimleri',
+  DevriyeLokasyon:   'devriye_lokasyonlar',
+  DevriyeNokta:      'devriye_noktalar',
+  DevriyeVardiya:    'devriye_vardiyalar',
+  DevriyeAtama:      'devriye_atamalar',
 };
 
 function createEntityClient(entityName) {
@@ -374,11 +378,20 @@ export const ik = {
   async dashboard() { return handleResponse(await fetch(`${BASE_URL}/api/ik/dashboard`, { credentials: 'include' })); },
 };
 
+// flowApi.devriye karşılıkları — Devriye Yönetimi modülünün özel uçları
+export const devriye = {
+  async bugunkuVardiyalarim() { return handleResponse(await fetch(`${BASE_URL}/api/devriye/bugunku-vardiyalarim`, { credentials: 'include' })); },
+  async qrOku(qr_token) { return handleResponse(await fetch(`${BASE_URL}/api/devriye/qr-oku`, _sjson('POST', { qr_token }))); },
+  async rapor(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/devriye/rapor?${qs}`, { credentials: 'include' })); },
+  async saatRaporu(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/devriye/saat-raporu?${qs}`, { credentials: 'include' })); },
+};
+
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde
 export const flowApi = {
   auth,
   stok,
   ik,
+  devriye,
   health: () => fetch(`${BASE_URL}/api/health`).then(r => { if (!r.ok) throw new Error('unhealthy'); return r.json(); }),
   entities: new Proxy({}, {
     get(_, entityName) {

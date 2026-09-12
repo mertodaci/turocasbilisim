@@ -11,6 +11,7 @@ const ROLES = [
   { value: "ik", label: "İK" },
   { value: "stajer", label: "Stajer" },
   { value: "musteri", label: "Müşteri" },
+  { value: "guvenlik", label: "Güvenlik" },
   { value: "admin", label: "Admin" },
 ];
 

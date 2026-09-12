@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { flowApi } from "@/api/flowApiClient";
 import { Camera, Loader2, Paperclip, X, Upload } from "lucide-react";
 import { useLeaveBalance } from "@/hooks/useLeaveBalance";
@@ -190,15 +191,15 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg">{employee ? "Calisan Duzenle" : "Yeni Calisan"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
 
-          {/* Profil Fotografi */}
-          <div className="flex items-center gap-5 p-4 bg-muted/30 rounded-xl border border-border/50">
+          {/* Profil Fotografi — sekmelerin üstünde sabit, kimlik kartı gibi */}
+          <div className="flex items-center gap-5 p-4 bg-muted/30 rounded-xl border border-border/50 shrink-0">
             <div
               className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center overflow-hidden cursor-pointer border-2 border-dashed border-border hover:border-primary transition-colors shrink-0"
               onClick={() => fileInputRef.current?.click()}
@@ -221,13 +222,20 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </div>
 
-          {/* Kisisel Bilgiler */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kisisel Bilgiler</h3>
+          <Tabs defaultValue="kisisel" className="flex flex-col min-h-0 flex-1 mt-4">
+            <TabsList className="w-full grid grid-cols-4 shrink-0">
+              <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
+              <TabsTrigger value="is">İş</TabsTrigger>
+              <TabsTrigger value="egitim">Eğitim</TabsTrigger>
+              <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
+            </TabsList>
+
+            <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1">
+            <TabsContent value="kisisel" className="mt-0">
             <div className="space-y-3">
               <div>
                 <Label className="mb-1.5 block">Ad Soyad *</Label>
-                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Ad Soyad" required />
+                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Ad Soyad" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -264,11 +272,9 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                 </div>
               </div>
             </div>
-          </div>
+            </TabsContent>
 
-          {/* Is Bilgileri */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Is Bilgileri</h3>
+            <TabsContent value="is" className="mt-0">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -352,11 +358,9 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                 </div>
               )}
             </div>
-          </div>
+            </TabsContent>
 
-          {/* Egitim Bilgileri */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Egitim Bilgileri</h3>
+            <TabsContent value="egitim" className="mt-0">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -465,11 +469,9 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                 <input ref={docInputRef} type="file" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={handleDocUpload} />
               </div>
             </div>
-          </div>
+            </TabsContent>
 
-          {/* Özlük & Ücret (Bordro) — tüm bordro/puantaj bilgisi burada tutulur */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Özlük &amp; Ücret (Bordro)</h3>
+            <TabsContent value="ozluk" className="mt-0">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -544,9 +546,11 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                 </div>
               )}
             </div>
-          </div>
+            </TabsContent>
+            </div>
+          </Tabs>
 
-          <div className="flex justify-end gap-3 pt-2 border-t">
+          <div className="flex justify-end gap-3 pt-3 border-t shrink-0">
             <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>
             <Button type="submit" disabled={isLoading || uploadingDoc || !form.full_name || !form.department}>
               {isLoading ? "Kaydediliyor..." : employee ? "Guncelle" : "Kaydet"}

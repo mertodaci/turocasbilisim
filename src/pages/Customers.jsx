@@ -22,7 +22,6 @@ const TYPE_CFG = {
 };
 
 const customerTypeLabels = { belediye:"Belediye", il_ozel_idaresi:"İl Özel İdaresi", kamu_kurumu:"Kamu Kurumu", su_idaresi:"Su İdaresi", ozel_sektor:"Özel Sektör", sivil_toplum:"STK", diger:"Diğer" };
-const municipalityTypeLabels = { buyuksehir:"Büyükşehir", il_belediyesi:"İl Belediyesi", ilce_belediyesi:"İlçe Belediyesi", il:"İl", ilce:"İlçe", belde:"Belde", koy:"Köy", diger:"Diğer" };
 const AVATAR_COLORS = ["bg-indigo-500","bg-purple-500","bg-teal-500","bg-blue-500","bg-emerald-500","bg-orange-500","bg-rose-500","bg-pink-500"];
 
 async function createJobTrackingDefaults(customerId, customerName) {
@@ -195,7 +194,6 @@ export default function Customers() {
             const isAday = c.is_potential==1||c.is_potential===true;
             const typeCfg = isAday ? TYPE_CFG.aday : TYPE_CFG.musteri;
             const typeLabel = customerTypeLabels[c.customer_type];
-            const munLabel = municipalityTypeLabels[c.municipality_type];
 
             return (
               <div key={c.id} className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all group overflow-hidden flex">
@@ -223,7 +221,6 @@ export default function Customers() {
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     {typeLabel && <span className="text-[11px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md">{typeLabel}</span>}
-                    {munLabel && <span className="text-[11px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md">{munLabel}</span>}
                   </div>
                 </div>
 

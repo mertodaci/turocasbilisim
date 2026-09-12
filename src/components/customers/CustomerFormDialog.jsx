@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 const empty = {
-  company_name: "", customer_type: "", municipality_type: "", customer_detail: "",
+  company_name: "", customer_type: "", customer_detail: "",
   population: "", project_manager: "", deploy_responsible: "", city: "",
   status: "aktif", notes: "", use_job_tracking: false,
   district: "", party: "", top_manager: "", address: "", is_potential: 0,
@@ -24,7 +24,6 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
     enabled: open,
   });
   const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
-  const { data: municipalityTypeOptions = [] } = useQuery({ queryKey: ["definitions", "belediye_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "belediye_tipi", is_active: true }) });
   const { data: customerDetailOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_detayi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_detayi", is_active: true }) });
   const { data: populationOptions = [] } = useQuery({ queryKey: ["definitions", "nufus_araligi"], queryFn: () => flowApi.entities.Definition.filter({ category: "nufus_araligi", is_active: true }) });
   const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }) });
@@ -64,31 +63,22 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Belediye Tipi</Label>
-                <Select value={form.municipality_type} onValueChange={(v) => set("municipality_type", v)}>
-                  <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
-                  <SelectContent>{municipalityTypeOptions.map((o) => <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
                 <Label>Müşteri Detayı</Label>
                 <Select value={form.customer_detail} onValueChange={(v) => set("customer_detail", v)}>
                   <SelectTrigger><SelectValue placeholder="Seçin" /></SelectTrigger>
                   <SelectContent>{customerDetailOptions.map((o) => <SelectItem key={o.id || o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Durum</Label>
-                <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aktif">Aktif</SelectItem>
-                    <SelectItem value="pasif">Pasif</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Durum</Label>
+              <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aktif">Aktif</SelectItem>
+                  <SelectItem value="pasif">Pasif</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

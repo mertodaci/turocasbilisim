@@ -22,7 +22,6 @@ const FIELD_TO_CATEGORY = {
   customer_detail: "musteri_detayi",
   city: "sehir",
   district: "sehir",
-  municipality_type: "belediye_tipi",
   population_range: "nufus_araligi",
 };
 
@@ -189,7 +188,6 @@ const MODULES = [
         label: "Detay",
         fields: [
           { key: "population_range", label: "Nüfus Aralığı" },
-          { key: "municipality_type", label: "Belediye Tipi" },
           { key: "notes", label: "Notlar" },
         ],
       },

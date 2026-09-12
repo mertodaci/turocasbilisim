@@ -8,7 +8,6 @@ const CATEGORIES = [
   { key: "ayrilis_nedeni", label: "Ayrılış Nedenleri", group: "Çalışan" },
   { key: "musteri_tipi",   label: "Müşteri Tipleri",   group: "Müşteri" },
   { key: "musteri_detayi", label: "Müşteri Detayları", group: "Müşteri" },
-  { key: "belediye_tipi",  label: "Belediye Tipleri",  group: "Müşteri" },
   { key: "nufus_araligi",  label: "Nüfus Aralıkları",  group: "Müşteri" },
   { key: "sehir",          label: "Şehirler",           group: "Müşteri" },
 ];

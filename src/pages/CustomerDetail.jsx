@@ -4,7 +4,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Plus, Pencil, Trash2, Phone, Mail,
   Star, AlertCircle, Shield, Wrench, User, Puzzle,
   Briefcase, HardDrive, FileText, ExternalLink, FileCheck,
-  Building2, Users2, Tag, Layers, ChevronDown, MapPin, Wallet
+  Building2, Users2, Tag, ChevronDown, MapPin, Wallet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,15 +57,6 @@ const customerTypeLabels = {
   ozel_sektor: "Özel Sektör",
   sivil_toplum: "Sivil Toplum",
   diger: "Diğer",
-};
-
-const municipalityTypeLabels = {
-  buyuksehir: "Büyükşehir",
-  il: "İl",
-  ilce: "İlçe",
-  belde: "Belde",
-  koy: "Köy",
-  yok: "Yok",
 };
 
 const customerDetailLabels = {
@@ -226,10 +217,6 @@ export default function CustomerDetail() {
     queryFn: () => flowApi.entities.JTTicket.filter({ customer_id: customerId }),
   });
 
-  const { data: municipalityOptions = [] } = useQuery({
-    queryKey: ["definitions", "belediye_tipi"],
-    queryFn: () => flowApi.entities.Definition.filter({ category: "belediye_tipi", is_active: true }),
-  });
   const { data: cityOptions = [] } = useQuery({
     queryKey: ["definitions", "sehir"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }),
@@ -412,12 +399,6 @@ export default function CustomerDetail() {
                   <span className="inline-flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2.5 py-1 rounded-lg">
                     <Building2 className="w-3.5 h-3.5" />
                     {customerTypeLabels[customer.customer_type] || customer.customer_type}
-                  </span>
-                )}
-                {customer.municipality_type && customer.municipality_type !== "yok" && (
-                  <span className="inline-flex items-center gap-1.5 text-xs bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 px-2.5 py-1 rounded-lg">
-                    <Layers className="w-3.5 h-3.5" />
-                    {municipalityOptions.find((m) => m.value === customer.municipality_type)?.label || municipalityTypeLabels[customer.municipality_type] || customer.municipality_type}
                   </span>
                 )}
                 {customer.customer_detail && (

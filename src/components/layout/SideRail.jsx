@@ -14,7 +14,7 @@ import { allNavItems } from "./navItems";
 // ikisi bağımsız çalışan iki ayrı navigasyon). Dar hâlde yalnız ikonlar;
 // hamburger'e tıklayınca tüm çubuk etiketli geniş panele dönüşür, alt
 // gruplar accordion olarak açılır/kapanır. Yalnızca masaüstünde görünür.
-export default function SideRail() {
+export default function SideRail({ expanded, setExpanded }) {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadMessageCount } = useMessages();
@@ -34,7 +34,6 @@ export default function SideRail() {
   };
 
   const [favorites, setFavorites] = useState([]);
-  const [expanded, setExpanded] = useState(false);
   const [openGroup, setOpenGroup] = useState(null); // { top-level labelKey açık mı }
   const [openSubGroup, setOpenSubGroup] = useState(null); // iç içe (Tanım/İşlem/Rapor gibi) açık alt-grup
 
@@ -42,12 +41,6 @@ export default function SideRail() {
     if (!user) return;
     flowApi.auth.getFavorites().then(setFavorites).catch(() => setFavorites([]));
   }, [user]);
-
-  useEffect(() => {
-    setExpanded(false);
-    setOpenGroup(null);
-    setOpenSubGroup(null);
-  }, [location.pathname]);
 
   const toggleFavorite = async (e, labelKey) => {
     e.preventDefault();
@@ -69,12 +62,6 @@ export default function SideRail() {
   }
   const navItems = filterNavTree(allNavItems);
 
-  const closeAll = () => {
-    setExpanded(false);
-    setOpenGroup(null);
-    setOpenSubGroup(null);
-  };
-
   const handleGroupClick = (labelKey) => {
     if (!expanded) setExpanded(true);
     setOpenGroup((k) => (k === labelKey ? null : labelKey));
@@ -93,7 +80,6 @@ export default function SideRail() {
     const showStokBadge = it.labelKey === "stok_dashboard" && stokUyariCount > 0;
     return (
       <Link key={it.path} to={it.path}
-        onClick={closeAll}
         style={{ paddingLeft: `${0.625 + depth * 1}rem` }}
         className={cn(
           "group flex items-center gap-2.5 pr-2.5 py-2 rounded-lg text-sm transition-colors",
@@ -140,8 +126,6 @@ export default function SideRail() {
 
   return (
     <>
-      {expanded && <div className="fixed inset-0 z-30" onClick={closeAll} />}
-
       <nav className={cn(
         "hidden md:flex fixed left-0 top-20 bottom-0 z-40 bg-card border-r border-border flex-col overflow-y-auto scrollbar-thin transition-[width] duration-200",
         expanded ? "w-64" : "w-16"
@@ -174,7 +158,7 @@ export default function SideRail() {
 
             if (!hasChildren) {
               return (
-                <Link key={item.labelKey} to={item.path} title={t(item.labelKey)} onClick={closeAll} className={rowClasses}>
+                <Link key={item.labelKey} to={item.path} title={t(item.labelKey)} className={rowClasses}>
                   <item.icon className="w-5 h-5 shrink-0" />
                   {expanded && <span className="truncate text-sm font-medium" title={t(item.labelKey)}>{t(item.labelKey)}</span>}
                   {anyBadge && <span className={cn("absolute w-2 h-2 bg-orange-500 rounded-full", expanded ? "top-2 left-7" : "top-1 right-1.5")} />}

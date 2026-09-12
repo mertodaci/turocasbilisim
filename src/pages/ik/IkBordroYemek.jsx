@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 
 const KESINTI = { hic: "Hiç Kesme", yemek: "Yemekten Kes", yol: "Yoldan Kes", her_ikisi: "Her İkisi", maas: "Maaştan Kes" };
@@ -55,10 +54,7 @@ export default function IkBordroYemek() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><UtensilsCrossed className="w-6 h-6 text-primary" /> Bordro Yemek & Cumartesi Opsiyonları</h1>
-        <p className="text-sm text-muted-foreground mt-1">Kişi bazlı cumartesi çalışma kuralı. Cumartesi çalışılmadığında yol/yemek/maaş kesintisi uygulanır (Bordrolama Ayarları'ndaki genel kuralın kişi bazlı override'ı).</p>
-      </div>
+      <p className="text-sm text-muted-foreground">Kişi bazlı cumartesi çalışma kuralı. Cumartesi çalışılmadığında yol/yemek/maaş kesintisi uygulanır (Bordrolama Ayarları'ndaki genel kuralın kişi bazlı override'ı).</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
         <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Toplam Kural</p><p className="text-xl font-bold">{ozet.toplam}</p></div>

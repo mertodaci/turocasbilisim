@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const empty = {
@@ -56,11 +56,7 @@ export default function IkVardiyalar() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Clock className="w-6 h-6 text-primary" /> Vardiya Tanımları</h1>
-          <p className="text-sm text-muted-foreground mt-1">Saat aralığı, gece geçişi, geç/erken tolerans ve fazla mesai katsayısı. Personel bir vardiyaya bağlanır; puantaj bu vardiyaya göre geç/erken/eksik hesaplar.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Vardiya</Button>
       </div>
 

@@ -77,16 +77,11 @@ export default function StokDepolar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Warehouse className="w-6 h-6 text-primary" /> Depolar
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Stok tutan yerler (fiziksel depo / araç). Şantiye ve müşteri
-            teslim noktaları için <b>Sahalar / Projeler</b> ekranını kullanın.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Stok tutan yerler (fiziksel depo / araç). Şantiye ve müşteri
+          teslim noktaları için <b>Sahalar / Projeler</b> ekranını kullanın.
+        </p>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Depo</Button>
       </div>
 

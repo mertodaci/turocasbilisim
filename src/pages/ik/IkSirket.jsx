@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 const empty = { bolum_adi: "", unvan: "", vergi_dairesi: "", vergi_no: "", sgk_sicil: "", mersis: "", adres: "", merkez_adres: "", web: "" };
@@ -32,10 +31,7 @@ export default function IkSirket() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="w-6 h-6 text-primary" /> Şirket Bilgileri</h1>
-        <p className="text-sm text-muted-foreground mt-1">Puantaj CSV / bordro çıktı başlığında yer alan ünvan, vergi, SGK sicil ve Mersis bilgileri. Genel varsayılan veya şube bazlı kapsam.</p>
-      </div>
+      <p className="text-sm text-muted-foreground">Puantaj CSV / bordro çıktı başlığında yer alan ünvan, vergi, SGK sicil ve Mersis bilgileri. Genel varsayılan veya şube bazlı kapsam.</p>
 
       <div className="flex gap-2 items-center">
         <Label className="text-xs">Kapsam</Label>

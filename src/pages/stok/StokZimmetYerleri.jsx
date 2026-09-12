@@ -52,16 +52,11 @@ export default function StokZimmetYerleri() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <MapPinned className="w-6 h-6 text-primary" /> Zimmet Yeri Tanımları
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Bir kişiye değil doğrudan bir yere/mekana (oda, ortak alan vb.) zimmetlenecek malzemeler için konum listesi.
-            Müşteri şantiyeleri için <b>Sahalar / Projeler</b> ekranını kullanın.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Bir kişiye değil doğrudan bir yere/mekana (oda, ortak alan vb.) zimmetlenecek malzemeler için konum listesi.
+          Müşteri şantiyeleri için <b>Sahalar / Projeler</b> ekranını kullanın.
+        </p>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Zimmet Yeri</Button>
       </div>
 

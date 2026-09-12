@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarClock, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 const empty = {
@@ -55,11 +55,7 @@ export default function IkVardiyaPlanlari() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><CalendarClock className="w-6 h-6 text-primary" /> Döngüsel Vardiya Planları</h1>
-          <p className="text-sm text-muted-foreground mt-1">Adım listesi = Vardiya / Off (O) / Haftalık İzin (H). Off ve haftalık izin farklıdır. Haftalık izin hak-ediş sayacı: kaç çalışma gününde kaç gün izin.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Plan</Button>
       </div>
 

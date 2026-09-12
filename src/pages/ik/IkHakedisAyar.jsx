@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wrench, ShieldAlert, Plus, Trash2 } from "lucide-react";
+import { ShieldAlert, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { paraSade as nf } from "@/lib/ikFormat";
@@ -91,10 +91,7 @@ export default function IkHakedisAyar() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Wrench className="w-6 h-6 text-primary" /> Bordrolama Ayarları (Yol / Yemek / Ticket)</h1>
-        <p className="text-sm text-muted-foreground mt-1">Aylık tutar ÷ baz gün = günlük birim. Bordroda günlük birim × hak edilen gün. Devam kodları (E/İ/R/Ü/M/Cumartesi) ve QR yokluğu hak gününü azaltır; maaş değişmez.</p>
-      </div>
+      <p className="text-sm text-muted-foreground">Aylık tutar ÷ baz gün = günlük birim. Bordroda günlük birim × hak edilen gün. Devam kodları (E/İ/R/Ü/M/Cumartesi) ve QR yokluğu hak gününü azaltır; maaş değişmez.</p>
 
       <div className="bg-card border rounded-2xl p-4 space-y-3">
         <p className="text-sm font-semibold">Genel Kurallar</p>

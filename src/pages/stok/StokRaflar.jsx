@@ -71,13 +71,8 @@ export default function StokRaflar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Rows3 className="w-6 h-6 text-primary" /> Raf Tanımları
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Her depo için raf, göz, alan veya zimmet rafı tanımlayın. Her yeni depoya otomatik "GENEL RAF" açılır.</p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Her depo için raf, göz, alan veya zimmet rafı tanımlayın. Her yeni depoya otomatik "GENEL RAF" açılır.</p>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Raf</Button>
       </div>
 

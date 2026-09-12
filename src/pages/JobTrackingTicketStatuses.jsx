@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, CheckSquare, CheckCircle2, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 const COLOR_OPTIONS = [
@@ -260,19 +260,13 @@ export default function JobTrackingTicketStatuses() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <CheckSquare className="w-6 h-6" /> Bilet Durumları
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">İş Takibi biletlerinde kullanılan durum tanımlarını yönetin.</p>
-        </div>
-        {statuses.length === 0 && (
+      {statuses.length === 0 && (
+        <div className="flex justify-end">
           <Button variant="outline" onClick={handleSeedDefaults}>
             <CheckCircle2 className="w-4 h-4 mr-2" /> Varsayilanlari Yukle
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between mb-2">

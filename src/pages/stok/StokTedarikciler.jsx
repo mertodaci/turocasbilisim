@@ -77,14 +77,9 @@ export default function StokTedarikciler() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" /> Tedarikçiler
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Cari kartlar müşterilerle ortak tutulur; buradaki liste "tedarikçi" işaretli firmalardır. Bir firma hem müşteri hem tedarikçi olabilir.</p>
-        </div>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Cari kartlar müşterilerle ortak tutulur; buradaki liste "tedarikçi" işaretli firmalardır. Bir firma hem müşteri hem tedarikçi olabilir.</p>
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" onClick={() => { setLinkId(""); setLinkOpen(true); }}>
             <Link2 className="w-4 h-4 mr-2" /> Mevcut Cariyi İşaretle
           </Button>

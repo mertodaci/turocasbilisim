@@ -32,6 +32,7 @@ export const MODULES = [
   { key: "is_takibi_kanban",     label: "İş Takibi Panolar",       path: "/is-takibi/kanban" },
   { key: "is_takibi_bilet_durumlari", label: "Bilet Durumları",   path: "/is-takibi/bilet-durumlari" },
   { key: "is_takibi_bilet_tipleri",   label: "Bilet Tipleri",     path: "/is-takibi/bilet-tipleri" },
+  { key: "is_takibi_tanimlar_v2",     label: "Genel Tanımlar",    path: "/is-takibi/genel-tanimlar" },
   { key: "ik_expense_requests", label: "Harcama Yönetimi (IK)", path: "/ik-harcama-yonetimi" },
   { key: "announcements",       label: "Duyurular",              path: "/duyurular" },
   { key: "support_center",      label: "Destek Merkezi",         path: "/destek-merkezi" },
@@ -42,6 +43,7 @@ export const MODULES = [
   { key: "sozlesme_turleri",    label: "Sözleşme Türleri",       path: "/sozlesme-turleri" },
   { key: "sozlesme_urunler",    label: "Ürünler",                path: "/sozlesme-urunler" },
   { key: "sozlesme_moduller",   label: "Modüller",               path: "/sozlesme-moduller" },
+  { key: "sozlesme_tanimlar",   label: "Genel Tanımlar",          path: "/sozlesme-tanimlar" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
   { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
   { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },
@@ -50,6 +52,7 @@ export const MODULES = [
   { key: "stok_urun_raf",       label: "Ürün - Raf Atama",       path: "/stok/urun-raf" },
   { key: "stok_sahalar",        label: "Sahalar / Projeler",     path: "/stok/sahalar" },
   { key: "stok_tedarikciler",   label: "Tedarikçiler",           path: "/stok/tedarikciler" },
+  { key: "stok_tanimlar",       label: "Stok Genel Tanımlar",    path: "/stok/tanimlar" },
   // Faz 2: Hareket fişleri — Giriş/Çıkış/Transfer/İade artık Stok Fiş Listesi'nin
   // "+" menüsünden açılıyor, ayrı sidebar öğeleri değil (path: null = gizli, izin anahtarı duruyor).
   { key: "stok_giris",          label: "Stok Giriş",             path: null },
@@ -78,6 +81,7 @@ export const MODULES = [
   { key: "ikb_vardiyalar",      label: "Vardiya Tanımları",      path: "/ik/vardiyalar" },
   { key: "ikb_vardiya_atama",   label: "Vardiya Transferi",      path: "/ik/vardiya-transfer" },
   { key: "ikb_vardiya_planlari", label: "Vardiya Planları",      path: "/ik/vardiya-planlari" },
+  { key: "pdks_tanimlar",       label: "Pdks Genel Tanımlar",    path: "/ik/pdks-tanimlar" },
   { key: "ikb_tatil_sihirbazi", label: "Tatil Sihirbazı",        path: "/ik/tatil-sihirbazi" },
   { key: "ikb_puantaj",         label: "Puantaj Cetveli",        path: "/ik/puantaj" },
   { key: "ikb_puantaj_rapor",   label: "Puantaj Raporları",      path: "/ik/puantaj-rapor" },
@@ -91,12 +95,14 @@ export const MODULES = [
   { key: "ikb_maas_ozet",       label: "Maaş Özet & Hareket Raporu", path: "/ik/maas-ozet" },
   { key: "ikb_ay_kapanis",      label: "Ay Kapanışı",            path: "/ik/ay-kapanis" },
   { key: "ikb_sirket",          label: "Şirket Bilgileri",       path: "/ik/sirket" },
+  { key: "bordro_tanimlar",     label: "Bordro Genel Tanımlar",  path: "/ik/bordro-tanimlar" },
   { key: "ikb_tutanak",         label: "Tutanak & İhtarlar",     path: "/ik/tutanak" },
   { key: "ikb_ilan",            label: "İlanlar",                path: "/ik/ilan" },
   { key: "ikb_izin_evrak",      label: "İzin & Rapor Evrak Takibi", path: "/ik/izin-evrak" },
   // ── Devriye Yönetimi ──
   { key: "devriye_lokasyon",       label: "Lokasyon & Checkpoint",  path: "/devriye/lokasyonlar" },
   { key: "devriye_vardiya_tanim",  label: "Devriye Vardiya Tanımları", path: "/devriye/vardiyalar" },
+  { key: "devriye_tanimlar",       label: "Devriye Genel Tanımlar",    path: "/devriye/tanimlar" },
   { key: "devriye_atama",          label: "Vardiya & Devriye Planı", path: "/devriye/atama" },
   { key: "devriye_personel",       label: "Güvenlik Personeli",     path: "/devriye/personel" },
   { key: "devriye_qr_saha",        label: "QR Devriye (Saha)",      path: "/devriye/qr-saha" },

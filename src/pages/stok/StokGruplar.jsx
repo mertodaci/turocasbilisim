@@ -61,13 +61,7 @@ export default function StokGruplar() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FolderTree className="w-6 h-6 text-primary" /> Ürün Grupları
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Ana grup ve alt grup yapısını yönetin.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Grup</Button>
       </div>
 

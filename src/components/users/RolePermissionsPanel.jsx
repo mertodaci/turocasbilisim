@@ -20,22 +20,22 @@ const ROLE_ICONS = {
 const CATEGORIES = [
   { label: "Ana Menü",         keys: ["dashboard"] },
   { label: "Destek Merkezi",   keys: ["support_center", "messages", "todos", "expenses", "my_leave_requests", "personal_calendar"] },
-  { label: "İş Takibi",         keys: ["is_takibi", "is_takibi_dashboard", "is_takibi_projeler", "is_takibi_biletler", "is_takibi_kanban", "is_takibi_bilet_durumlari", "is_takibi_bilet_tipleri"] },
+  { label: "İş Takibi",         keys: ["is_takibi", "is_takibi_dashboard", "is_takibi_projeler", "is_takibi_biletler", "is_takibi_kanban", "is_takibi_bilet_durumlari", "is_takibi_bilet_tipleri", "is_takibi_tanimlar_v2"] },
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "quick_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map"] },
-  { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler", "sozlesme_turleri", "sozlesme_urunler", "sozlesme_moduller"] },
+  { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler", "sozlesme_tanimlar", "sozlesme_turleri", "sozlesme_urunler", "sozlesme_moduller"] },
   { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
   { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_demirbas_sorgula", "stok_excel"] },
-  { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler"] },
+  { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler", "stok_zimmet_yerleri", "stok_tanimlar"] },
   { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_iade", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },
   { label: "Stok — Raporlar", keys: ["stok_raporlar"] },
   { label: "Stok — Satın Alma", keys: ["stok_satinalma"] },
   { label: "Stok — Zimmet", keys: ["stok_zimmet", "stok_zimmet_yerleri"] },
   { label: "Stok — e-Belge", keys: ["stok_qnb"] },
-  { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler", "ikb_vardiyalar", "ikb_vardiya_planlari", "ikb_tatil_sihirbazi", "ikb_hakedis_ayar", "ikb_bordro_yemek", "ikb_sirket"] },
+  { label: "İK/Bordro — Tanımlar", keys: ["ikb_subeler", "ikb_bolumler", "ikb_vardiyalar", "ikb_vardiya_planlari", "pdks_tanimlar", "ikb_tatil_sihirbazi", "ikb_hakedis_ayar", "ikb_bordro_yemek", "ikb_sirket", "bordro_tanimlar"] },
   { label: "İK/Bordro — İşlemler", keys: ["ikb_personel", "ikb_zam", "ikb_ozluk_evrak", "ikb_izin_evrak", "ikb_vardiya_atama", "ikb_puantaj", "ikb_mesai", "ikb_kesinti", "ikb_ic_borc", "ikb_personel_masraf", "ikb_bordro", "ikb_ay_kapanis", "ikb_tutanak", "ikb_ilan"] },
   { label: "İK/Bordro — Raporlar", keys: ["ikb_puantaj_rapor", "ikb_maas_ozet"] },
-  { label: "Devriye Yönetimi", keys: ["devriye_lokasyon", "devriye_vardiya_tanim", "devriye_atama", "devriye_personel", "devriye_qr_saha", "devriye_okuma_rapor", "devriye_saat_rapor", "devriye_qr_yazdir"] },
+  { label: "Devriye Yönetimi", keys: ["devriye_lokasyon", "devriye_vardiya_tanim", "devriye_tanimlar", "devriye_atama", "devriye_personel", "devriye_qr_saha", "devriye_okuma_rapor", "devriye_saat_rapor", "devriye_qr_yazdir"] },
 ];
 
 const ACTIONS = [

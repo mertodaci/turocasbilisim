@@ -44,11 +44,7 @@ export default function DevriyeVardiyaTanim() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Clock className="w-6 h-6 text-primary" /> Vardiya Tanımları</h1>
-          <p className="text-sm text-muted-foreground mt-1">Güvenlik personeli vardiyaları.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={() => openEdit(null)}><Plus className="w-4 h-4 mr-2" /> Yeni Vardiya</Button>
       </div>
 

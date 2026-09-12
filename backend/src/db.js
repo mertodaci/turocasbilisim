@@ -99,6 +99,40 @@ function migrateLegacyJobTrackingRename() {
       }
     }
   } catch (e) { console.warn('[migrate] sözleşme türleri/ürün/modül ayrımı kopyası:', e.message); }
+  // Her modülün dağınık "Tanım" ekranları tek bir "Genel Tanımlar" ekranına
+  // konsolide edildi (Sözleşme, İş Takibi, Pdks, Devriye, Bordro, Stok) —
+  // eski yaprak anahtarlarından HERHANGİ birinde en yüksek yetkiye sahip
+  // olan roller yeni konsolide anahtara da kavuşur (erişim kaybı olmasın).
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const migrateUnion = (oldModules, newModule) => {
+      const byRole = {};
+      for (const old of oldModules) {
+        const rows = db.prepare("SELECT role_name, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE module=?").all(old);
+        for (const r of rows) {
+          const cur = byRole[r.role_name] || { can_view: 0, can_add: 0, can_edit: 0, can_delete: 0 };
+          byRole[r.role_name] = {
+            can_view: cur.can_view || r.can_view, can_add: cur.can_add || r.can_add,
+            can_edit: cur.can_edit || r.can_edit, can_delete: cur.can_delete || r.can_delete,
+          };
+        }
+      }
+      for (const [role_name, p] of Object.entries(byRole)) {
+        const exists = db.prepare("SELECT id FROM role_permissions WHERE role_name=? AND module=?").get(role_name, newModule);
+        if (!exists) {
+          db.prepare("INSERT INTO role_permissions (id, role_name, module, can_view, can_add, can_edit, can_delete, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?)")
+            .run(uuidv4(), role_name, newModule, p.can_view, p.can_add, p.can_edit, p.can_delete, now, now);
+        }
+      }
+    };
+    migrateUnion(['sozlesme_turleri', 'sozlesme_urunler', 'sozlesme_moduller'], 'sozlesme_tanimlar');
+    migrateUnion(['is_takibi_bilet_durumlari', 'is_takibi_bilet_tipleri'], 'is_takibi_tanimlar_v2');
+    migrateUnion(['ikb_vardiyalar', 'ikb_vardiya_planlari'], 'pdks_tanimlar');
+    migrateUnion(['devriye_lokasyon', 'devriye_vardiya_tanim'], 'devriye_tanimlar');
+    migrateUnion(['ikb_tatil_sihirbazi', 'ikb_hakedis_ayar', 'ikb_bordro_yemek', 'ikb_sirket'], 'bordro_tanimlar');
+    migrateUnion(['stok_urunler', 'stok_gruplar', 'stok_depolar', 'stok_raflar', 'stok_urun_raf', 'stok_sahalar', 'stok_zimmet_yerleri', 'stok_tedarikciler'], 'stok_tanimlar');
+  } catch (e) { console.warn('[migrate] modül Tanım konsolidasyonu kopyası:', e.message); }
   try {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
@@ -586,7 +620,7 @@ function initDb() {
       'customer_map','expenses','leave_allowances','leave_types','is_takibi','is_takibi_dashboard',
       'is_takibi_projeler','is_takibi_biletler','is_takibi_kanban','is_takibi_bilet_durumlari','is_takibi_bilet_tipleri',
       'ik_expense_requests','announcements','support_center','org_chart','quick_report',
-      'hakedisler','sozlesmeler','sozlesme_turleri','sozlesme_urunler','sozlesme_moduller','oturum_yonetimi',
+      'hakedisler','sozlesmeler','sozlesme_turleri','sozlesme_urunler','sozlesme_moduller','sozlesme_tanimlar','oturum_yonetimi',
       // ── Stok / Depo Yönetimi modülü ──────────────────────────────
       // Faz 1: Tanımlar
       'stok_urunler','stok_gruplar','stok_depolar','stok_raflar','stok_urun_raf',
@@ -629,6 +663,8 @@ function initDb() {
       // ── Devriye Yönetimi modülü ───────────────────────────────────
       'devriye_lokasyon','devriye_vardiya_tanim','devriye_atama','devriye_personel',
       'devriye_qr_saha','devriye_okuma_rapor','devriye_saat_rapor','devriye_qr_yazdir',
+      // ── Modül "Tanım" konsolidasyonu (Genel Tanımlar deseni) ──────
+      'is_takibi_tanimlar_v2','pdks_tanimlar','devriye_tanimlar','bordro_tanimlar','stok_tanimlar',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();

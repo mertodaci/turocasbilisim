@@ -93,11 +93,7 @@ export default function DevriyeLokasyon() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><MapPin className="w-6 h-6 text-primary" /> Lokasyon & Checkpoint</h1>
-          <p className="text-sm text-muted-foreground mt-1">Devriye lokasyonları ve içindeki QR checkpoint noktaları.</p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={() => openLokEdit(null)}><Plus className="w-4 h-4 mr-2" /> Yeni Lokasyon</Button>
       </div>
 

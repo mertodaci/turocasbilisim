@@ -60,17 +60,10 @@ export default function StokSahalar() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-primary" /> Sahalar / Projeler
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Şantiye, proje ve müşteri teslim noktaları. Stok tutmaz; stok çıkışının hedefi olur (malzeme burada tüketilmiş sayılır) ve zimmet görev yeri olarak kullanılır.</p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <Input className="max-w-xs" placeholder="Kod / ad / yetkili ara" value={q} onChange={(e) => setQ(e.target.value)} />
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Saha</Button>
       </div>
-
-      <Input className="max-w-xs" placeholder="Kod / ad / yetkili ara" value={q} onChange={(e) => setQ(e.target.value)} />
 
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-x-auto">
         {isLoading ? (

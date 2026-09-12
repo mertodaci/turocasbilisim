@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarDays, Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const empty = { tarih: "", ad: "", tip: "tam", kaynak: "yerel", aktif: 1 };
@@ -43,18 +43,12 @@ export default function IkTatilSihirbazi() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><CalendarDays className="w-6 h-6 text-primary" /> Tatil Sihirbazı</h1>
-          <p className="text-sm text-muted-foreground mt-1">Türkiye resmî tatil takvimi + özel kapalı günler. Puantaj motoru bu tarihleri RT (tam) / yarım gün olarak işler; çalışılırsa tatil mesaisi hesaplanır.</p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={yil} onValueChange={setYil}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>{yillar.sort().map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-          </Select>
-          <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Özel Gün</Button>
-        </div>
+      <div className="flex items-center justify-end flex-wrap gap-2">
+        <Select value={yil} onValueChange={setYil}>
+          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+          <SelectContent>{yillar.sort().map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+        </Select>
+        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Özel Gün</Button>
       </div>
 
       <div className="bg-card border rounded-2xl overflow-x-auto">

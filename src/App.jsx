@@ -50,6 +50,7 @@ const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
 const SozlesmeTurleri = lazy(() => import('./pages/SozlesmeTurleri'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
+const SozlesmeGenelTanimlar = lazy(() => import('./pages/SozlesmeGenelTanimlar'));
 const SozlesmeForm = lazy(() => import('./pages/SozlesmeForm'));
 const JobTrackingV3 = lazy(() => import('./pages/JobTrackingV3'));
 const JobTrackingDashboard = lazy(() => import('./pages/JobTrackingDashboard'));
@@ -57,6 +58,7 @@ const JobTrackingTickets = lazy(() => import('./pages/JobTrackingTickets'));
 const JobTrackingKanban = lazy(() => import('./pages/JobTrackingKanban'));
 const JobTrackingTicketStatuses = lazy(() => import('./pages/JobTrackingTicketStatuses'));
 const JobTrackingTicketTypes = lazy(() => import('./pages/JobTrackingTicketTypes'));
+const JobTrackingGenelTanimlar = lazy(() => import('./pages/JobTrackingGenelTanimlar'));
 // Stok / Depo Yönetimi — Faz 1: Tanımlar
 const StokUrunler = lazy(() => import('./pages/stok/StokUrunler'));
 const StokGruplar = lazy(() => import('./pages/stok/StokGruplar'));
@@ -76,6 +78,7 @@ const StokRaporlar = lazy(() => import('./pages/stok/StokRaporlar'));
 const StokSatinAlma = lazy(() => import('./pages/stok/StokSatinAlma'));
 const StokZimmet = lazy(() => import('./pages/stok/StokZimmet'));
 const StokZimmetYerleri = lazy(() => import('./pages/stok/StokZimmetYerleri'));
+const StokGenelTanimlar = lazy(() => import('./pages/stok/StokGenelTanimlar'));
 const StokDashboard = lazy(() => import('./pages/stok/StokDashboard'));
 const StokMobil = lazy(() => import('./pages/stok/StokMobil'));
 const StokEtiket = lazy(() => import('./pages/stok/StokEtiket'));
@@ -89,6 +92,7 @@ const IkZam = lazy(() => import('./pages/ik/IkZam'));
 const IkVardiyalar = lazy(() => import('./pages/ik/IkVardiyalar'));
 const IkVardiyaTransfer = lazy(() => import('./pages/ik/IkVardiyaTransfer'));
 const IkVardiyaPlanlari = lazy(() => import('./pages/ik/IkVardiyaPlanlari'));
+const PdksGenelTanimlar = lazy(() => import('./pages/ik/PdksGenelTanimlar'));
 const IkTatilSihirbazi = lazy(() => import('./pages/ik/IkTatilSihirbazi'));
 const IkPuantaj = lazy(() => import('./pages/ik/IkPuantaj'));
 const IkPuantajRapor = lazy(() => import('./pages/ik/IkPuantajRapor'));
@@ -101,6 +105,7 @@ const IkBordro = lazy(() => import('./pages/ik/IkBordro'));
 const IkMaasOzet = lazy(() => import('./pages/ik/IkMaasOzet'));
 const IkAyKapanis = lazy(() => import('./pages/ik/IkAyKapanis'));
 const IkSirket = lazy(() => import('./pages/ik/IkSirket'));
+const BordroGenelTanimlar = lazy(() => import('./pages/ik/BordroGenelTanimlar'));
 const IkOzlukEvrak = lazy(() => import('./pages/ik/IkOzlukEvrak'));
 const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
 const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
@@ -108,6 +113,7 @@ const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
 
 const DevriyeLokasyon = lazy(() => import('./pages/devriye/DevriyeLokasyon'));
 const DevriyeVardiyaTanim = lazy(() => import('./pages/devriye/DevriyeVardiyaTanim'));
+const DevriyeGenelTanimlar = lazy(() => import('./pages/devriye/DevriyeGenelTanimlar'));
 const DevriyeAtama = lazy(() => import('./pages/devriye/DevriyeAtama'));
 const DevriyePersonel = lazy(() => import('./pages/devriye/DevriyePersonel'));
 const DevriyeQrSaha = lazy(() => import('./pages/devriye/DevriyeQrSaha'));
@@ -214,6 +220,7 @@ const AuthenticatedApp = () => {
         <Route path="/sozlesme-turleri" element={guard("sozlesme_turleri", <SozlesmeTurleri />)} />
         <Route path="/sozlesme-urunler" element={guard("sozlesme_urunler", <SozlesmeUrunler />)} />
         <Route path="/sozlesme-moduller" element={guard("sozlesme_moduller", <SozlesmeModuller />)} />
+        <Route path="/sozlesme-tanimlar" element={guard("sozlesme_tanimlar", <SozlesmeGenelTanimlar />)} />
         <Route path="/sozlesmeler/yeni" element={guard("sozlesmeler", <SozlesmeForm />)} />
         <Route path="/sozlesmeler/:id" element={guard("sozlesmeler", <SozlesmeForm />)} />
         <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />
@@ -235,6 +242,7 @@ const AuthenticatedApp = () => {
         <Route path="/is-takibi/kanban" element={guard("is_takibi_kanban", <JobTrackingKanban />)} />
         <Route path="/is-takibi/bilet-durumlari" element={guard("is_takibi_bilet_durumlari", <JobTrackingTicketStatuses />)} />
         <Route path="/is-takibi/bilet-tipleri" element={guard("is_takibi_bilet_tipleri", <JobTrackingTicketTypes />)} />
+        <Route path="/is-takibi/genel-tanimlar" element={guard("is_takibi_tanimlar_v2", <JobTrackingGenelTanimlar />)} />
         {/* Stok / Depo Yönetimi — Faz 1: Tanımlar */}
         <Route path="/stok/urunler" element={guard("stok_urunler", <StokUrunler />)} />
         <Route path="/stok/gruplar" element={guard("stok_gruplar", <StokGruplar />)} />
@@ -260,6 +268,7 @@ const AuthenticatedApp = () => {
         {/* Faz 8: Zimmet */}
         <Route path="/stok/zimmet" element={guard("stok_zimmet", <StokZimmet />)} />
         <Route path="/stok/zimmet-yerleri" element={guard("stok_zimmet_yerleri", <StokZimmetYerleri />)} />
+        <Route path="/stok/tanimlar" element={guard("stok_tanimlar", <StokGenelTanimlar />)} />
         {/* Faz 9-11: Mobil, Etiket, Excel, Dashboard */}
         <Route path="/stok" element={guard("stok_dashboard", <StokDashboard />)} />
         <Route path="/stok/mobil" element={guard("stok_mobil", <StokMobil />)} />
@@ -275,6 +284,7 @@ const AuthenticatedApp = () => {
         <Route path="/ik/vardiyalar" element={guard("ikb_vardiyalar", <IkVardiyalar />)} />
         <Route path="/ik/vardiya-transfer" element={guard("ikb_vardiya_atama", <IkVardiyaTransfer />)} />
         <Route path="/ik/vardiya-planlari" element={guard("ikb_vardiya_planlari", <IkVardiyaPlanlari />)} />
+        <Route path="/ik/pdks-tanimlar" element={guard("pdks_tanimlar", <PdksGenelTanimlar />)} />
         <Route path="/ik/tatil-sihirbazi" element={guard("ikb_tatil_sihirbazi", <IkTatilSihirbazi />)} />
         <Route path="/ik/puantaj" element={guard("ikb_puantaj", <IkPuantaj />)} />
         <Route path="/ik/puantaj-rapor" element={guard("ikb_puantaj_rapor", <IkPuantajRapor />)} />
@@ -289,6 +299,7 @@ const AuthenticatedApp = () => {
         <Route path="/ik/ay-kapanis" element={guard("ikb_ay_kapanis", <IkAyKapanis />)} />
         <Route path="/devriye/lokasyonlar" element={guard("devriye_lokasyon", <DevriyeLokasyon />)} />
         <Route path="/devriye/vardiyalar" element={guard("devriye_vardiya_tanim", <DevriyeVardiyaTanim />)} />
+        <Route path="/devriye/tanimlar" element={guard("devriye_tanimlar", <DevriyeGenelTanimlar />)} />
         <Route path="/devriye/atama" element={guard("devriye_atama", <DevriyeAtama />)} />
         <Route path="/devriye/personel" element={guard("devriye_personel", <DevriyePersonel />)} />
         <Route path="/devriye/qr-saha" element={guard("devriye_qr_saha", <DevriyeQrSaha />)} />
@@ -296,6 +307,7 @@ const AuthenticatedApp = () => {
         <Route path="/devriye/saat-raporu" element={guard("devriye_saat_rapor", <DevriyeSaatRaporu />)} />
         <Route path="/devriye/qr-yazdir" element={guard("devriye_qr_yazdir", <DevriyeQrYazdir />)} />
         <Route path="/ik/sirket" element={guard("ikb_sirket", <IkSirket />)} />
+        <Route path="/ik/bordro-tanimlar" element={guard("bordro_tanimlar", <BordroGenelTanimlar />)} />
         <Route path="/ik/ozluk-evrak" element={guard("ikb_ozluk_evrak", <IkOzlukEvrak />)} />
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />
         <Route path="/ik/ilan" element={guard("ikb_ilan", <IkIlan />)} />

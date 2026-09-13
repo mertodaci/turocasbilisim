@@ -84,7 +84,7 @@ export default function AppLayout() {
           src={bgMesh}
           alt=""
           aria-hidden="true"
-          className="fixed inset-0 w-full h-full object-cover opacity-[0.06] dark:opacity-[0.08] pointer-events-none select-none -z-10"
+          className="fixed inset-0 w-full h-full object-cover object-bottom contrast-125 opacity-[0.35] dark:opacity-[0.4] pointer-events-none select-none -z-10"
         />
         <div className="min-h-screen flex flex-col" id="main-content">
           <TopBar />

@@ -79,12 +79,12 @@ function AppBreadcrumb() {
 export default function AppLayout() {
   return (
     <BreadcrumbProvider>
-      <div className="relative min-h-screen bg-background w-full overflow-x-hidden" style={{maxWidth: "100vw"}}>
+      <div className="relative isolate min-h-screen bg-background w-full overflow-x-hidden" style={{maxWidth: "100vw"}}>
         <img
           src={bgMesh}
           alt=""
           aria-hidden="true"
-          className="fixed inset-0 w-full h-full object-cover object-bottom opacity-50 dark:opacity-60 pointer-events-none select-none"
+          className="fixed inset-0 w-full h-full object-cover object-bottom opacity-40 dark:opacity-50 pointer-events-none select-none -z-10"
         />
         <div className="min-h-screen flex flex-col" id="main-content">
           <TopBar />

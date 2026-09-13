@@ -5,12 +5,23 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake } from "lucide-react";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
-import { useStokAlerts } from "@/lib/NotificationContext";
+import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
+import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
+import { useLanguage } from "@/lib/LanguageContext";
 import { kisa } from "@/lib/hakedisUtils";
+
+const QUICK_ACTIONS = [
+  { label: "Yeni Müşteri", to: "/musteriler", icon: UserPlus },
+  { label: "Yeni Sözleşme", to: "/sozlesmeler", icon: FileSignature },
+  { label: "Personel Ekle", to: "/calisanlar", icon: Users },
+  { label: "Stok Girişi", to: "/stok/fisler", icon: PackagePlus },
+  { label: "İş Talebi Oluştur", to: "/is-takibi/tickets", icon: ClipboardPlus },
+  { label: "Rapor Al", to: "/hizli-rapor", icon: FileBarChart },
+];
 
 const TONES = {
   red:    "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900",
@@ -38,13 +49,19 @@ const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yo
 export default function AdminDashboard() {
   const { statusName } = useTicketStatuses();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { stokUyari } = useStokAlerts();
+  const { unreadTodoCount } = useTodos();
+  const { assignedTicketCount } = useJTNotifications();
+  const recentlyVisited = useRecentlyVisited();
   const { expired: sozlesmeSonaEren, upcoming: sozlesmeYaklasan, nameOf: sozlesmeFirmaAdi } = useContractAlerts();
 
   const { data: summary = { openTickets: [], openCount: 0, byStatus: [], dailyTrend: [] } } = useQuery({ queryKey: ["admin-summary"], queryFn: () => fetch("/api/dashboard/admin-summary", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000 });
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: announcements = [] } = useQuery({ queryKey: ["announcements-active"], queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }) });
+  const { data: recentCustomers = [] } = useQuery({ queryKey: ["recent-customers"], queryFn: () => flowApi.entities.Customer.list("-created_date", 3) });
+  const { data: recentContracts = [] } = useQuery({ queryKey: ["recent-contracts"], queryFn: () => flowApi.entities.CustomerContract.list("-created_date", 3) });
 
   const ik = ikData?.kpi || {};
   const donem = ikData?.bordro_donem || {};
@@ -108,9 +125,59 @@ export default function AdminDashboard() {
     { n: summary.pendingExpenses || 0, label: "Harcama", to: "/ik-harcama-yonetimi" },
     { n: ik.bekleyen_mesai || 0, label: "Mesai", to: "/ik/mesai" },
   ];
+  const toplamBekleyenOnay = bekleyenOnaylar.reduce((s, o) => s + o.n, 0);
+
+  const benimIslerim = [
+    { n: toplamBekleyenOnay, label: "Onay Bekleyen İşler", to: "/ik-izin-yonetimi", icon: CheckSquare, tone: "amber" },
+    { n: assignedTicketCount || 0, label: "Bana Atananlar", to: "/is-takibi/tickets", icon: ClipboardList, tone: "blue" },
+    { n: unreadTodoCount || 0, label: "Yapılacaklarım", to: "/yapilacaklar", icon: ListChecks, tone: "violet" },
+  ];
+
+  const sonIslemler = [
+    ...recentCustomers.map((c) => ({ key: `c-${c.id}`, ts: c.created_date, text: `${c.company_name || "Yeni müşteri"} eklendi`, to: `/musteri/${c.id}`, icon: Building2 })),
+    ...recentContracts.map((c) => ({ key: `s-${c.id}`, ts: c.created_date, text: `${c.title || "Sözleşme"} oluşturuldu`, to: "/sozlesmeler", icon: ScrollText })),
+  ].sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 5);
 
   return (
-    <div className="space-y-5">
+    <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr_280px] gap-5 items-start">
+
+      {/* SOL KOLON — Hızlı İşlemler + Son Kullanılanlar */}
+      <aside className="space-y-4 xl:sticky xl:top-24 order-2 xl:order-1">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <Boxes className="w-4 h-4 text-indigo-500" /> Hızlı İşlemler
+          </h3>
+          <div className="space-y-1">
+            {QUICK_ACTIONS.map((a, i) => (
+              <Link key={i} to={a.to} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors text-sm">
+                <a.icon className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 truncate">{a.label}</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <History className="w-4 h-4 text-slate-500" /> Son Kullanılanlar
+          </h3>
+          {recentlyVisited.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Henüz sayfa gezilmedi</p>
+          ) : (
+            <div className="space-y-1">
+              {recentlyVisited.map((v) => (
+                <Link key={v.path} to={v.path} className="block px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm truncate">
+                  {t(v.labelKey)}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ORTA KOLON — mevcut içerik */}
+      <div className="space-y-5 order-1 xl:order-2">
 
       {/* BAŞLIK */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -353,6 +420,63 @@ export default function AdminDashboard() {
       <div className="text-center text-xs text-muted-foreground pb-2">
         Canlı veri · Her 10 dakikada otomatik yenilenir
       </div>
+      </div>
+
+      {/* SAĞ KOLON — Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
+      <aside className="space-y-4 xl:sticky xl:top-24 order-3">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-amber-500" /> Benim İşlerim
+          </h3>
+          <div className="space-y-1.5">
+            {benimIslerim.map((it, i) => (
+              <Link key={i} to={it.to} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors">
+                <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", TONES[it.tone])}>
+                  <it.icon className={cn("w-3.5 h-3.5", ICON_TONES[it.tone])} />
+                </span>
+                <span className="flex-1 text-sm truncate">{it.label}</span>
+                <span className={cn("text-sm font-bold", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son İşlemler
+          </h3>
+          {sonIslemler.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Henüz kayıt yok</p>
+          ) : (
+            <div className="space-y-1">
+              {sonIslemler.map((it) => (
+                <Link key={it.key} to={it.to} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
+                  <it.icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs truncate">{it.text}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-blue-500" /> Yaklaşan Takvim
+          </h3>
+          {sozlesmeYaklasan.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Yaklaşan bir şey yok</p>
+          ) : (
+            <div className="space-y-1.5">
+              {sozlesmeYaklasan.slice(0, 5).map((c) => (
+                <Link key={c.id} to={`/musteri/${c.customer_id}`} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
+                  <span className="text-xs truncate">{sozlesmeFirmaAdi(c.customer_id)}</span>
+                  <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

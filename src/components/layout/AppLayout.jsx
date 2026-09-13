@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import BottomNav from "./BottomNav";
@@ -5,6 +6,7 @@ import TopBar from "./TopBar";
 import { allNavItems, getBreadcrumbTrail, DETAIL_ROUTE_PARENTS } from "./navItems";
 import { BreadcrumbProvider, useBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { useLanguage } from "@/lib/LanguageContext";
+import { recordVisit } from "@/lib/useRecentlyVisited";
 import bgMesh from "@/assets/anaekran.png";
 import {
   Breadcrumb,
@@ -21,11 +23,17 @@ function AppBreadcrumb() {
   const { t } = useLanguage();
   const dynamicLabel = useBreadcrumbLabel();
   const isHome = location.pathname === "/";
-  if (isHome) return null;
-
   const detailMatch = DETAIL_ROUTE_PARENTS.find((d) => location.pathname.startsWith(d.prefix));
   const trail = getBreadcrumbTrail(detailMatch ? detailMatch.leafPath : location.pathname);
-  if (trail.length === 0) return null;
+
+  useEffect(() => {
+    if (!isHome && trail.length > 0) {
+      recordVisit(location.pathname, trail[trail.length - 1]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  if (isHome || trail.length === 0) return null;
 
   const findPath = (labelKey) => {
     function walk(list) {

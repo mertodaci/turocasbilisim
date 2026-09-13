@@ -139,7 +139,7 @@ export default function AdminDashboard() {
   ].sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 5);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr_280px] gap-5 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
 
       {/* SOL KOLON — Hızlı İşlemler + Son Kullanılanlar */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-2 xl:order-1">

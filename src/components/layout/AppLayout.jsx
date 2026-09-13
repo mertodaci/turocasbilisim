@@ -7,6 +7,7 @@ import { allNavItems, getBreadcrumbTrail, DETAIL_ROUTE_PARENTS } from "./navItem
 import { BreadcrumbProvider, useBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { recordVisit } from "@/lib/useRecentlyVisited";
+import { cn } from "@/lib/utils";
 import bgMesh from "@/assets/anaekran.png";
 import {
   Breadcrumb,
@@ -85,6 +86,8 @@ function AppBreadcrumb() {
 }
 
 export default function AppLayout() {
+  const location = useLocation();
+  const isDashboard = location.pathname === "/";
   return (
     <BreadcrumbProvider>
       <div className="relative isolate min-h-screen bg-background w-full overflow-x-hidden" style={{maxWidth: "100vw"}}>
@@ -96,7 +99,7 @@ export default function AppLayout() {
         />
         <div className="min-h-screen flex flex-col" id="main-content">
           <TopBar />
-          <main className="flex-1 px-4 pt-6 pb-40 w-full overflow-x-hidden max-w-7xl mx-auto">
+          <main className={cn("flex-1 px-4 pt-6 pb-40 w-full overflow-x-hidden mx-auto", isDashboard ? "max-w-none" : "max-w-7xl")}>
             <AppBreadcrumb />
             <Outlet />
           </main>

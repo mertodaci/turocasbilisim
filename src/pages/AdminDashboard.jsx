@@ -143,11 +143,12 @@ export default function AdminDashboard() {
 
       {/* SOL KOLON — Hızlı İşlemler + Son Kullanılanlar */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-2 xl:order-1">
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-            <Boxes className="w-4 h-4 text-indigo-500" /> Hızlı İşlemler
-          </h3>
-          <div className="space-y-1">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+            <Boxes className="w-4 h-4" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide">Hızlı İşlemler</h3>
+          </div>
+          <div className="space-y-1 p-4 pt-3">
             {QUICK_ACTIONS.map((a, i) => (
               <Link key={i} to={a.to} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors text-sm">
                 <a.icon className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -158,26 +159,29 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-            <History className="w-4 h-4 text-slate-500" /> Son Kullanılanlar
-          </h3>
-          {recentlyVisited.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Henüz sayfa gezilmedi</p>
-          ) : (
-            <div className="space-y-1">
-              {recentlyVisited.map((v) => (
-                <Link key={v.path} to={v.path} className="block px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm truncate">
-                  {t(v.labelKey)}
-                </Link>
-              ))}
-            </div>
-          )}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-500 to-slate-600 text-white">
+            <History className="w-4 h-4" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide">Son Kullanılanlar</h3>
+          </div>
+          <div className="p-4 pt-3">
+            {recentlyVisited.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Henüz sayfa gezilmedi</p>
+            ) : (
+              <div className="space-y-1">
+                {recentlyVisited.map((v) => (
+                  <Link key={v.path} to={v.path} className="block px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm truncate">
+                    {t(v.labelKey)}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
       {/* ORTA KOLON — mevcut içerik */}
-      <div className="space-y-5 order-1 xl:order-2">
+      <div className="space-y-5 order-1 xl:order-2 min-w-0">
 
       {/* BAŞLIK */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -424,11 +428,12 @@ export default function AdminDashboard() {
 
       {/* SAĞ KOLON — Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-            <Bell className="w-4 h-4 text-amber-500" /> Benim İşlerim
-          </h3>
-          <div className="space-y-1.5">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+            <Bell className="w-4 h-4" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide">Benim İşlerim</h3>
+          </div>
+          <div className="space-y-1.5 p-4 pt-3">
             {benimIslerim.map((it, i) => (
               <Link key={i} to={it.to} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors">
                 <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", TONES[it.tone])}>
@@ -441,28 +446,33 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son İşlemler
-          </h3>
-          {sonIslemler.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Henüz kayıt yok</p>
-          ) : (
-            <div className="space-y-1">
-              {sonIslemler.map((it) => (
-                <Link key={it.key} to={it.to} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
-                  <it.icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs truncate">{it.text}</span>
-                </Link>
-              ))}
-            </div>
-          )}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+            <TrendingUp className="w-4 h-4" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide">Son İşlemler</h3>
+          </div>
+          <div className="p-4 pt-3">
+            {sonIslemler.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Henüz kayıt yok</p>
+            ) : (
+              <div className="space-y-1">
+                {sonIslemler.map((it) => (
+                  <Link key={it.key} to={it.to} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
+                    <it.icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs truncate">{it.text}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
-            <CalendarClock className="w-4 h-4 text-blue-500" /> Yaklaşan Takvim
-          </h3>
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <CalendarClock className="w-4 h-4" />
+            <h3 className="text-xs font-semibold uppercase tracking-wide">Yaklaşan Takvim</h3>
+          </div>
+          <div className="p-4 pt-3">
           {sozlesmeYaklasan.length === 0 ? (
             <p className="text-xs text-muted-foreground">Yaklaşan bir şey yok</p>
           ) : (
@@ -475,6 +485,7 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </aside>
     </div>

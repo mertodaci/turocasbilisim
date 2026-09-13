@@ -14,11 +14,13 @@ import { toast } from "sonner";
 import { Paperclip, X, FileText, Loader2, Maximize2, Minimize2, ExternalLink, Pencil } from "lucide-react";
 import { invalidateTicketQueries } from "@/lib/jobTrackingQueryUtils";
 import { cn } from "@/lib/utils";
+import ModuleFormDialog from "@/components/customers/ModuleFormDialog";
 
 export default function JTTicketFormDialog({ ticket, projects, customers, employees, boards = [], open, onOpenChange, defaultBoardId = null, defaultBoardName = null, defaultStatus = null, isMusteri = false, currentUser = null }) {
   const queryClient = useQueryClient();
   const [customerModules, setCustomerModules] = useState([]);
   const [customerContacts, setCustomerContacts] = useState([]);
+  const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [attachments, setAttachments] = useState(ticket?.attachments || []);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -204,6 +206,16 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
     },
   });
 
+  const createModuleMutation = useMutation({
+    mutationFn: (data) => flowApi.entities.CustomerModule.create({ ...data, customer_id: formData.customer_id }),
+    onSuccess: (created) => {
+      setCustomerModules((prev) => [...prev, created]);
+      setFormData((f) => ({ ...f, product_name: created.module_name }));
+      setModuleDialogOpen(false);
+      toast.success("Modül atandı");
+    },
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const dataToSave = { ...formData, attachments };
@@ -290,7 +302,14 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
 
   const UrunModulField = (
     <div className="space-y-2">
-      <Label>Ürün / Modül <span className="text-red-500">*</span></Label>
+      <div className="flex items-center justify-between">
+        <Label>Ürün / Modül <span className="text-red-500">*</span></Label>
+        {!isMusteri && formData.customer_id && (
+          <button type="button" onClick={() => setModuleDialogOpen(true)} className="text-xs text-primary hover:underline">
+            + Modül Ata
+          </button>
+        )}
+      </div>
       {customerModules.length > 0 ? (
         <SearchableSelect
           value={formData.product_name}
@@ -662,6 +681,14 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
         </form>
       </DialogContent>
     </Dialog>
+    <ModuleFormDialog
+      open={moduleDialogOpen}
+      onClose={() => setModuleDialogOpen(false)}
+      module={null}
+      contracts={[]}
+      isLoading={createModuleMutation.isPending}
+      onSubmit={(data) => createModuleMutation.mutate(data)}
+    />
     {previewFile && createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70" onClick={(e) => { e.stopPropagation(); closePreview(); }} style={{pointerEvents: "all"}}>
         <div className={cn("relative bg-card text-card-foreground rounded-xl shadow-2xl w-full mx-4 flex flex-col transition-all", previewZoomed ? "max-w-[96vw] max-h-[96vh]" : "max-w-3xl max-h-[90vh]")} onClick={(e) => e.stopPropagation()}>

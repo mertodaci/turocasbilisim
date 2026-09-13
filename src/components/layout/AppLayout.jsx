@@ -5,6 +5,7 @@ import TopBar from "./TopBar";
 import { allNavItems, getBreadcrumbTrail, DETAIL_ROUTE_PARENTS } from "./navItems";
 import { BreadcrumbProvider, useBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { useLanguage } from "@/lib/LanguageContext";
+import bgMesh from "@/assets/anaekran.png";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -78,7 +79,13 @@ function AppBreadcrumb() {
 export default function AppLayout() {
   return (
     <BreadcrumbProvider>
-      <div className="min-h-screen bg-background w-full overflow-x-hidden" style={{maxWidth: "100vw"}}>
+      <div className="relative min-h-screen bg-background w-full overflow-x-hidden" style={{maxWidth: "100vw"}}>
+        <img
+          src={bgMesh}
+          alt=""
+          aria-hidden="true"
+          className="fixed inset-0 w-full h-full object-cover opacity-[0.06] dark:opacity-[0.08] pointer-events-none select-none -z-10"
+        />
         <div className="min-h-screen flex flex-col" id="main-content">
           <TopBar />
           <main className="flex-1 px-4 pt-6 pb-40 w-full overflow-x-hidden max-w-7xl mx-auto">

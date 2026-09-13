@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck, Shield, User, Users, Briefcase, GraduationCap } from "lucide-react";
+import { ShieldCheck, Shield, User, Users, Briefcase, GraduationCap, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { useRolePermissions, MODULES } from "@/lib/RolePermissionsContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
@@ -45,11 +46,60 @@ const ACTIONS = [
   { key: "can_delete", label: "Sil",       short: "🗑️" },
 ];
 
+function RoleForm({ onSave, onCancel, initial, existingNames = [] }) {
+  const [name, setName] = useState(initial?.name || "");
+  const [label, setLabel] = useState(initial?.label || "");
+  const [description, setDescription] = useState(initial?.description || "");
+  const isEdit = !!initial;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!label.trim()) { toast.error("Görünen ad zorunludur!"); return; }
+    if (!isEdit) {
+      const trimmed = name.trim();
+      if (!trimmed) { toast.error("Sistem değeri zorunludur!"); return; }
+      if (existingNames.includes(trimmed)) { toast.error("Bu sistem değeri zaten kullanılıyor!"); return; }
+      onSave({ name: trimmed, label: label.trim(), description: description.trim() });
+    } else {
+      onSave({ label: label.trim(), description: description.trim() });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 bg-muted/40 border border-border/50 rounded-xl p-3 mb-2">
+      {!isEdit && (
+        <div className="space-y-1">
+          <label className="text-[11px] text-muted-foreground">Sistem Değeri</label>
+          <Input value={name} onChange={(e) => setName(e.target.value.trim())} placeholder="örn: depo_sorumlusu" className="h-8 text-xs" />
+        </div>
+      )}
+      <div className="space-y-1">
+        <label className="text-[11px] text-muted-foreground">Görünen Ad</label>
+        <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="örn: Depo Sorumlusu" className="h-8 text-xs" />
+      </div>
+      <div className="space-y-1">
+        <label className="text-[11px] text-muted-foreground">Açıklama (opsiyonel)</label>
+        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="örn: Depo işlemlerini yönetir" className="h-8 text-xs" />
+      </div>
+      <div className="flex gap-1.5 pt-0.5">
+        <button type="submit" className="flex-1 flex items-center justify-center gap-1 h-7 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+          <Check className="w-3 h-3" /> Kaydet
+        </button>
+        <button type="button" onClick={onCancel} className="flex items-center justify-center h-7 w-7 text-muted-foreground hover:text-foreground border border-border/50 rounded-lg">
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function RolePermissionsPanel() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const { permissions } = useRolePermissions();
   const [activeRole, setActiveRole] = useState("yonetici");
+  const [showCreateRole, setShowCreateRole] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState(null);
 
   const { data: roles = [] } = useQuery({
     queryKey: ["roles"],
@@ -60,6 +110,53 @@ export default function RolePermissionsPanel() {
     queryKey: ["role-permissions"],
     queryFn: () => flowApi.entities.RolePermission.list(),
   });
+
+  const createRoleMutation = useMutation({
+    mutationFn: (data) => flowApi.entities.Role.create({ ...data, is_active: 1 }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      setShowCreateRole(false);
+      setActiveRole(created.name);
+      toast.success("Rol oluşturuldu");
+    },
+    onError: (e) => toast.error(e?.message || "Rol oluşturulamadı"),
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, data }) => flowApi.entities.Role.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      setEditingRoleId(null);
+      toast.success("Rol güncellendi");
+    },
+    onError: (e) => toast.error(e?.message || "Rol güncellenemedi"),
+  });
+
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (role) => {
+      const orphaned = dbPermissions.filter((p) => p.role_name === role.name);
+      for (const p of orphaned) {
+        try { await flowApi.entities.RolePermission.delete(p.id); } catch { /* devam */ }
+      }
+      await flowApi.entities.Role.delete(role.id);
+    },
+    onSuccess: (_, role) => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
+      if (activeRole === role.name) {
+        const remaining = roles.filter((r) => r.id !== role.id);
+        setActiveRole(remaining[0]?.name || "yonetici");
+      }
+      toast.success("Rol silindi");
+    },
+    onError: (e) => toast.error(e?.message || "Rol silinemedi"),
+  });
+
+  const handleDeleteRole = (role) => {
+    if (window.confirm(`"${role.label}" rolü silinsin mi? Bu role ait tüm yetki tanımları da silinir.`)) {
+      deleteRoleMutation.mutate(role);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async ({ role_name, module, field, value }) => {
@@ -98,30 +195,65 @@ export default function RolePermissionsPanel() {
   return (
     <div className="flex gap-6 h-full">
       {/* SOL PANEL - ROLLER */}
-      <div className="w-56 shrink-0">
+      <div className="w-64 shrink-0">
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-border/50 bg-muted/30">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Roller</p>
+            <button onClick={() => { setShowCreateRole((v) => !v); setEditingRoleId(null); }} className="flex items-center gap-1 text-xs text-primary hover:underline">
+              <Plus className="w-3.5 h-3.5" /> Yeni Rol
+            </button>
           </div>
           <div className="p-2 space-y-1">
+            {showCreateRole && (
+              <RoleForm
+                existingNames={roles.map((r) => r.name)}
+                onSave={(data) => createRoleMutation.mutate(data)}
+                onCancel={() => setShowCreateRole(false)}
+              />
+            )}
             {roles.map((role) => {
               const rcfg = ROLE_ICONS[role.name] || ROLE_ICONS.kullanici;
               const RIcon = rcfg.icon;
               const isActive = activeRole === role.name;
+              const isAdmin = role.name === "admin";
               const moduleCount = dbPermissions.filter(p => p.role_name === role.name && p.can_view == 1).length;
+
+              if (editingRoleId === role.id) {
+                return (
+                  <RoleForm
+                    key={role.id}
+                    initial={role}
+                    onSave={(data) => updateRoleMutation.mutate({ id: role.id, data })}
+                    onCancel={() => setEditingRoleId(null)}
+                  />
+                );
+              }
+
               return (
-                <button key={role.name} onClick={() => setActiveRole(role.name)}
-                  className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
+                <div key={role.name}
+                  className={cn("group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
                     isActive ? `${rcfg.light} border` : "hover:bg-muted/50 border border-transparent")}>
-                  <div className={cn("p-1.5 rounded-lg", isActive ? rcfg.bg : "bg-muted")}>
-                    <RIcon className={cn("w-3.5 h-3.5", isActive ? "text-white" : "text-muted-foreground")}/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-semibold truncate", isActive ? rcfg.color : "text-foreground")}>{role.label}</p>
-                    <p className="text-xs text-muted-foreground">{moduleCount} modül</p>
-                  </div>
-                  {isActive && <div className={cn("w-1.5 h-1.5 rounded-full", rcfg.bg)}/>}
-                </button>
+                  <button onClick={() => setActiveRole(role.name)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    <div className={cn("p-1.5 rounded-lg shrink-0", isActive ? rcfg.bg : "bg-muted")}>
+                      <RIcon className={cn("w-3.5 h-3.5", isActive ? "text-white" : "text-muted-foreground")}/>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-sm font-semibold truncate", isActive ? rcfg.color : "text-foreground")}>{role.label}</p>
+                      <p className="text-xs text-muted-foreground">{moduleCount} modül</p>
+                    </div>
+                  </button>
+                  {!isAdmin && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button onClick={() => { setEditingRoleId(role.id); setShowCreateRole(false); }} className="p-1 text-muted-foreground hover:text-foreground">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => handleDeleteRole(role)} className="p-1 text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  {isActive && <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", rcfg.bg)}/>}
+                </div>
               );
             })}
           </div>

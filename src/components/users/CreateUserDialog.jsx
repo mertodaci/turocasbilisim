@@ -1,19 +1,9 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { X, UserPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
-const ROLES = [
-  { value: "kullanici", label: "Kullanıcı" },
-  { value: "yonetici", label: "Yönetici" },
-  { value: "ik", label: "İK" },
-  { value: "stajer", label: "Stajer" },
-  { value: "musteri", label: "Müşteri" },
-  { value: "guvenlik", label: "Güvenlik" },
-  { value: "admin", label: "Admin" },
-];
 
 export default function CreateUserDialog({ onClose, customers = [], currentUserRole }) {
   const queryClient = useQueryClient();
@@ -25,10 +15,18 @@ export default function CreateUserDialog({ onClose, customers = [], currentUserR
     customer_id: "",
   });
 
+  const { data: roles = [] } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => flowApi.entities.Role.list("name", 100),
+  });
+  const allRoles = roles
+    .filter((r) => r.is_active == 1 || r.is_active === true)
+    .map((r) => ({ value: r.name, label: r.label }));
+
   // Sadece admin "admin" rolü atayabilsin; yönetici atayamasın
   const availableRoles = currentUserRole === "admin"
-    ? ROLES
-    : ROLES.filter((r) => r.value !== "admin");
+    ? allRoles
+    : allRoles.filter((r) => r.value !== "admin");
 
   const createMutation = useMutation({
     mutationFn: (data) => flowApi.auth.createUser(data),

@@ -11,12 +11,12 @@ import { Plus, Pencil, Trash2, FileWarning, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
-const TURLER = [
+export const TURLER = [
   ["tutanak", "Tutanak"],
   ["ihtar", "İhtar"],
   ["savunma_talebi", "Savunma Talebi"],
 ];
-const turLabel = (t) => (TURLER.find(([k]) => k === t) || [, t])[1];
+export const turLabel = (t) => (TURLER.find(([k]) => k === t) || [, t])[1];
 const empty = { personel_id: "", personel_adi: "", tur: "tutanak", tarih: new Date().toISOString().slice(0, 10), konu: "", aciklama: "", dosya_url: "" };
 
 export default function IkTutanak() {

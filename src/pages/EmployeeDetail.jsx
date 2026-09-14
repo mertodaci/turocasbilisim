@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Navigate } from "react-router-dom";
-import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature } from "lucide-react";
+import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning } from "lucide-react";
 import { format, differenceInYears, addYears } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import { useSetBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PersonelEvraklari } from "@/pages/ik/IkOzlukEvrak";
+import { turLabel } from "@/pages/ik/IkTutanak";
 
 const LEAVE_TYPE_LABELS = {
   yillik_izin: "Yıllık İzin", hastalik_izni: "Hastalık İzni", mazeret_izni: "Mazeret İzni",
@@ -35,6 +36,7 @@ export default function EmployeeDetail() {
   const { can } = useRolePermissions();
   const isPrivileged = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "employees", "edit");
   const canViewBelgeler = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "ikb_ozluk_evrak", "view");
+  const canViewTutanak = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "ikb_tutanak", "view");
   const urlParams = new URLSearchParams(window.location.search);
   const employeeId = window.location.pathname.split("/").pop();
 
@@ -55,6 +57,12 @@ export default function EmployeeDetail() {
     queryFn: () => flowApi.entities.Definition.filter({ category: "ayrilis_nedeni" }),
   });
   const getExitReasonLabel = (val) => exitReasonDefs.find(r => r.value === val)?.label || val;
+
+  const { data: tutanaklar = [] } = useQuery({
+    queryKey: ["ik_tutanaklar", employeeId],
+    queryFn: () => flowApi.entities.IkTutanak.filter({ personel_id: employeeId }, "-tarih", 500),
+    enabled: !!employeeId && canViewTutanak,
+  });
 
   const { data: employee, isLoading: loadingEmployee } = useQuery({
     queryKey: ["employee", employeeId],
@@ -209,13 +217,15 @@ export default function EmployeeDetail() {
 
       <Tabs defaultValue="genel">
         <TabsList className={cn("grid w-full", {
-          "grid-cols-2": !canViewBelgeler && !(isPrivileged && employee.hire_date),
-          "grid-cols-3": (canViewBelgeler ? 1 : 0) + (isPrivileged && employee.hire_date ? 1 : 0) === 1,
-          "grid-cols-4": canViewBelgeler && isPrivileged && employee.hire_date,
+          "grid-cols-2": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
+          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
+          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
+          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
         })}>
           <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
+          {canViewTutanak && <TabsTrigger value="tutanak">Tutanak & İhtar</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
         </TabsList>
 
@@ -537,6 +547,39 @@ export default function EmployeeDetail() {
               <Paperclip className="w-4 h-4 text-primary" /> Özlük Belgeleri
             </h3>
             <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} />
+          </div>
+        </TabsContent>
+      )}
+
+      {canViewTutanak && (
+        <TabsContent value="tutanak" className="space-y-6 mt-4">
+          <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <FileWarning className="w-4 h-4 text-primary" /> Tutanak & İhtarlar
+            </h3>
+            {tutanaklar.length === 0 ? (
+              <div className="h-24 flex items-center justify-center text-muted-foreground text-sm">Kayıt yok.</div>
+            ) : (
+              <div className="space-y-3">
+                {tutanaklar.map((r) => (
+                  <div key={r.id} className="border border-border/50 rounded-xl p-4">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-xs px-2 py-0.5 rounded font-medium", r.tur === "ihtar" ? "bg-red-100 text-red-700" : r.tur === "savunma_talebi" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700")}>{turLabel(r.tur)}</span>
+                        <p className="text-sm font-medium">{r.konu}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{(r.tarih || "").slice(0, 10)}</span>
+                    </div>
+                    {r.aciklama && <p className="text-sm text-muted-foreground mt-2">{r.aciklama}</p>}
+                    {r.dosya_url && (
+                      <a href={r.dosya_url} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-1 text-xs mt-2">
+                        <Paperclip className="w-3.5 h-3.5" /> Belgeyi Aç
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </TabsContent>
       )}

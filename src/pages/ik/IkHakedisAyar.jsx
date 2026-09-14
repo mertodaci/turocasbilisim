@@ -139,6 +139,7 @@ export default function IkHakedisAyar() {
         </div>
 
         <p className="text-sm font-semibold pt-2 border-t">Gelir Vergisi Dilimleri ({currentYil})</p>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm max-w-xl">
           <thead><tr className="text-xs text-muted-foreground"><th className="text-left py-1">Alt Sınır</th><th className="text-left py-1">Üst Sınır</th><th className="text-left py-1">Oran %</th><th></th></tr></thead>
           <tbody>
@@ -152,6 +153,7 @@ export default function IkHakedisAyar() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className="flex flex-wrap gap-2 items-end">
           <div><Label className="mb-1 block text-[11px]">Alt Sınır</Label><Input type="number" className="w-28" value={yeniDilim.alt_sinir} onChange={(e) => setYeniDilim({ ...yeniDilim, alt_sinir: e.target.value })} /></div>
           <div><Label className="mb-1 block text-[11px]">Üst Sınır (boş=sonsuz)</Label><Input type="number" className="w-28" value={yeniDilim.ust_sinir} onChange={(e) => setYeniDilim({ ...yeniDilim, ust_sinir: e.target.value })} /></div>

@@ -83,7 +83,7 @@ function LeaveTypeForm({ onSave, onCancel, initial }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-muted/40 border border-border/50 rounded-xl px-4 py-4 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">İzin Türü Adı</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="örn: Yıllık İzin" className="h-9 text-sm" required />
@@ -93,7 +93,7 @@ function LeaveTypeForm({ onSave, onCancel, initial }) {
           <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kurallar..." className="h-9 text-sm" />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Ücret Durumu</Label>
           <div className="flex items-center gap-2 h-9">
@@ -121,7 +121,7 @@ function LeaveTypeForm({ onSave, onCancel, initial }) {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Min Gün</Label>
           <Input type="number" value={minDays} onChange={(e) => setMinDays(e.target.value)} placeholder="1" className="h-9 text-sm" />

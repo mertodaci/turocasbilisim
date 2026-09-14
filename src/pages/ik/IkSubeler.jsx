@@ -20,6 +20,7 @@ export default function IkSubeler() {
   const queryClient = useQueryClient();
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [form, setForm] = useState(empty);
+  const [initialForm, setInitialForm] = useState(empty);
   const [q, setQ] = useState("");
 
   const { data: subeler = [], isLoading } = useQuery({
@@ -53,14 +54,23 @@ export default function IkSubeler() {
     onError: (e) => toast.error("Silinemedi: " + (e?.message || "hata")),
   });
 
-  const openCreate = () => { setForm(empty); setDialog({ open: true, item: null }); };
+  const openCreate = () => { setForm(empty); setInitialForm(empty); setDialog({ open: true, item: null }); };
   const openEdit = (s) => {
-    setForm({
+    const f = {
       ad: s.ad || "", adres: s.adres || "", ip_araligi: s.ip_araligi || "",
       gps_enlem: s.gps_enlem ?? "", gps_boylam: s.gps_boylam ?? "", sapma_metre: s.sapma_metre ?? 0,
       telefon: s.telefon || "", yetkili: s.yetkili || "", sira: s.sira ?? 0, aktif: s.aktif ?? 1,
-    });
+    };
+    setForm(f); setInitialForm(f);
     setDialog({ open: true, item: s });
+  };
+  // Disariya tiklayinca/Escape'e basinca formda girilmis veri varsa sessizce
+  // kapatmak yerine onay sorar; veri yoksa (veya edit'te hicbir sey
+  // degistirilmediyse) direkt kapanir (bkz. #1028).
+  const closeDialog = () => {
+    const degisti = JSON.stringify(form) !== JSON.stringify(initialForm);
+    if (degisti && !confirm("Kaydedilmemiş değişiklikler var. Kapatılsın mı?")) return;
+    setDialog({ open: false, item: null });
   };
   const handleSubmit = () => {
     if (!form.ad.trim()) { toast.error("Şube adı zorunlu"); return; }
@@ -134,7 +144,7 @@ export default function IkSubeler() {
         )}
       </div>
 
-      <Dialog open={dialog.open} onOpenChange={(v) => !v && setDialog({ open: false, item: null })}>
+      <Dialog open={dialog.open} onOpenChange={(v) => !v && closeDialog()}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>{dialog.item ? "Şube Düzenle" : "Yeni Şube / Lokasyon"}</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto pr-1">
@@ -185,7 +195,7 @@ export default function IkSubeler() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => setDialog({ open: false, item: null })}>İptal</Button>
+              <Button variant="outline" onClick={closeDialog}>İptal</Button>
               <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
               </Button>

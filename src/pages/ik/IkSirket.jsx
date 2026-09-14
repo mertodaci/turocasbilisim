@@ -45,7 +45,7 @@ export default function IkSirket() {
       </div>
 
       <div className="bg-card border rounded-2xl p-5 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><Label className="mb-1 block text-xs">Bölüm Adı (CSV başlığı)</Label><Input value={form.bolum_adi} onChange={(e) => setForm({ ...form, bolum_adi: e.target.value })} /></div>
           <div><Label className="mb-1 block text-xs">Şirket Ünvanı</Label><Input value={form.unvan} onChange={(e) => setForm({ ...form, unvan: e.target.value })} /></div>
           <div><Label className="mb-1 block text-xs">Vergi Dairesi</Label><Input value={form.vergi_dairesi} onChange={(e) => setForm({ ...form, vergi_dairesi: e.target.value })} /></div>

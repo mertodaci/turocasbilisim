@@ -24,6 +24,8 @@ const customerTypeLabels = { belediye:"Belediye", il_ozel_idaresi:"İl Özel İd
 const AVATAR_COLORS = ["bg-indigo-500","bg-purple-500","bg-teal-500","bg-blue-500","bg-emerald-500","bg-orange-500","bg-rose-500","bg-pink-500"];
 
 async function createJobTrackingDefaults(customerId, customerName) {
+  const existingProjects = await flowApi.entities.JTProject.filter({ customer_id: customerId });
+  if (existingProjects.length > 0) return;
   const existingStatuses = await flowApi.entities.JTTicketStatus.list();
   if (existingStatuses.length === 0) {
     for (const s of DEFAULT_STATUSES) await flowApi.entities.JTTicketStatus.create(s);

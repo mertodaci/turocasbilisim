@@ -129,41 +129,42 @@ export default function Employees() {
         </div>
       )}
 
-      {/* FİLTRELER */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="İsim, e-posta veya telefon ara..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"/>
+      {/* FİLTRELER + DEPARTMAN FİLTRELERİ: kayıt sayısı arttıkça kaybolmasın diye yapışkan (sticky) */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-3 space-y-3 bg-background/95 backdrop-blur-sm border-b border-border/40">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="İsim, e-posta veya telefon ara..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"/>
+          </div>
+          <div className="flex gap-1 bg-muted rounded-xl p-1">
+            {[{v:"aktif",l:"Aktif"},{v:"pasif",l:"Pasif"},{v:"hepsi",l:"Hepsi"}].map(o=>(
+              <button key={o.v} onClick={()=>setStatusFilter(o.v)}
+                className={cn("px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                  statusFilter===o.v?"bg-card shadow text-foreground":"text-muted-foreground hover:text-foreground")}>
+                {o.l}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
-          {[{v:"aktif",l:"Aktif"},{v:"pasif",l:"Pasif"},{v:"hepsi",l:"Hepsi"}].map(o=>(
-            <button key={o.v} onClick={()=>setStatusFilter(o.v)}
-              className={cn("px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
-                statusFilter===o.v?"bg-card shadow text-foreground":"text-muted-foreground hover:text-foreground")}>
-              {o.l}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* DEPARTMAN FİLTRELERİ */}
-      {departments.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={()=>setDeptFilter("all")}
-            className={cn("text-xs px-3 py-1.5 rounded-full border transition-all font-medium",
-              deptFilter==="all"?"bg-indigo-600 text-white border-indigo-600":"border-border text-muted-foreground hover:border-indigo-400")}>
-            Tümü ({activeCount})
-          </button>
-          {departments.map(d=>(
-            <button key={d} onClick={()=>setDeptFilter(deptFilter===d?"all":d)}
+        {departments.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={()=>setDeptFilter("all")}
               className={cn("text-xs px-3 py-1.5 rounded-full border transition-all font-medium",
-                deptFilter===d?"bg-indigo-600 text-white border-indigo-600":"border-border text-muted-foreground hover:border-indigo-400")}>
-              {getDeptLabel(d)} ({deptCounts[d]||0})
+                deptFilter==="all"?"bg-indigo-600 text-white border-indigo-600":"border-border text-muted-foreground hover:border-indigo-400")}>
+              Tümü ({activeCount})
             </button>
-          ))}
-        </div>
-      )}
+            {departments.map(d=>(
+              <button key={d} onClick={()=>setDeptFilter(deptFilter===d?"all":d)}
+                className={cn("text-xs px-3 py-1.5 rounded-full border transition-all font-medium",
+                  deptFilter===d?"bg-indigo-600 text-white border-indigo-600":"border-border text-muted-foreground hover:border-indigo-400")}>
+                {getDeptLabel(d)} ({deptCounts[d]||0})
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* GRID */}
       {filtered.length === 0 ? (

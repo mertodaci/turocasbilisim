@@ -23,6 +23,29 @@ const statusConfig = {
   pasif: { label: "Pasif", className: "bg-slate-100 text-slate-500" },
 };
 
+async function ensureJobTrackingDefaults(customerId, customerName) {
+  const existing = await flowApi.entities.JTProject.filter({ customer_id: customerId });
+  if (existing.length > 0) return;
+  const statuses = await flowApi.entities.JTTicketStatus.list();
+  if (statuses.length === 0) {
+    const defaults = [
+      { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
+      { name: "Analiz", key: "analiz", color: "blue", sort_order: 2, is_active: 1, is_final: 0 },
+      { name: "Gelistirme", key: "gelistirme", color: "purple", sort_order: 3, is_active: 1, is_final: 0 },
+      { name: "Test", key: "test", color: "orange", sort_order: 4, is_active: 1, is_final: 0 },
+      { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 5, is_active: 1, is_final: 1 },
+    ];
+    for (const s of defaults) await flowApi.entities.JTTicketStatus.create(s);
+  }
+  await flowApi.entities.JTProject.create({
+    customer_id: customerId,
+    customer_name: customerName,
+    name: customerName + " - Genel",
+    status: "devam_ediyor",
+    priority: "orta",
+  });
+}
+
 const contactTypeConfig = {
   anahtar_kullanici: { label: "Anahtar Kullanıcı", icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-200" },
   kritik_kullanici: { label: "Kritik Kullanıcı", icon: AlertCircle, color: "text-red-500", bg: "bg-red-50", border: "border-red-200" },
@@ -590,24 +613,7 @@ export default function CustomerDetail() {
                       const wasEnabled = customer?.use_job_tracking == 1 || customer?.use_job_tracking === true;
                       await flowApi.entities.Customer.update(customerId, { use_job_tracking: checked ? 1 : 0 });
                       if (!wasEnabled && checked) {
-                        const statuses = await flowApi.entities.JTTicketStatus.list();
-                        if (statuses.length === 0) {
-                          const defaults = [
-                            { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
-                            { name: "Analiz", key: "analiz", color: "blue", sort_order: 2, is_active: 1, is_final: 0 },
-                            { name: "Gelistirme", key: "gelistirme", color: "purple", sort_order: 3, is_active: 1, is_final: 0 },
-                            { name: "Test", key: "test", color: "orange", sort_order: 4, is_active: 1, is_final: 0 },
-                            { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 5, is_active: 1, is_final: 1 },
-                          ];
-                          for (const s of defaults) await flowApi.entities.JTTicketStatus.create(s);
-                        }
-                        await flowApi.entities.JTProject.create({
-                          customer_id: customerId,
-                          customer_name: customer.company_name,
-                          name: customer.company_name + " - Genel",
-                          status: "devam_ediyor",
-                          priority: "orta",
-                        });
+                        await ensureJobTrackingDefaults(customerId, customer.company_name);
                       }
                       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
                       queryClient.invalidateQueries({ queryKey: ["tq-projects-customer", customerId] });
@@ -759,24 +765,7 @@ export default function CustomerDetail() {
           const willEnable = data.use_job_tracking === true || data.use_job_tracking === 1;
           await flowApi.entities.Customer.update(customerId, data);
           if (!wasEnabled && willEnable) {
-            const statuses = await flowApi.entities.JTTicketStatus.list();
-            if (statuses.length === 0) {
-              const defaults = [
-                { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
-                { name: "Analiz", key: "analiz", color: "blue", sort_order: 2, is_active: 1, is_final: 0 },
-                { name: "Gelistirme", key: "gelistirme", color: "purple", sort_order: 3, is_active: 1, is_final: 0 },
-                { name: "Test", key: "test", color: "orange", sort_order: 4, is_active: 1, is_final: 0 },
-                { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 5, is_active: 1, is_final: 1 },
-              ];
-              for (const s of defaults) await flowApi.entities.JTTicketStatus.create(s);
-            }
-            await flowApi.entities.JTProject.create({
-              customer_id: customerId,
-              customer_name: data.company_name,
-              name: data.company_name + " - Genel",
-              status: "devam_ediyor",
-              priority: "orta",
-            });
+            await ensureJobTrackingDefaults(customerId, data.company_name);
           }
           queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
           setEditOpen(false);

@@ -472,11 +472,15 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
   // "Bilet olusturuldu" girdisi eklenir. DB'de ayrica bir satir olarak
   // tutulmuyor -- boylece backend'e/olusturma akisina dokunmadan, mevcut
   // binlerce bilette de geriye donuk calisir.
+  // "Oluşturan" alaninda da (asagida, Detaylar panelinde) kullanilir --
+  // login e-postasi ile employees.email arasinda buyuk/kucuk harf farki
+  // olabildigi icin (ör. Ahmet.Yilmaz@ vs ahmet.yilmaz@) eslesme case-insensitive.
+  const creatorEmp = (employees || []).find(e => e.email && ticket?.created_by && e.email.toLowerCase() === ticket.created_by.toLowerCase());
+  const creatorName = ticket?.customer_contact_name || creatorEmp?.full_name || ticket?.created_by || 'Bilinmiyor';
+
   const historyEntries = (() => {
     const systemComments = comments.filter(c => c.comment_type === 'system' && (!isMusteri || !c.is_internal));
     if (!ticket?.created_date) return systemComments;
-    const creatorEmp = (employees || []).find(e => e.email && ticket.created_by && e.email.toLowerCase() === ticket.created_by.toLowerCase());
-    const creatorName = ticket.customer_contact_name || creatorEmp?.full_name || ticket.created_by || 'Bilinmiyor';
     const createdEntry = {
       id: '__ticket_created__',
       content: 'Bilet oluşturuldu',
@@ -1037,9 +1041,7 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
                       <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                       <div>
                         <p className="text-xs text-muted-foreground">Oluşturan</p>
-                        <p className="font-medium">
-                          {(employees || []).find(e => e.email === ticket.created_by)?.full_name || ticket.created_by}
-                        </p>
+                        <p className="font-medium">{creatorName}</p>
                       </div>
                     </div>
                   )}

@@ -737,6 +737,14 @@ function createEntityRouter(tableName) {
       const id = uuidv4();
       const now = new Date().toISOString();
 
+      // Devriye Noktasi: qr_token istemcide crypto.randomUUID() ile
+      // uretiliyordu -- bu API sadece guvenli baglamda (HTTPS/localhost)
+      // calisir, duz HTTP'de tarayicida tanimsiz kalip kayit backend'e hic
+      // ulasmadan hataya dusuyordu. Diger tum id/token'lar gibi burada uretilir.
+      if (tableName === 'devriye_noktalar' && !data.qr_token) {
+        data.qr_token = uuidv4();
+      }
+
       // job_tickets için otomatik bilet numarası
       if (tableName === 'job_tickets' && !data.ticket_number) {
         // COUNT(*)+1 degil MAX+1: gecmis gocler sirasinda satir sayisi ile en

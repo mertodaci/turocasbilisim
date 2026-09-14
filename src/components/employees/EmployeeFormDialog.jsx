@@ -11,6 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { flowApi } from "@/api/flowApiClient";
 import { Camera, Loader2, Paperclip, X, Upload } from "lucide-react";
 import { useLeaveBalance } from "@/hooks/useLeaveBalance";
+import { useAuth } from "@/lib/AuthContext";
+import { useRolePermissions } from "@/lib/RolePermissionsContext";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
@@ -39,6 +41,13 @@ const emptyForm = {
 
 export default function EmployeeFormDialog({ open, onOpenChange, onClose, employee, onSubmit, isLoading }) {
   const [form, setForm] = useState(emptyForm);
+
+  const { user } = useAuth();
+  const { can } = useRolePermissions();
+  // Maas alani (Aylik Ucret) yetki bazli: admin/yonetici her zaman gorur/duzenler,
+  // digerleri icin ozel bordro-personel yetkisi araniyor (bkz. #1039).
+  const canViewSalary = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "ikb_personel", "view");
+  const canEditSalary = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "ikb_personel", "edit");
 
   const { remaining: leaveBalance, used: leaveUsed, entitled: leaveEntitled, hasHireDate } = useLeaveBalance(employee);
 
@@ -626,20 +635,12 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                 <Label className="mb-1.5 block">Adres (özlük)</Label>
                 <Input value={form.personel_adresi} onChange={(e) => setForm({ ...form, personel_adresi: e.target.value })} />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              {canViewSalary && (
                 <div>
                   <Label className="mb-1.5 block">Aylık Ücret (₺)</Label>
-                  <Input type="number" value={form.aylik_ucret} onChange={(e) => setForm({ ...form, aylik_ucret: e.target.value })} />
+                  <Input type="number" disabled={!canEditSalary} value={form.aylik_ucret} onChange={(e) => setForm({ ...form, aylik_ucret: e.target.value })} />
                 </div>
-                <div>
-                  <Label className="mb-1.5 block">Saatlik (türetilir ÷225)</Label>
-                  <Input disabled value={((Number(form.aylik_ucret) || 0) / 225).toFixed(2)} />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Ticket Aylık (₺)</Label>
-                  <Input type="number" value={form.ticket_aylik} onChange={(e) => setForm({ ...form, ticket_aylik: e.target.value })} />
-                </div>
-              </div>
+              )}
               <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
                 <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.emekli_mi} onCheckedChange={(v) => setForm({ ...form, emekli_mi: v ? 1 : 0 })} /> Emekli</label>
                 <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.sahsi_hesap_aktif} onCheckedChange={(v) => setForm({ ...form, sahsi_hesap_aktif: v ? 1 : 0 })} /> Şahsi hesap kullan</label>

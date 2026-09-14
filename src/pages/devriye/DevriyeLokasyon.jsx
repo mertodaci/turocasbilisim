@@ -59,7 +59,7 @@ export default function DevriyeLokasyon() {
   });
 
   const createNokta = useMutation({
-    mutationFn: (d) => flowApi.entities.DevriyeNokta.create({ ...d, qr_token: crypto.randomUUID() }),
+    mutationFn: (d) => flowApi.entities.DevriyeNokta.create(d), // qr_token backend'de uretilir (crypto.randomUUID() sadece HTTPS/localhost'ta calisir)
     onSuccess: () => { invalidateNokta(); setNoktaDialog({ open: false, item: null, lokasyonId: null }); toast.success("Nokta eklendi"); },
     onError: (e) => toast.error("Eklenemedi: " + (e?.message || "hata")),
   });

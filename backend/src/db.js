@@ -564,6 +564,9 @@ function initDb() {
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_iban TEXT",
     "ALTER TABLE employees ADD COLUMN sahsi_hesap_aciklama TEXT",
     "ALTER TABLE employees ADD COLUMN vardiya_id TEXT",
+    // Calisan Tanim ekrani gozden gecirme (#1036): uyruk + acil durum kisileri
+    "ALTER TABLE employees ADD COLUMN uyruk TEXT DEFAULT 'Türkiye'",
+    "ALTER TABLE employees ADD COLUMN emergency_contacts TEXT DEFAULT '[]'",
     // İK Faz 12 gözden geçirme: cumartesi çalışılmayan işyeri varsayılanı + iç borç aylık taksiti
     "ALTER TABLE ik_hakedis_genel_ayar ADD COLUMN cumartesi_tatil INTEGER DEFAULT 1",
     "ALTER TABLE ik_ic_borclar ADD COLUMN aylik_taksit REAL DEFAULT 0",

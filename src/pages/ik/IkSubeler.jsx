@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { formatTrPhone } from "@/lib/utils";
 import { toast } from "sonner";
 
 const empty = {
@@ -152,7 +153,7 @@ export default function IkSubeler() {
               </div>
               <div>
                 <Label className="mb-1.5 block">Telefon</Label>
-                <Input value={form.telefon} onChange={(e) => setForm({ ...form, telefon: e.target.value })} />
+                <Input value={form.telefon} onChange={(e) => setForm({ ...form, telefon: formatTrPhone(e.target.value) })} placeholder="0(5xx) xxx xx xx" />
               </div>
             </div>
             <div>

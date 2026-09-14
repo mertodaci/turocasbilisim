@@ -13,6 +13,8 @@ import { Camera, Loader2, Paperclip, X, Upload } from "lucide-react";
 import { useLeaveBalance } from "@/hooks/useLeaveBalance";
 import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
+import { formatTrPhone } from "@/lib/utils";
+import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
@@ -24,8 +26,10 @@ const roleOptions = [
 
 const emptyForm = {
   full_name: "", tc: "", card_uid: "", birth_date: "", hire_date: "", next_leave_entitlement_date: "", gender: "",
+  uyruk: "Türkiye",
   department: "", position: "", app_role: "",
   phone: "", email: "", avatar_url: "", show_in_job_tracking: false,
+  emergency_contacts: [],
   manager_id: "", manager_name: "",
   education_level: "", highest_education: "",
   university: "", education_department: "", graduation_date: "",
@@ -41,6 +45,7 @@ const emptyForm = {
 
 export default function EmployeeFormDialog({ open, onOpenChange, onClose, employee, onSubmit, isLoading }) {
   const [form, setForm] = useState(emptyForm);
+  const [activeTab, setActiveTab] = useState("kisisel");
 
   const { user } = useAuth();
   const { can } = useRolePermissions();
@@ -81,6 +86,10 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const certInputRefs = useRef({});
 
   useEffect(() => {
+    if (open) setActiveTab("kisisel");
+  }, [open, employee]);
+
+  useEffect(() => {
     if (employee) {
       setForm({
         full_name: employee.full_name || "",
@@ -89,10 +98,12 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
         birth_date: employee.birth_date || "",
         hire_date: employee.hire_date || "",
         gender: employee.gender || "",
+        uyruk: employee.uyruk || "Türkiye",
         department: employee.department || "",
         position: employee.position || "",
         app_role: employee.app_role || "",
         show_in_job_tracking: employee.show_in_job_tracking === 1 || employee.show_in_job_tracking === true,
+        emergency_contacts: employee.emergency_contacts || [],
         phone: employee.phone || "",
         email: employee.email || "",
         avatar_url: employee.avatar_url || "",
@@ -197,8 +208,23 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
       e.target.value = "";
     }
   };
+  // Zorunlu alan kontrolu: hangi tab'da eksik oldugunu bulup oraya gecirir +
+  // net bir mesaj gosterir -- oncesinde Kaydet butonu sessizce disabled
+  // kaliyordu, kullanici hangi alanin eksik oldugunu tab'lar arasinda
+  // gezerek bulmak zorunda kaliyordu (bkz. #1036).
+  const getValidationError = () => {
+    if (!form.full_name.trim()) return { tab: "kisisel", message: "Ad Soyad zorunlu" };
+    const turkiyeMi = (form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye";
+    if (turkiyeMi && !/^[0-9]{11}$/.test(form.tc || "")) return { tab: "kisisel", message: "TC Kimlik No zorunlu ve 11 haneli olmalı" };
+    if (!form.birth_date) return { tab: "kisisel", message: "Doğum Tarihi zorunlu" };
+    if (!form.department) return { tab: "kisisel", message: "Departman zorunlu" };
+    return null;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const err = getValidationError();
+    if (err) { setActiveTab(err.tab); toast.error(err.message); return; }
     const payload = { ...form, show_in_job_tracking: form.show_in_job_tracking ? 1 : 0 };
     if (form.education_history && form.education_history.length > 0) {
       payload.university = form.education_history[0].university || "";
@@ -254,9 +280,10 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </div>
 
-          <Tabs defaultValue="kisisel" className="flex flex-col min-h-0 flex-1 mt-4">
-            <TabsList className="w-full grid grid-cols-4 shrink-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1 mt-4">
+            <TabsList className="w-full grid grid-cols-5 shrink-0">
               <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
+              <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
               <TabsTrigger value="is">İş</TabsTrigger>
               <TabsTrigger value="egitim">Eğitim</TabsTrigger>
               <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
@@ -271,13 +298,19 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="mb-1.5 block">TC Kimlik No</Label>
-                  <Input value={form.tc} onChange={(e) => setForm({ ...form, tc: e.target.value })} placeholder="12345678901" maxLength={11} />
+                  <Label className="mb-1.5 block">Uyruk</Label>
+                  <Input value={form.uyruk} onChange={(e) => setForm({ ...form, uyruk: e.target.value })} placeholder="Türkiye" />
                 </div>
                 <div>
-                  <Label className="mb-1.5 block">Dogum Tarihi</Label>
+                  <Label className="mb-1.5 block">TC Kimlik No{(form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye" ? " *" : ""}</Label>
+                  <Input value={form.tc} onChange={(e) => setForm({ ...form, tc: e.target.value.replace(/\D/g, "").slice(0, 11) })} placeholder="12345678901" maxLength={11} />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Doğum Tarihi *</Label>
                   <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="mb-1.5 block">Cinsiyet</Label>
                   <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
@@ -288,27 +321,6 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Telefon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0532..." />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">E-posta</Label>
-                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ornek@firma.com" />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Kart ID</Label>
-                  <Input value={form.card_uid} onChange={(e) => setForm({ ...form, card_uid: e.target.value.trim().toUpperCase() })} placeholder="Örn: E9632487" />
-                </div>
-              </div>
-            </div>
-            </TabsContent>
-
-            <TabsContent value="is" className="mt-0">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="mb-1.5 block">Departman *</Label>
                   <Select value={form.department} onValueChange={(v) => setForm({ ...form, department: v })}>
@@ -321,16 +333,127 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                   </Select>
                 </div>
                 <div>
-                  <Label className="mb-1.5 block">Pozisyon / Unvan</Label>
-                  <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      {positionOptions.map((p) => (
-                        <SelectItem key={p.id} value={p.value}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="mb-1.5 block">Kart ID</Label>
+                  <Input value={form.card_uid} onChange={(e) => setForm({ ...form, card_uid: e.target.value.trim().toUpperCase() })} placeholder="Örn: E9632487" />
                 </div>
+              </div>
+            </div>
+            </TabsContent>
+
+            <TabsContent value="iletisim" className="mt-0">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-1.5 block">Telefon</Label>
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: formatTrPhone(e.target.value) })} placeholder="0(5xx) xxx xx xx" />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">E-posta</Label>
+                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ornek@firma.com" />
+                </div>
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Adres</Label>
+                <Input value={form.personel_adresi} onChange={(e) => setForm({ ...form, personel_adresi: e.target.value })} />
+              </div>
+
+              <div className="pt-2 border-t">
+                <div className="flex items-center justify-between mb-2 mt-3">
+                  <Label>Acil Durumda Ulaşılacak Kişiler</Label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, emergency_contacts: [...(form.emergency_contacts || []), { relation: "", full_name: "", phone: "", order: (form.emergency_contacts || []).length + 1 }] })}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    + Kişi Ekle
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {(form.emergency_contacts || []).map((kisi, idx) => (
+                    <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Kişi</span>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, emergency_contacts: form.emergency_contacts.filter((_, i) => i !== idx) })}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Yakınlık Derecesi</Label>
+                          <Input
+                            placeholder="ör. Eşi, Kardeşi"
+                            value={kisi.relation}
+                            onChange={(e) => {
+                              const updated = [...form.emergency_contacts];
+                              updated[idx] = { ...updated[idx], relation: e.target.value };
+                              setForm({ ...form, emergency_contacts: updated });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Adı Soyadı</Label>
+                          <Input
+                            value={kisi.full_name}
+                            onChange={(e) => {
+                              const updated = [...form.emergency_contacts];
+                              updated[idx] = { ...updated[idx], full_name: e.target.value };
+                              setForm({ ...form, emergency_contacts: updated });
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Telefon Numarası</Label>
+                          <Input
+                            placeholder="0(5xx) xxx xx xx"
+                            value={kisi.phone}
+                            onChange={(e) => {
+                              const updated = [...form.emergency_contacts];
+                              updated[idx] = { ...updated[idx], phone: formatTrPhone(e.target.value) };
+                              setForm({ ...form, emergency_contacts: updated });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Sıra Numarası (öncelik)</Label>
+                          <Input
+                            type="number" min="1"
+                            value={kisi.order || ""}
+                            onChange={(e) => {
+                              const updated = [...form.emergency_contacts];
+                              updated[idx] = { ...updated[idx], order: e.target.value };
+                              setForm({ ...form, emergency_contacts: updated });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!form.emergency_contacts || form.emergency_contacts.length === 0) && (
+                    <p className="text-xs text-muted-foreground italic">Henüz acil durum kişisi eklenmedi.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            </TabsContent>
+
+            <TabsContent value="is" className="mt-0">
+            <div className="space-y-3">
+              <div>
+                <Label className="mb-1.5 block">Pozisyon / Unvan</Label>
+                <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+                  <SelectContent>
+                    {positionOptions.map((p) => (
+                      <SelectItem key={p.id} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="mb-1.5 block">Bagli Oldugu Yonetici</Label>
@@ -424,7 +547,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                   <Label>Universite Bilgileri</Label>
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, education_history: [...(form.education_history || []), { university: "", department: "", graduation_date: "" }] })}
+                    onClick={() => setForm({ ...form, education_history: [...(form.education_history || []), { university: "", department: "", graduation_date: "", gpa: "" }] })}
                     className="text-xs text-primary hover:underline"
                   >
                     + Universite Ekle
@@ -443,31 +566,52 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <Input
-                        placeholder="Universite adi"
-                        value={edu.university}
-                        onChange={(e) => {
-                          const updated = [...form.education_history];
-                          updated[idx] = { ...updated[idx], university: e.target.value };
-                          setForm({ ...form, education_history: updated });
-                        }}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="mb-1 block text-xs text-muted-foreground">Üniversite</Label>
                         <Input
-                          placeholder="Bolum adi"
-                          value={edu.department}
+                          placeholder="Universite adi"
+                          value={edu.university}
                           onChange={(e) => {
                             const updated = [...form.education_history];
-                            updated[idx] = { ...updated[idx], department: e.target.value };
+                            updated[idx] = { ...updated[idx], university: e.target.value };
                             setForm({ ...form, education_history: updated });
                           }}
                         />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Bölüm</Label>
+                          <Input
+                            placeholder="Bolum adi"
+                            value={edu.department}
+                            onChange={(e) => {
+                              const updated = [...form.education_history];
+                              updated[idx] = { ...updated[idx], department: e.target.value };
+                              setForm({ ...form, education_history: updated });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Tarihi</Label>
+                          <Input
+                            type="date"
+                            value={edu.graduation_date}
+                            onChange={(e) => {
+                              const updated = [...form.education_history];
+                              updated[idx] = { ...updated[idx], graduation_date: e.target.value };
+                              setForm({ ...form, education_history: updated });
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Not Ortalaması</Label>
                         <Input
-                          type="date"
-                          value={edu.graduation_date}
+                          type="number" step="0.01" min="0" max="4" placeholder="örn. 3.24"
+                          value={edu.gpa || ""}
                           onChange={(e) => {
                             const updated = [...form.education_history];
-                            updated[idx] = { ...updated[idx], graduation_date: e.target.value };
+                            updated[idx] = { ...updated[idx], gpa: e.target.value };
                             setForm({ ...form, education_history: updated });
                           }}
                         />
@@ -631,10 +775,6 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
                   <Input value={form.kanun_no} onChange={(e) => setForm({ ...form, kanun_no: e.target.value })} />
                 </div>
               </div>
-              <div>
-                <Label className="mb-1.5 block">Adres (özlük)</Label>
-                <Input value={form.personel_adresi} onChange={(e) => setForm({ ...form, personel_adresi: e.target.value })} />
-              </div>
               {canViewSalary && (
                 <div>
                   <Label className="mb-1.5 block">Aylık Ücret (₺)</Label>
@@ -672,7 +812,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
           <div className="flex justify-end gap-3 pt-3 border-t shrink-0">
             <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>
-            <Button type="submit" disabled={isLoading || uploadingDoc || !form.full_name || !form.department}>
+            <Button type="submit" disabled={isLoading || uploadingDoc}>
               {isLoading ? "Kaydediliyor..." : employee ? "Guncelle" : "Kaydet"}
             </Button>
           </div>

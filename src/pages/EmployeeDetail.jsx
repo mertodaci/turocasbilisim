@@ -398,13 +398,29 @@ export default function EmployeeDetail() {
               : (employee.university ? [{ university: employee.university, department: employee.education_department, graduation_date: employee.graduation_date }] : []);
             const certificates = employee.certificates || [];
             const documents = employee.education_documents || [];
+            const egitimDurumuVar = employee.education_level || employee.highest_education;
 
-            if (!history.length && !certificates.length && !documents.length) {
+            if (!history.length && !certificates.length && !documents.length && !egitimDurumuVar) {
               return <p className="text-sm text-muted-foreground">Eğitim bilgisi girilmemiş.</p>;
             }
 
             return (
               <>
+                {/* Egitim Durumu -- universite girilmese bile ayri gosterilir, tab
+                    tamamen bos gorunmesin diye (bkz. #1037) */}
+                {egitimDurumuVar && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl mb-5">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">Eğitim Durumu</p>
+                      <p className="text-sm font-medium">{employee.education_level || "Seçilmemiştir"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">En Yüksek Eğitim</p>
+                      <p className="text-sm font-medium">{employee.highest_education || "Seçilmemiştir"}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Üniversite Bilgileri */}
                 {history.length > 0 && (
                   <div>
@@ -414,25 +430,23 @@ export default function EmployeeDetail() {
                     </div>
                     <div className="space-y-3">
                       {history.map((edu, idx) => (
-                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-xl">
-                          {edu.university && (
-                            <div>
-                              <p className="text-[11px] text-muted-foreground">Üniversite</p>
-                              <p className="text-sm font-medium">{edu.university}</p>
-                            </div>
-                          )}
-                          {edu.department && (
-                            <div>
-                              <p className="text-[11px] text-muted-foreground">Bölüm</p>
-                              <p className="text-sm font-medium">{edu.department}</p>
-                            </div>
-                          )}
-                          {edu.graduation_date && (
-                            <div>
-                              <p className="text-[11px] text-muted-foreground">Mezuniyet Tarihi</p>
-                              <p className="text-sm font-medium">{format(new Date(edu.graduation_date), "d MMMM yyyy", { locale: tr })}</p>
-                            </div>
-                          )}
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 bg-muted/30 rounded-xl">
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Üniversite</p>
+                            <p className="text-sm font-medium">{edu.university || "Seçilmemiştir"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Bölüm</p>
+                            <p className="text-sm font-medium">{edu.department || "Seçilmemiştir"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Mezuniyet Tarihi</p>
+                            <p className="text-sm font-medium">{edu.graduation_date ? format(new Date(edu.graduation_date), "d MMMM yyyy", { locale: tr }) : "Seçilmemiştir"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-muted-foreground">Mezuniyet Not Ortalaması</p>
+                            <p className="text-sm font-medium">{edu.gpa || "Seçilmemiştir"}</p>
+                          </div>
                         </div>
                       ))}
                     </div>

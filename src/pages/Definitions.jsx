@@ -10,6 +10,7 @@ const CATEGORIES = [
   { key: "pozisyon",       label: "Pozisyonlar",       group: "Çalışan" },
   { key: "egitim_seviyesi",label: "Eğitim Seviyeleri", group: "Çalışan" },
   { key: "ayrilis_nedeni", label: "Ayrılış Nedenleri", group: "Çalışan" },
+  { key: "belge_turu",     label: "Belge Türleri",     group: "Çalışan" },
   { key: "musteri_tipi",   label: "Müşteri Tipleri",   group: "Müşteri" },
   { key: "musteri_detayi", label: "Müşteri Detayları", group: "Müşteri" },
   { key: "sehir",          label: "Şehirler",           group: "Müşteri" },

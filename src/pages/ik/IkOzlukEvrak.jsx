@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderArchive, Upload, Trash2, Paperclip, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FolderArchive, Upload, Trash2, Paperclip, CheckCircle2, AlertTriangle, Info, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
-const EVRAK_TIPLERI = ["kimlik", "diploma", "sozlesme", "saglik_raporu", "ehliyet", "adli_sicil", "ikametgah", "sgk_ise_giris", "fotograf", "banka", "diger"];
-const tipLabel = (t) => ({ kimlik: "Kimlik", diploma: "Diploma", sozlesme: "İş Sözleşmesi", saglik_raporu: "Sağlık Raporu", ehliyet: "Ehliyet / SRC", adli_sicil: "Adli Sicil", ikametgah: "İkametgah", sgk_ise_giris: "SGK İşe Giriş", fotograf: "Fotoğraf", banka: "Banka / IBAN", diger: "Diğer" }[t] || t);
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp)$/i;
 
 async function uploadFile(file) {
   const fd = new FormData();
@@ -21,13 +21,28 @@ async function uploadFile(file) {
   return res.json();
 }
 
-function PersonelBazli({ personeller }) {
+function useBelgeTurleri() {
+  const { data = [] } = useQuery({
+    queryKey: ["definitions", "belge_turu"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "belge_turu", is_active: true }),
+  });
+  const tipler = useMemo(() => (data.length ? data.map((d) => d.value) : ["diger"]), [data]);
+  const tipLabel = useMemo(() => {
+    const map = Object.fromEntries(data.map((d) => [d.value, d.label]));
+    return (t) => map[t] || t || "Diğer";
+  }, [data]);
+  return { tipler, tipLabel };
+}
+
+export function PersonelEvraklari({ personelId, personelAdi }) {
   const qc = useQueryClient();
-  const [personelId, setPersonelId] = useState("");
-  const [tip, setTip] = useState("kimlik");
+  const { tipler, tipLabel } = useBelgeTurleri();
+  const [tip, setTip] = useState("diger");
   const [aciklama, setAciklama] = useState("");
   const [busy, setBusy] = useState(false);
-  const persById = useMemo(() => Object.fromEntries(personeller.map((p) => [p.id, p])), [personeller]);
+  const [replacingId, setReplacingId] = useState(null);
+  const [detayRow, setDetayRow] = useState(null);
+  const replaceInputRef = useRef(null);
 
   const { data: evraklar = [] } = useQuery({
     queryKey: ["ik_ozluk_evrak", personelId],
@@ -44,7 +59,7 @@ function PersonelBazli({ personeller }) {
     try {
       const up = await uploadFile(file);
       await flowApi.entities.IkOzlukEvrak.create({
-        personel_id: personelId, personel_adi: persById[personelId]?.full_name || "",
+        personel_id: personelId, personel_adi: personelAdi || "",
         evrak_tipi: tip, dosya_url: up.url, dosya_adi: file.name,
         tarih: new Date().toISOString().slice(0, 10), aciklama,
       });
@@ -55,21 +70,30 @@ function PersonelBazli({ personeller }) {
     finally { setBusy(false); e.target.value = ""; }
   };
 
+  const baslatDegistir = (id) => { setReplacingId(id); replaceInputRef.current?.click(); };
+  const onReplaceFile = async (e) => {
+    const file = e.target.files?.[0];
+    const id = replacingId;
+    if (!file || !id) return;
+    setBusy(true);
+    try {
+      const up = await uploadFile(file);
+      await flowApi.entities.IkOzlukEvrak.update(id, { dosya_url: up.url, dosya_adi: file.name });
+      invalidate();
+      toast.success("Belge güncellendi");
+    } catch { toast.error("Güncellenemedi"); }
+    finally { setBusy(false); setReplacingId(null); e.target.value = ""; }
+  };
+
   return (
     <div className="space-y-4">
+      <input ref={replaceInputRef} type="file" className="hidden" onChange={onReplaceFile} />
       <div className="flex gap-2 flex-wrap items-end">
-        <div className="min-w-[220px]">
-          <Label className="mb-1.5 block text-xs">Personel</Label>
-          <Select value={personelId} onValueChange={setPersonelId}>
-            <SelectTrigger><SelectValue placeholder="Personel seç" /></SelectTrigger>
-            <SelectContent>{personeller.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
         <div className="w-44">
           <Label className="mb-1.5 block text-xs">Evrak Tipi</Label>
           <Select value={tip} onValueChange={setTip}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{EVRAK_TIPLERI.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
+            <SelectContent>{tipler.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="flex-1 min-w-[160px]">
@@ -101,18 +125,61 @@ function PersonelBazli({ personeller }) {
                   <td className="px-4 py-2.5"><a href={r.dosya_url} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" /> {r.dosya_adi || "Aç"}</a></td>
                   <td className="px-4 py-2.5 text-muted-foreground">{(r.tarih || "").slice(0, 10)}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{r.aciklama || "—"}</td>
-                  <td className="px-4 py-2.5 text-right"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Evrak silinsin mi?")) delM.mutate(r.id); }}><Trash2 className="w-3.5 h-3.5" /></Button></td>
+                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setDetayRow(r)} title="Detay"><Info className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => baslatDegistir(r.id)} disabled={busy} title="Değiştir"><RefreshCw className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Evrak silinsin mi?")) delM.mutate(r.id); }} title="Sil"><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      <Dialog open={!!detayRow} onOpenChange={(o) => !o && setDetayRow(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Belge Detayı</DialogTitle></DialogHeader>
+          {detayRow && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-muted-foreground">Tip:</span> {tipLabel(detayRow.evrak_tipi)}</div>
+                <div><span className="text-muted-foreground">Tarih:</span> {(detayRow.tarih || "").slice(0, 10) || "—"}</div>
+              </div>
+              <div><span className="text-muted-foreground">Açıklama:</span> {detayRow.aciklama || "—"}</div>
+              {IMAGE_EXT.test(detayRow.dosya_url || "") ? (
+                <img src={detayRow.dosya_url} alt={detayRow.dosya_adi} className="max-h-80 rounded-lg border mx-auto" />
+              ) : (
+                <a href={detayRow.dosya_url} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" /> {detayRow.dosya_adi || "Dosyayı Aç"}</a>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function PersonelBazli({ personeller }) {
+  const [personelId, setPersonelId] = useState("");
+  const persById = useMemo(() => Object.fromEntries(personeller.map((p) => [p.id, p])), [personeller]);
+
+  return (
+    <div className="space-y-4">
+      <div className="min-w-[220px] max-w-xs">
+        <Label className="mb-1.5 block text-xs">Personel</Label>
+        <Select value={personelId} onValueChange={setPersonelId}>
+          <SelectTrigger><SelectValue placeholder="Personel seç" /></SelectTrigger>
+          <SelectContent>{personeller.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <PersonelEvraklari personelId={personelId} personelAdi={persById[personelId]?.full_name} />
     </div>
   );
 }
 
 function TopluYukleme() {
+  const { tipler, tipLabel } = useBelgeTurleri();
   const [rows, setRows] = useState([]); // {dosya_url, dosya_adi, personel_id, personel_adi, evrak_tipi, eslesme}
   const [busy, setBusy] = useState(false);
   const [uygulandi, setUygulandi] = useState(0);
@@ -186,7 +253,7 @@ function TopluYukleme() {
                     <td className="px-3 py-2">
                       <Select value={r.evrak_tipi || "diger"} onValueChange={(v) => setRow(i, { evrak_tipi: v })}>
                         <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
-                        <SelectContent>{EVRAK_TIPLERI.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
+                        <SelectContent>{tipler.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
                       </Select>
                     </td>
                     <td className="px-3 py-2 text-xs">

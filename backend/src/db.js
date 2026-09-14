@@ -1695,6 +1695,24 @@ function initDb() {
     }
   } catch(e) { console.error('devriye rol seed:', e.message); }
 
+  // ── Personel Belgeleri: standart belge turu tanimlari (idempotent) ──
+  // Bu tanimlar Definitions.jsx'teki "Belge Turleri" kategorisinden
+  // yonetilir; IK Ozluk Evraklari ekrani artik sabit bir liste yerine
+  // buradan besleniyor (#1038).
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const belgeTuruVar = db.prepare("SELECT 1 FROM definitions WHERE category='belge_turu' LIMIT 1").get();
+    if (!belgeTuruVar) {
+      const standartlar = [
+        ['Nüfus Cüzdanı', 'nufus_cuzdani'], ['Diploma', 'diploma'], ['Sabıka Kaydı', 'sabika_kaydi'],
+        ['Sağlık Raporu', 'saglik_raporu'], ['Sertifika', 'sertifika'], ['Office Sertifikası', 'office_sertifikasi'],
+      ];
+      const ins = db.prepare("INSERT INTO definitions (id, category, label, value, is_active, sort_order, created_by, created_date, updated_date) VALUES (?,?,?,?,1,?,?,?,?)");
+      standartlar.forEach(([label, value], i) => ins.run(uuidv4(), 'belge_turu', label, value, i, 'sistem', now, now));
+    }
+  } catch(e) { console.error('belge turu seed:', e.message); }
+
   console.log('✅ Veritabanı tabloları hazır');
 }
 

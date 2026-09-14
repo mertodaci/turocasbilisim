@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import { useSetBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PersonelEvraklari } from "@/pages/ik/IkOzlukEvrak";
 
 const LEAVE_TYPE_LABELS = {
   yillik_izin: "Yıllık İzin", hastalik_izni: "Hastalık İzni", mazeret_izni: "Mazeret İzni",
@@ -33,6 +34,7 @@ export default function EmployeeDetail() {
   const { user } = useAuth();
   const { can } = useRolePermissions();
   const isPrivileged = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "employees", "edit");
+  const canViewBelgeler = user?.role === "admin" || user?.role === "yonetici" || can(user?.role, "ikb_ozluk_evrak", "view");
   const urlParams = new URLSearchParams(window.location.search);
   const employeeId = window.location.pathname.split("/").pop();
 
@@ -206,9 +208,14 @@ export default function EmployeeDetail() {
       )}
 
       <Tabs defaultValue="genel">
-        <TabsList className={cn("grid w-full", isPrivileged && employee.hire_date ? "grid-cols-3" : "grid-cols-2")}>
+        <TabsList className={cn("grid w-full", {
+          "grid-cols-2": !canViewBelgeler && !(isPrivileged && employee.hire_date),
+          "grid-cols-3": (canViewBelgeler ? 1 : 0) + (isPrivileged && employee.hire_date ? 1 : 0) === 1,
+          "grid-cols-4": canViewBelgeler && isPrivileged && employee.hire_date,
+        })}>
           <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
+          {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
         </TabsList>
 
@@ -522,6 +529,17 @@ export default function EmployeeDetail() {
           })()}
         </div>
         </TabsContent>
+
+      {canViewBelgeler && (
+        <TabsContent value="belgeler" className="space-y-6 mt-4">
+          <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Paperclip className="w-4 h-4 text-primary" /> Özlük Belgeleri
+            </h3>
+            <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} />
+          </div>
+        </TabsContent>
+      )}
 
       {/* İzin Bilgileri */}
       {isPrivileged && employee.hire_date && (

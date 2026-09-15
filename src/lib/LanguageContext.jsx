@@ -148,7 +148,6 @@ const translations = {
     ikb_ay_kapanis: "Ay Kapanışı",
     ikb_sirket: "Şirket Bilgileri",
     ikb_tutanak: "Tutanak & İhtarlar",
-    ikb_ilan: "İlanlar",
     ikb_izin_evrak: "İzin & Rapor Evrakları",
   },
   en: {
@@ -296,7 +295,6 @@ const translations = {
     ikb_ay_kapanis: "Month Closing",
     ikb_sirket: "Company Info",
     ikb_tutanak: "Records & Warnings",
-    ikb_ilan: "Postings",
     ikb_izin_evrak: "Leave & Report Documents",
   },
 };

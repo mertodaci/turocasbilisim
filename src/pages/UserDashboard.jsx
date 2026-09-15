@@ -9,6 +9,7 @@ import { tr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
+import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 
 export default function UserDashboard() {
   const { user } = useAuth();
@@ -27,11 +28,9 @@ export default function UserDashboard() {
     return ids.includes(employeeRecord?.id);
   });
   const { data: myTodos = [] } = useQuery({ queryKey: ["my-todos-dash", user?.email], queryFn: () => flowApi.entities.Todo.filter({ owner_email: user.email }), enabled: !!user?.email });
-  const { data: announcements = [] } = useQuery({ queryKey: ["announcements-active"], queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }) });
+  const { activeAnnouncements } = useActiveAnnouncements();
   const { data: pendingLeavesIK = [] } = useQuery({ queryKey: ["pending-leaves-ik"], queryFn: () => flowApi.entities.LeaveRequest.list(), enabled: isIK, select: d => d.filter(l=>["ik_onayi_bekliyor","yonetici_onayi_bekliyor"].includes(l.status)) });
   const { data: pendingExpensesIK = [] } = useQuery({ queryKey: ["pending-expenses-ik"], queryFn: () => flowApi.entities.ExpenseReport.list(), enabled: isIK, select: d => d.filter(r=>["ik_onayi_bekliyor","yonetici_onayi_bekliyor"].includes(r.status)) });
-
-  const activeAnnouncements = announcements.filter(a => (a.is_active===1||a.is_active===true) && (a.target_roles==="all"||!a.target_roles||a.target_roles.split(",").includes(user?.role))).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
 
   const pendingLeaves = myLeaves.filter(l=>["beklemede","yonetici_onayi_bekliyor","ik_onayi_bekliyor"].includes(l.status));
   const approvedLeaves = myLeaves.filter(l=>l.status==="onaylandi");

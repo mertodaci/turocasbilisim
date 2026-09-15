@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ const COLOR_OPTIONS = [
   { value: "yellow", label: "Sarı", bg: "bg-yellow-500" },
 ];
 
-const empty = { title: "", content: "", color: "blue", is_active: 1, sort_order: 0, target_roles: "all" };
+const empty = { title: "", content: "", color: "blue", is_active: 1, sort_order: 0, target_roles: "all", start_date: "", end_date: "", target_sube_id: "", target_bolum_id: "" };
 
 export default function Announcements() {
   const queryClient = useQueryClient();
@@ -30,6 +30,14 @@ export default function Announcements() {
     queryKey: ["announcements"],
     queryFn: () => flowApi.entities.Announcement.list(),
   });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 2000) });
+  const subeById = useMemo(() => Object.fromEntries(subeler.map((s) => [s.id, s])), [subeler]);
+  const bolumById = useMemo(() => Object.fromEntries(bolumler.map((b) => [b.id, b])), [bolumler]);
+  const filteredBolumler = useMemo(
+    () => bolumler.filter((b) => !form.target_sube_id || !b.sube_id || b.sube_id === form.target_sube_id),
+    [bolumler, form.target_sube_id]
+  );
 
   const createMutation = useMutation({
     mutationFn: (data) => flowApi.entities.Announcement.create(data),
@@ -47,7 +55,7 @@ export default function Announcements() {
   });
 
   const openCreate = () => { setForm(empty); setDialog({ open: true, item: null }); };
-  const openEdit = (item) => { setForm({ title: item.title || "", content: item.content || "", color: item.color || "blue", is_active: item.is_active ?? 1, sort_order: item.sort_order || 0, target_roles: item.target_roles || "all" }); setDialog({ open: true, item }); };
+  const openEdit = (item) => { setForm({ title: item.title || "", content: item.content || "", color: item.color || "blue", is_active: item.is_active ?? 1, sort_order: item.sort_order || 0, target_roles: item.target_roles || "all", start_date: (item.start_date || "").slice(0, 10), end_date: (item.end_date || "").slice(0, 10), target_sube_id: item.target_sube_id || "", target_bolum_id: item.target_bolum_id || "" }); setDialog({ open: true, item }); };
 
   const handleSubmit = () => {
     if (!form.content) return;
@@ -88,6 +96,7 @@ export default function Announcements() {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Renk</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Durum</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Sıra</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Hedef</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -113,6 +122,14 @@ export default function Announcements() {
                       />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{a.sort_order || 0}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {(subeById[a.target_sube_id]?.ad || bolumById[a.target_bolum_id]?.ad)
+                        ? [subeById[a.target_sube_id]?.ad, bolumById[a.target_bolum_id]?.ad].filter(Boolean).join(" · ")
+                        : "Tümü"}
+                      {(a.start_date || a.end_date) && (
+                        <div className="text-[11px] text-muted-foreground/70">{a.start_date || "—"} → {a.end_date || "—"}</div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)}>
@@ -188,6 +205,38 @@ export default function Announcements() {
                 <option value="musteri">Müşteri</option>
               </select>
               <p className="text-xs text-muted-foreground mt-1">Ctrl ile birden fazla seçebilirsiniz</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="mb-1.5 block">Şube (opsiyonel)</Label>
+                <Select value={form.target_sube_id || "all"} onValueChange={(v) => setForm({ ...form, target_sube_id: v === "all" ? "" : v, target_bolum_id: "" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Şubeler</SelectItem>
+                    {subeler.map((s) => <SelectItem key={s.id} value={s.id}>{s.ad}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Bölüm (opsiyonel)</Label>
+                <Select value={form.target_bolum_id || "all"} onValueChange={(v) => setForm({ ...form, target_bolum_id: v === "all" ? "" : v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tüm Bölümler</SelectItem>
+                    {filteredBolumler.map((b) => <SelectItem key={b.id} value={b.id}>{b.ad}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="mb-1.5 block">Başlangıç Tarihi (opsiyonel)</Label>
+                <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Bitiş Tarihi (opsiyonel)</Label>
+                <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active === 1} onCheckedChange={(v) => setForm({ ...form, is_active: v ? 1 : 0 })} />

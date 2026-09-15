@@ -97,7 +97,6 @@ export const MODULES = [
   { key: "ikb_sirket",          label: "Şirket Bilgileri",       path: "/ik/sirket" },
   { key: "bordro_tanimlar",     label: "Bordro Genel Tanımlar",  path: "/ik/bordro-tanimlar" },
   { key: "ikb_tutanak",         label: "Tutanak & İhtarlar",     path: "/ik/tutanak" },
-  { key: "ikb_ilan",            label: "İlanlar",                path: "/ik/ilan" },
   { key: "ikb_izin_evrak",      label: "İzin & Rapor Evrak Takibi", path: "/ik/izin-evrak" },
   // ── Devriye Yönetimi ──
   { key: "devriye_lokasyon",       label: "Lokasyon & Checkpoint",  path: "/devriye/lokasyonlar" },

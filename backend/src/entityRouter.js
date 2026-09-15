@@ -12,7 +12,7 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'stok_personeller','stok_demirbaslar','stok_rezervasyonlar',
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
   'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
-  'ik_ozluk_evraklari','ik_tutanaklar','ik_ilanlar','ik_izin_evraklari',
+  'ik_ozluk_evraklari','ik_tutanaklar','ik_izin_evraklari',
   'ik_bordro_satirlari'];
 
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
@@ -176,7 +176,6 @@ const TABLE_TO_MODULE = {
   ik_toplu_yukleme: 'ikb_bordro',
   ik_ozluk_evraklari: 'ikb_ozluk_evrak',
   ik_tutanaklar: 'ikb_tutanak',
-  ik_ilanlar: 'ikb_ilan',
   ik_izin_evraklari: 'ikb_izin_evrak',
   // ── Devriye Yönetimi ──
   devriye_lokasyonlar: 'devriye_lokasyon',
@@ -305,7 +304,7 @@ const ALLOWED_COLUMNS = {
   conversations: ['title','type','name','participants','last_message','last_message_id','last_message_at','last_message_sender_email','last_read_message_id_by_user','status','archived_by','deleted_by'],
   messages: ['conversation_id','content','sender_id','sender_name','sender_email','message_type','file_url','file_name','file_size','file_type','meet_link','reply_to_id','reactions'],
   definitions: ['category','name','value','description','is_active','sort_order','color','icon','label'],
-  announcements: ['title','content','target_roles','start_date','end_date','is_active','priority'],
+  announcements: ['title','content','target_roles','start_date','end_date','is_active','priority','sort_order','color','target_sube_id','target_bolum_id'],
   expense_reports: ['title','employee_id','employee_name','employee_email','status','total_amount','currency','period','notes','approver_id','approver_name','approval_date','project_name','trip_start_date','trip_end_date','advance_amount','department_manager','rejection_reason'],
   expense_items: ['report_id','category','description','amount','currency','date','receipt_url','notes'],
   job_projects: ['name','description','status','customer_id','customer_name','start_date','end_date','team_member_ids','notes','type','priority','budget','manager_id','manager_name','is_active'],
@@ -370,7 +369,6 @@ const ALLOWED_COLUMNS = {
   ik_toplu_yukleme: ['tur','dosya_adi','donem_yil','donem_ay','toplam','eslesen','uygulanan','hatali','onizleme_json','durum','geri_alma_json'],
   ik_ozluk_evraklari: ['personel_id','personel_adi','evrak_tipi','dosya_url','dosya_adi','tarih','aciklama','yukleyen','is_deleted'],
   ik_tutanaklar: ['personel_id','personel_adi','tur','tarih','konu','aciklama','dosya_url','olusturan','is_deleted'],
-  ik_ilanlar: ['baslik','bolum_id','bolum_adi','sube_id','sube_adi','durum','baslangic','bitis','detay','yetkili_notu','olusturan','is_deleted'],
   ik_izin_evraklari: ['leave_id','personel_id','personel_adi','evrak_adi','dosya_url','durum','aciklama','is_deleted'],
   // ── Devriye Yönetimi ──
   devriye_lokasyonlar: ['ad','aciklama','aktif'],
@@ -442,7 +440,6 @@ const REQUIRED_FIELDS = {
   ik_bordro_donemleri: ['yil','ay'],
   ik_ozluk_evraklari: ['personel_id'],
   ik_tutanaklar: ['personel_id'],
-  ik_ilanlar: ['baslik'],
   ik_izin_evraklari: ['leave_id'],
 };
 

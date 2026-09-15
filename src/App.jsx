@@ -108,7 +108,6 @@ const IkSirket = lazy(() => import('./pages/ik/IkSirket'));
 const BordroGenelTanimlar = lazy(() => import('./pages/ik/BordroGenelTanimlar'));
 const IkOzlukEvrak = lazy(() => import('./pages/ik/IkOzlukEvrak'));
 const IkTutanak = lazy(() => import('./pages/ik/IkTutanak'));
-const IkIlan = lazy(() => import('./pages/ik/IkIlan'));
 const IkIzinEvrak = lazy(() => import('./pages/ik/IkIzinEvrak'));
 
 const DevriyeLokasyon = lazy(() => import('./pages/devriye/DevriyeLokasyon'));
@@ -310,7 +309,6 @@ const AuthenticatedApp = () => {
         <Route path="/ik/bordro-tanimlar" element={guard("bordro_tanimlar", <BordroGenelTanimlar />)} />
         <Route path="/ik/ozluk-evrak" element={guard("ikb_ozluk_evrak", <IkOzlukEvrak />)} />
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />
-        <Route path="/ik/ilan" element={guard("ikb_ilan", <IkIlan />)} />
         <Route path="/ik/hareket-rapor" element={<Navigate to="/ik/maas-ozet" replace />} />
         <Route path="/ik/izin-evrak" element={guard("ikb_izin_evrak", <IkIzinEvrak />)} />
       </Route>

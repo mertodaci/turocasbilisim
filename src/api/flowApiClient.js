@@ -121,7 +121,6 @@ const ENTITY_MAP = {
   IkTopluYukleme:    'ik_toplu_yukleme',
   IkOzlukEvrak:      'ik_ozluk_evraklari',
   IkTutanak:         'ik_tutanaklar',
-  IkIlan:            'ik_ilanlar',
   IkIzinEvrak:       'ik_izin_evraklari',
   IkVergiAyar:       'ik_vergi_ayarlari',
   IkGelirVergisiDilim: 'ik_gelir_vergisi_dilimleri',

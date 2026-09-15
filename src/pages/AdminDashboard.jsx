@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
+import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useLanguage } from "@/lib/LanguageContext";
 import { kisa } from "@/lib/hakedisUtils";
@@ -59,7 +60,7 @@ export default function AdminDashboard() {
   const { data: summary = { openTickets: [], openCount: 0, byStatus: [], dailyTrend: [] } } = useQuery({ queryKey: ["admin-summary"], queryFn: () => fetch("/api/dashboard/admin-summary", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000 });
   const { data: exec } = useQuery({ queryKey: ["dashboard-executive"], queryFn: () => fetch("/api/dashboard/executive", { credentials: "include" }).then(r => r.json()), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
-  const { data: announcements = [] } = useQuery({ queryKey: ["announcements-active"], queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }) });
+  const { activeAnnouncements } = useActiveAnnouncements();
   const { data: recentCustomers = [] } = useQuery({ queryKey: ["recent-customers"], queryFn: () => flowApi.entities.Customer.list("-created_date", 3) });
   const { data: recentContracts = [] } = useQuery({ queryKey: ["recent-contracts"], queryFn: () => flowApi.entities.CustomerContract.list("-created_date", 3) });
 
@@ -79,13 +80,6 @@ export default function AdminDashboard() {
   const dayName = format(new Date(), "EEEE", { locale: tr });
   const dateStr = format(new Date(), "d MMMM yyyy", { locale: tr });
 
-  const activeAnnouncements = announcements.filter(a => {
-    const dateOk = (!a.start_date || a.start_date <= format(new Date(), "yyyy-MM-dd")) &&
-      (!a.end_date || a.end_date >= format(new Date(), "yyyy-MM-dd"));
-    const roles = (a.target_roles || "all").toString();
-    const roleOk = roles === "all" || roles.split(",").map(r => r.trim()).includes(user?.role);
-    return dateOk && roleOk;
-  });
 
   const openTickets = summary.openTickets || [];
   const expiring = contracts.expiring || [];

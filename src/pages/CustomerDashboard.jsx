@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { ClipboardList, Building2, CheckCircle2, AlertCircle, Clock, Activity, ArrowRight } from "lucide-react";
 import JTDashboardChart from "@/components/jobtracking/JTDashboardChart";
 import { CUSTOMER_APPROVAL_STATUSES } from "@/lib/jobTrackingStatus";
+import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 
 const STATUS_LABELS = {
   musteri_talep: "Müşteri Talebi",
@@ -53,15 +54,7 @@ export default function CustomerDashboard() {
     queryFn: () => flowApi.entities.JTTicketStatus.filter({ is_active: true }, "sort_order", 500),
   });
 
-  const { data: announcements = [] } = useQuery({
-    queryKey: ["announcements-active"],
-    queryFn: () => flowApi.entities.Announcement.filter({ is_active: 1 }),
-  });
-
-  const activeAnnouncements = announcements.filter(a =>
-    (a.is_active === 1 || a.is_active === true) &&
-    (a.target_roles === "all" || !a.target_roles || a.target_roles.split(",").includes(user?.role))
-  ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const { activeAnnouncements } = useActiveAnnouncements();
 
   const finalStatusKeys = statuses.filter(s => s.is_final).map(s => s.key);
   const openTickets = allTickets.filter(t => !finalStatusKeys.includes(t.status) && t.status !== "arsivlendi");

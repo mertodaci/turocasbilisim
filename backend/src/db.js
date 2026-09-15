@@ -137,7 +137,7 @@ function migrateLegacyJobTrackingRename() {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
       ('activities','add_activity','ideas','work_tracking',
        'satis','satis_firsatlari','satis_teklifleri','satis_raporlari','satis_masasi','satis_aktivite_ekle',
-       'ikb_vip','ikb_dashboard','app_version','reports','is_takibi_tanimlar')`).run();
+       'ikb_vip','ikb_dashboard','app_version','reports','is_takibi_tanimlar','ikb_ilan')`).run();
   } catch { /* role_permissions henüz yoksa sorun değil */ }
   // 'satis' rolü kaldırıldı — mevcut kullanıcılar 'kullanici'ye taşınır.
   try { db.prepare("UPDATE users SET role='kullanici' WHERE role='satis'").run(); } catch {}
@@ -414,6 +414,11 @@ function initDb() {
     "ALTER TABLE users ADD COLUMN favorites TEXT DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN customer_id TEXT",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT",
+    "ALTER TABLE announcements ADD COLUMN target_roles TEXT DEFAULT 'all'",
+    "ALTER TABLE announcements ADD COLUMN start_date TEXT",
+    "ALTER TABLE announcements ADD COLUMN end_date TEXT",
+    "ALTER TABLE announcements ADD COLUMN target_sube_id TEXT",
+    "ALTER TABLE announcements ADD COLUMN target_bolum_id TEXT",
     // authMiddleware / authRoutes / entityRouter 'users.status' bekliyor ama bu
     // kolon db.js'te hic olusturulmuyordu (prod DB'ye elle eklenmis, temiz
     // kurulumda -- or. sandbox -- eksikti; her authed istek 500 "Kimlik
@@ -664,7 +669,7 @@ function initDb() {
       // Faz 9-10: bordro + ay kapanışı
       'ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis','ikb_sirket',
       // Faz 11: evrak + tutanak + ilan + izin evrak
-      'ikb_tutanak','ikb_ilan','ikb_izin_evrak',
+      'ikb_tutanak','ikb_izin_evrak',
       // ── Devriye Yönetimi modülü ───────────────────────────────────
       'devriye_lokasyon','devriye_vardiya_tanim','devriye_atama','devriye_personel',
       'devriye_qr_saha','devriye_okuma_rapor','devriye_saat_rapor','devriye_qr_yazdir',
@@ -1658,7 +1663,7 @@ function initDb() {
       'ikb_vardiyalar','ikb_vardiya_atama','ikb_vardiya_planlari','ikb_tatil_sihirbazi',
       'ikb_puantaj','ikb_puantaj_rapor','ikb_mesai','ikb_hakedis_ayar','ikb_bordro_yemek',
       'ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_maas_ozet','ikb_ay_kapanis',
-      'ikb_sirket','ikb_tutanak','ikb_ilan','ikb_izin_evrak'];
+      'ikb_sirket','ikb_tutanak','ikb_izin_evrak'];
     const IK_ISLEM = ['ikb_puantaj','ikb_mesai','ikb_kesinti','ikb_ic_borc','ikb_personel_masraf','ikb_bordro','ikb_ay_kapanis','ikb_hakedis_ayar','ikb_bordro_yemek'];
     const IK_RAPOR = ['ikb_puantaj_rapor','ikb_maas_ozet','ikb_personel'];
     const IK_SUBE = ['ikb_puantaj','ikb_mesai','ikb_izin_evrak','ikb_personel','ikb_puantaj_rapor'];

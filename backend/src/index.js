@@ -215,7 +215,6 @@ app.use('/api/entities/ik_sirket_bilgileri',   createEntityRouter('ik_sirket_bil
 app.use('/api/entities/ik_toplu_yukleme',      createEntityRouter('ik_toplu_yukleme'));
 app.use('/api/entities/ik_ozluk_evraklari',    createEntityRouter('ik_ozluk_evraklari'));
 app.use('/api/entities/ik_tutanaklar',         createEntityRouter('ik_tutanaklar'));
-app.use('/api/entities/ik_ilanlar',            createEntityRouter('ik_ilanlar'));
 app.use('/api/entities/ik_izin_evraklari',     createEntityRouter('ik_izin_evraklari'));
 
 // ── Devriye Yönetimi modülü ──

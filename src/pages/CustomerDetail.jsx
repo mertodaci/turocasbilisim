@@ -156,7 +156,7 @@ export default function CustomerDetail() {
     user?.role === "yonetici" ||
     can(user?.role, "customers", "edit") ||
     can(user?.role, "customers", "add");
-  const TABS = canEdit ? [...BASE_TABS, "Düzenle"] : BASE_TABS;
+  const TABS = BASE_TABS;
 
   const [contactDialog, setContactDialog] = useState({ open: false, contact: null });
   const [moduleDialog, setModuleDialog] = useState({ open: false, module: null });

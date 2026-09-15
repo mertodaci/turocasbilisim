@@ -208,18 +208,16 @@ export default function EmployeeDetail() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn("grid w-full", {
-          "grid-cols-2": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 0,
-          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 1,
-          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 2,
-          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 3,
-          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 4,
+          "grid-cols-2": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
+          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
+          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
+          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
         })}>
           <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
           {canViewTutanak && <TabsTrigger value="tutanak">Tutanak & İhtar</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
-          {isPrivileged && <TabsTrigger value="duzenle">Düzenle</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="genel" className="space-y-6 mt-4">

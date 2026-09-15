@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { BarChart3, Download, Boxes, Warehouse, Rows3, AlertTriangle } from "lucide-react";
+import { BarChart3, Download, Boxes, Warehouse, Rows3, AlertTriangle, TrendingDown } from "lucide-react";
 
 const TABS = [
   { id: "merkez", label: "Merkez" },
@@ -16,7 +16,11 @@ const TABS = [
   { id: "hareket", label: "Hareket Raporu" },
   { id: "raf", label: "Raf Doluluk" },
   { id: "degerleme", label: "Stok Değerleme" },
+  { id: "devir", label: "Devir & Yaşlanma" },
+  { id: "abc", label: "ABC Analizi" },
 ];
+
+const SINIF_RENK = { A: "bg-emerald-100 text-emerald-700", B: "bg-amber-100 text-amber-700", C: "bg-slate-100 text-slate-600" };
 
 const xlsx = (rows, name) => {
   if (!rows?.length) return;
@@ -40,6 +44,10 @@ export default function StokRaporlar() {
   const raf = useQuery({ queryKey: ["rp_raf", f.depo_id], queryFn: () => flowApi.stok.rapor("raf-doluluk", { depo_id: f.depo_id }), enabled: tab === "raf" });
   const degerleme = useQuery({ queryKey: ["rp_deger", f.depo_id, f.urun_id], queryFn: () => flowApi.stok.rapor("degerleme", { depo_id: f.depo_id, urun_id: f.urun_id }), enabled: tab === "degerleme" });
   const tutarlilik = useQuery({ queryKey: ["stok_fifo_tutarlilik"], queryFn: () => flowApi.stok.fifoTutarlilik(), enabled: tab === "degerleme" });
+  const devir = useQuery({ queryKey: ["rp_devir", f.depo_id], queryFn: () => flowApi.stok.rapor("devir", { depo_id: f.depo_id }), enabled: tab === "devir" });
+  const abc = useQuery({ queryKey: ["rp_abc", f.depo_id], queryFn: () => flowApi.stok.rapor("abc", { depo_id: f.depo_id }), enabled: tab === "abc" });
+
+  const ekstreyeGit = (urun_id, depo_id) => { setF((prev) => ({ ...prev, urun_id, depo_id: depo_id || "" })); setTab("ekstre"); };
 
   const depoOpts = [{ value: "", label: "Tüm Depolar" }, ...depolar.map((d) => ({ value: d.id, label: d.ad }))];
   const urunOpts = [{ value: "", label: "Tüm Ürünler" }, ...urunler.map((u) => ({ value: u.id, label: u.ad }))];
@@ -111,7 +119,7 @@ export default function StokRaporlar() {
               <thead className="bg-muted/40 border-b"><tr><Th>Depo</Th><Th>Raf</Th><Th>Ürün Kodu</Th><Th>Ürün Adı</Th><Th>Grup</Th><Th r>Giren</Th><Th r>Çıkan</Th><Th r>Mevcut</Th><Th r>Rezerve</Th><Th r>Kull.</Th><Th>Birim</Th></tr></thead>
               <tbody>
                 {(durum.data?.rows || []).map((r, i) => (
-                  <tr key={i} className="border-b last:border-0"><Td>{r.depo_adi}</Td><Td>{r.raf_adi || "GENEL RAF"}</Td><Td>{r.urun_kodu}</Td><Td b>{r.urun_adi}</Td><Td>{r.grup}</Td><Td r>{r.giren}</Td><Td r>{r.cikan}</Td><Td r b>{r.mevcut}</Td><Td r>{r.rezerve ? <span className="text-amber-600">{r.rezerve}</span> : "—"}</Td><Td r>{r.kullanilabilir ?? r.mevcut}</Td><Td>{r.birim}</Td></tr>
+                  <tr key={i} className="border-b last:border-0"><Td>{r.depo_adi}</Td><Td>{r.raf_adi || "GENEL RAF"}</Td><Td>{r.urun_kodu}</Td><Td b><button className="hover:underline hover:text-primary text-left" title="Ürün ekstresine git" onClick={() => ekstreyeGit(r.urun_id, r.depo_id)}>{r.urun_adi}</button></Td><Td>{r.grup}</Td><Td r>{r.giren}</Td><Td r>{r.cikan}</Td><Td r b>{r.mevcut}</Td><Td r>{r.rezerve ? <span className="text-amber-600">{r.rezerve}</span> : "—"}</Td><Td r>{r.kullanilabilir ?? r.mevcut}</Td><Td>{r.birim}</Td></tr>
                 ))}
                 {durum.isLoading && <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Yükleniyor...</td></tr>}
                 {!durum.isLoading && !(durum.data?.rows || []).length && <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Kayıt yok.</td></tr>}
@@ -227,6 +235,65 @@ export default function StokRaporlar() {
                   <tr key={i} className="border-b last:border-0"><Td b>{r.urun_adi}</Td><Td>{r.depo_adi}</Td><Td r>{r.miktar}</Td><Td r>{(r.ort_maliyet ?? 0).toFixed(2)}</Td><Td r b>{(r.deger ?? 0).toFixed(2)}</Td></tr>
                 ))}
                 {!(degerleme.data?.rows || []).length && <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">Değerlenecek stok yok.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "devir" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Devir hızı = son 365 gündeki çıkış / mevcut stok. Demirbaşlar bu rapora dahil değildir (tekil zimmetle takip edilir, "devir" kavramına girmez).</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="w-52"><SearchableSelect value={f.depo_id} onChange={(v) => setF({ ...f, depo_id: v })} options={depoOpts} placeholder="Depo" /></div>
+            <div className="ml-auto bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-lg px-4 py-2 text-sm font-semibold">Ölü Stok: {devir.data?.olu_sayisi ?? 0} ürün ({devir.data?.olu_esik ?? 90}+ gün hareketsiz)</div>
+            <Button variant="outline" onClick={() => xlsx(devir.data?.rows, "devir-yaslanma")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+          </div>
+          <div className="bg-card border rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[760px]">
+              <thead className="bg-muted/40 border-b"><tr><Th>Ürün Kodu</Th><Th>Ürün Adı</Th><Th>Grup</Th><Th r>Mevcut</Th><Th r>Çıkış (365 gün)</Th><Th r>Devir Hızı</Th><Th>Son Hareket</Th><Th r>Gün</Th><Th>Durum</Th></tr></thead>
+              <tbody>
+                {(devir.data?.rows || []).map((r, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <Td>{r.urun_kodu}</Td>
+                    <Td b><button className="hover:underline hover:text-primary text-left" title="Ürün ekstresine git" onClick={() => ekstreyeGit(r.urun_id, f.depo_id)}>{r.urun_adi}</button></Td>
+                    <Td>{r.grup}</Td><Td r>{r.mevcut} {r.birim}</Td><Td r>{r.cikis_365}</Td><Td r>{r.devir_hizi}x</Td>
+                    <Td>{r.son_hareket ? r.son_hareket.slice(0, 10) : "—"}</Td><Td r>{r.gun_sayisi ?? "—"}</Td>
+                    <Td>{r.olu_stok ? <span className="text-red-600 font-medium flex items-center gap-1"><TrendingDown className="w-3.5 h-3.5" /> Ölü Stok</span> : <span className="text-emerald-600">Aktif</span>}</Td>
+                  </tr>
+                ))}
+                {devir.isLoading && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Yükleniyor...</td></tr>}
+                {!devir.isLoading && !(devir.data?.rows || []).length && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Kayıt yok.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "abc" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Ürünler, güncel stok değerine göre kümülatif payları A (ilk %80), B (sonraki %15) ve C (son %5) sınıflarına ayrılır — az sayıda ürün stok değerinin büyük kısmını oluşturuyorsa önceliği A sınıfına verin.</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="w-52"><SearchableSelect value={f.depo_id} onChange={(v) => setF({ ...f, depo_id: v })} options={depoOpts} placeholder="Depo" /></div>
+            <div className="flex gap-2 ml-auto">
+              {["A", "B", "C"].map((s) => (
+                <div key={s} className={`rounded-lg px-3 py-2 text-sm font-semibold ${SINIF_RENK[s]}`}>{s}: {abc.data?.ozet?.[s] ?? 0} ürün</div>
+              ))}
+            </div>
+            <Button variant="outline" onClick={() => xlsx(abc.data?.rows, "abc-analizi")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+          </div>
+          <div className="bg-card border rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead className="bg-muted/40 border-b"><tr><Th>Sınıf</Th><Th>Ürün</Th><Th r>Miktar</Th><Th r>Değer</Th><Th r>Pay %</Th><Th r>Kümülatif %</Th></tr></thead>
+              <tbody>
+                {(abc.data?.rows || []).map((r, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <Td><span className={`text-xs font-semibold px-2 py-0.5 rounded ${SINIF_RENK[r.sinif]}`}>{r.sinif}</span></Td>
+                    <Td b><button className="hover:underline hover:text-primary text-left" title="Ürün ekstresine git" onClick={() => ekstreyeGit(r.urun_id, f.depo_id)}>{r.urun_adi}</button></Td>
+                    <Td r>{r.miktar}</Td><Td r>{r.deger.toLocaleString("tr-TR")} ₺</Td><Td r>%{r.yuzde}</Td><Td r>%{r.kumulatif_yuzde}</Td>
+                  </tr>
+                ))}
+                {!(abc.data?.rows || []).length && <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">Değerlenecek stok yok.</td></tr>}
               </tbody>
             </table>
           </div>

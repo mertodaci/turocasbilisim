@@ -1819,6 +1819,64 @@ app.get('/api/stok/rapor/degerleme', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Devir hızı & yaşlanma: demirbaş haric (tekil zimmetle takip edilir, "devir"
+// kavramına girmez) tüketim urunlerinde, son 365 gundeki cikis / mevcut bakiye
+// orani ve son hareketten bu yana gecen gun sayisi (hareketsiz = "olu stok").
+app.get('/api/stok/rapor/devir', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { depo_id, olu_gun } = req.query;
+    const oluEsik = Number(olu_gun) > 0 ? Number(olu_gun) : 90;
+    const cond = [], params = [];
+    if (depo_id) { cond.push('h.depo_id=?'); params.push(depo_id); }
+    const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+    const rows = db.prepare(`SELECT h.urun_id, MAX(h.urun_adi) urun_adi,
+        COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) mevcut,
+        COALESCE(SUM(CASE WHEN h.tip='cikis' AND h.tarih >= date('now','-365 days') THEN h.miktar ELSE 0 END),0) cikis_365,
+        MAX(h.tarih) son_hareket
+      FROM stok_hareketler h ${where}
+      GROUP BY h.urun_id`).all(...params);
+    const urunMap = {};
+    for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim, urun_tipi FROM stok_urunler').all()) urunMap[u.id] = u;
+    const bugun = new Date();
+    const out = rows.filter((r) => urunMap[r.urun_id]?.urun_tipi !== 'demirbas' && r.mevcut > 1e-9).map((r) => {
+      const gunSayisi = r.son_hareket ? Math.floor((bugun - new Date(r.son_hareket)) / 86400000) : null;
+      return {
+        urun_id: r.urun_id, urun_adi: r.urun_adi, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '',
+        birim: urunMap[r.urun_id]?.ana_birim || 'ADET', mevcut: +r.mevcut.toFixed(4), cikis_365: r.cikis_365,
+        devir_hizi: r.mevcut > 0 ? +(r.cikis_365 / r.mevcut).toFixed(2) : 0,
+        son_hareket: r.son_hareket, gun_sayisi: gunSayisi, olu_stok: gunSayisi == null || gunSayisi >= oluEsik,
+      };
+    }).sort((a, b) => (b.gun_sayisi ?? 99999) - (a.gun_sayisi ?? 99999));
+    res.json({ rows: out, olu_esik: oluEsik, olu_sayisi: out.filter((r) => r.olu_stok).length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ABC analizi: urunleri (parti bazli guncel deger uzerinden) kumulatif deger
+// yuzdesine gore A (%0-80), B (%80-95), C (%95-100) sinifina ayirir — klasik
+// Pareto dagilimi: "hangi az sayida urun stok degerinin cogunu olusturuyor".
+app.get('/api/stok/rapor/abc', authMiddleware, (req, res) => {
+  if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const { depo_id } = req.query;
+    const cond = ["durum!='kapali'", 'kalan_bakiye>0'], params = [];
+    if (depo_id) { cond.push('depo_id=?'); params.push(depo_id); }
+    const rows = db.prepare(`SELECT urun_id, MAX(urun_adi) urun_adi, SUM(kalan_bakiye) miktar, SUM(kalan_bakiye*alis_maliyeti) deger
+      FROM stok_partiler WHERE ${cond.join(' AND ')}
+      GROUP BY urun_id ORDER BY deger DESC`).all(...params);
+    const toplam = rows.reduce((a, r) => a + r.deger, 0);
+    let kumulatif = 0;
+    const out = rows.map((r) => {
+      kumulatif += r.deger;
+      const kumPct = toplam > 0 ? (kumulatif / toplam) * 100 : 0;
+      const sinif = kumPct <= 80 ? 'A' : kumPct <= 95 ? 'B' : 'C';
+      return { ...r, deger: +r.deger.toFixed(2), yuzde: toplam > 0 ? +((r.deger / toplam) * 100).toFixed(2) : 0, kumulatif_yuzde: +kumPct.toFixed(2), sinif };
+    });
+    const ozet = { A: out.filter((r) => r.sinif === 'A').length, B: out.filter((r) => r.sinif === 'B').length, C: out.filter((r) => r.sinif === 'C').length };
+    res.json({ rows: out, toplam_deger: +toplam.toFixed(2), ozet });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/stok/rapor/merkez', authMiddleware, (req, res) => {
   if (!stokRaporPerm(req)) return res.status(403).json({ error: 'Yetkiniz yok' });
   try {

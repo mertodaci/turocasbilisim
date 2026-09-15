@@ -3,7 +3,7 @@ import RolePermissionsPanel from "@/components/users/RolePermissionsPanel";
 
 export default function RolePermissions() {
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <ShieldCheck className="w-6 h-6 text-primary" />

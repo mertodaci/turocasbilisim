@@ -112,7 +112,7 @@ export default function Customers() {
   const types = [...new Set(customers.map(c=>c.customer_type).filter(Boolean))];
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 max-w-7xl mx-auto">
       {/* BAŞLIK */}
       <div className="flex items-center justify-between">
         <div>

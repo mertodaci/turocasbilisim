@@ -30,7 +30,7 @@ export default function IkSirket() {
   });
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto">
       <p className="text-sm text-muted-foreground">Puantaj CSV / bordro çıktı başlığında yer alan ünvan, vergi, SGK sicil ve Mersis bilgileri. Genel varsayılan veya şube bazlı kapsam.</p>
 
       <div className="flex gap-2 items-center">

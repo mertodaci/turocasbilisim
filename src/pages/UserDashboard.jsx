@@ -50,7 +50,7 @@ export default function UserDashboard() {
   ];
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <ContractAlerts />
 
       {/* BAŞLIK */}

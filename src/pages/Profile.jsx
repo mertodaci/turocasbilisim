@@ -78,7 +78,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="max-w-lg mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Profilim</h1>
         <p className="text-sm text-muted-foreground mt-1">Hesap bilgileriniz</p>

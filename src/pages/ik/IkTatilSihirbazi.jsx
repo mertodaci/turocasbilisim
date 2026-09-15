@@ -42,7 +42,7 @@ export default function IkTatilSihirbazi() {
   if (!yillar.includes(yil)) yillar.push(yil);
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <div className="flex items-center justify-end flex-wrap gap-2">
         <Select value={yil} onValueChange={setYil}>
           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>

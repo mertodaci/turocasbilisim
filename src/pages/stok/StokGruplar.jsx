@@ -60,7 +60,7 @@ export default function StokGruplar() {
     .map((g) => ({ value: g.id, label: g.ad }));
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex justify-end">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Grup</Button>
       </div>

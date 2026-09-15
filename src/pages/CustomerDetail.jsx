@@ -332,7 +332,7 @@ export default function CustomerDetail() {
     .filter((x) => x.mods.length > 0);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl mx-auto">
 
       {/* Ust Kart */}
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">

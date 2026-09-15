@@ -88,7 +88,7 @@ export default function Employees() {
   );
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 max-w-7xl mx-auto">
       {/* BAŞLIK */}
       <div className="flex items-center justify-between">
         <div>

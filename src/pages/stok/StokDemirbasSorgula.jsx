@@ -32,7 +32,7 @@ export default function StokDemirbasSorgula() {
   };
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2 text-violet-600"><ScanSearch className="w-6 h-6" /> Demirbaş Sorgula</h1>
         <p className="text-sm text-muted-foreground mt-1">Bir demirbaşın sicil no'sunu yazın ya da QR etiketini okutun — şu an nerede olduğunu, zimmetli mi olduğunu ve tüm geçmişini görün.</p>

@@ -29,7 +29,7 @@ export default function IkAyKapanis() {
   });
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Lock className="w-6 h-6 text-primary" /> Ay Kapanışı & Bordro</h1>
         <p className="text-sm text-muted-foreground mt-1">Dönem kilitlenince bordro/puantaj/kesinti satırları değiştirilemez. Geri alınabilir. SGK devam kodları CSV bu ekrandan indirilir.</p>

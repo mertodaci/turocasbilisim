@@ -134,7 +134,7 @@ export default function EmployeeDetail() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl mx-auto">
 
       {/* Header */}
       <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4">

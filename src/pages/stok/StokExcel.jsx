@@ -48,7 +48,7 @@ export default function StokExcel() {
   const geriM = useMutation({ mutationFn: (id) => flowApi.stok.excelGeriAl(id), onSuccess: () => { inv(); toast.success("Geri alındı"); }, onError: (e) => toast.error(String(e?.message)) });
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5 max-w-4xl mx-auto">
       <div><h1 className="text-2xl font-bold flex items-center gap-2"><FileUp className="w-6 h-6 text-primary" /> Excel Stok Yükleme</h1>
         <p className="text-sm text-muted-foreground mt-1">Excel'den toplu giriş. Kolonlar: <b>kod</b> veya <b>barkod</b>, <b>miktar</b>, opsiyonel <b>birim_fiyat</b>. Yükleme bir giriş fişi oluşturur ve onaylar; "Geri Al" ile iptal edilir.</p></div>
 

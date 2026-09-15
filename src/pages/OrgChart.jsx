@@ -200,7 +200,7 @@ export default function OrgChart() {
   }
 
   return (
-    <div className="space-y-6 max-w-full">
+    <div className="space-y-6 max-w-full mx-auto">
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>

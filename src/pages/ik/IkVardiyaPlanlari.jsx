@@ -54,7 +54,7 @@ export default function IkVardiyaPlanlari() {
   };
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl mx-auto">
       <div className="flex justify-end">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" /> Yeni Plan</Button>
       </div>

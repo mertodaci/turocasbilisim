@@ -78,7 +78,7 @@ export default function CustomerDashboard() {
   const awaitingCustomer = openTickets.filter(t => t.status === "cevap_bekleniyor" || CUSTOMER_APPROVAL_STATUSES.includes(t.status));
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

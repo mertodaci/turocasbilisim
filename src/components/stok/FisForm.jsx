@@ -249,7 +249,7 @@ export default function FisForm({ tip }) {
   const sahaOpts = sahalar.map((s) => ({ value: s.id, label: s.ad }));
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold flex items-center gap-2 ${cfg.renk}`}><Icon className="w-6 h-6" /> {cfg.baslik}{editId ? " (düzenle)" : ""}</h1>

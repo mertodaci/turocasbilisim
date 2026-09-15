@@ -43,7 +43,7 @@ const emptyForm = {
   sahsi_hesap_aktif: 0, sahsi_hesap_tutar: 0, sahsi_hesap_banka: "", sahsi_hesap_iban: "", sahsi_hesap_aciklama: "",
 };
 
-export default function EmployeeFormDialog({ open, onOpenChange, onClose, employee, onSubmit, isLoading }) {
+export default function EmployeeFormDialog({ open, onOpenChange, onClose, employee, onSubmit, isLoading, embedded = false }) {
   const [form, setForm] = useState(emptyForm);
   const [activeTab, setActiveTab] = useState("kisisel");
 
@@ -86,8 +86,8 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const certInputRefs = useRef({});
 
   useEffect(() => {
-    if (open) setActiveTab("kisisel");
-  }, [open, employee]);
+    if (open || embedded) setActiveTab("kisisel");
+  }, [open, embedded, employee]);
 
   useEffect(() => {
     if (employee) {
@@ -247,13 +247,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
     if (onClose) onClose();
   };
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="text-lg">{employee ? "Calisan Duzenle" : "Yeni Calisan"}</DialogTitle>
-        </DialogHeader>
-
+  const formBody = (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
 
           {/* Profil Fotografi — sekmelerin üstünde sabit, kimlik kartı gibi */}
@@ -811,12 +805,33 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-3 border-t shrink-0">
-            <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>
+            {!embedded && <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>}
             <Button type="submit" disabled={isLoading || uploadingDoc}>
               {isLoading ? "Kaydediliyor..." : employee ? "Guncelle" : "Kaydet"}
             </Button>
           </div>
         </form>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">Çalışanı Düzenle</h2>
+          <p className="text-sm text-muted-foreground mt-1">Bilgileri güncelleyin, sekmeler arasında geçiş yapabilirsiniz.</p>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg">{employee ? "Calisan Duzenle" : "Yeni Calisan"}</DialogTitle>
+        </DialogHeader>
+        {formBody}
       </DialogContent>
     </Dialog>
   );

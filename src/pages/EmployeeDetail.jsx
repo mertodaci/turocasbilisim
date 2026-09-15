@@ -28,7 +28,7 @@ const LEAVE_TYPE_LABELS = {
 };
 
 export default function EmployeeDetail() {
-  const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("genel");
   const [terminateOpen, setTerminateOpen] = useState(false);
   const [formPrintLeave, setFormPrintLeave] = useState(null);
   const [showReconciliation, setShowReconciliation] = useState(false);
@@ -82,7 +82,7 @@ export default function EmployeeDetail() {
     mutationFn: (data) => flowApi.entities.Employee.update(employeeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee", employeeId] });
-      setEditOpen(false);
+      setActiveTab("genel");
     },
   });
 
@@ -174,7 +174,7 @@ export default function EmployeeDetail() {
         </div>
         {isPrivileged && (
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setEditOpen(true)}>
+            <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setActiveTab("duzenle")}>
               <Pencil className="w-3.5 h-3.5" /> Düzenle
             </Button>
             {employee.status !== "pasif" && (
@@ -186,15 +186,6 @@ export default function EmployeeDetail() {
         )}
       </div>
 
-      {isPrivileged && (
-        <EmployeeFormDialog
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          employee={employee}
-          onSubmit={(data) => updateMutation.mutate(data)}
-          isLoading={updateMutation.isPending}
-        />
-      )}
       {isPrivileged && (
         <TerminateEmployeeDialog
           open={terminateOpen}
@@ -215,18 +206,20 @@ export default function EmployeeDetail() {
         />
       )}
 
-      <Tabs defaultValue="genel">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn("grid w-full", {
-          "grid-cols-2": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
-          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
-          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
-          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
+          "grid-cols-2": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 0,
+          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 1,
+          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 2,
+          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 3,
+          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 4,
         })}>
           <TabsTrigger value="genel">Genel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
           {canViewTutanak && <TabsTrigger value="tutanak">Tutanak & İhtar</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
+          {isPrivileged && <TabsTrigger value="duzenle">Düzenle</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="genel" className="space-y-6 mt-4">
@@ -750,6 +743,19 @@ export default function EmployeeDetail() {
             </table>
           )}
         </div>
+        </TabsContent>
+      )}
+
+      {isPrivileged && (
+        <TabsContent value="duzenle" className="space-y-6 mt-4">
+          <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+            <EmployeeFormDialog
+              embedded
+              employee={employee}
+              onSubmit={(data) => updateMutation.mutate(data)}
+              isLoading={updateMutation.isPending}
+            />
+          </div>
         </TabsContent>
       )}
 

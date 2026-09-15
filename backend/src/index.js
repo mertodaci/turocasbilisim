@@ -895,6 +895,33 @@ function stokKritikListe() {
   return out;
 }
 
+// Devir hizi & yaslanma hesaplama — hem /api/stok/rapor/devir (tam liste) hem
+// /api/stok/dashboard (ozet kart) tarafindan paylasilir, iki yerde ayri ayri
+// yazilip zamanla birbirinden sapmasin diye.
+function stokDevirHesapla(depoId, oluEsik = 90) {
+  const cond = [], params = [];
+  if (depoId) { cond.push('h.depo_id=?'); params.push(depoId); }
+  const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+  const rows = db.prepare(`SELECT h.urun_id, MAX(h.urun_adi) urun_adi,
+      COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) mevcut,
+      COALESCE(SUM(CASE WHEN h.tip='cikis' AND h.tarih >= date('now','-365 days') THEN h.miktar ELSE 0 END),0) cikis_365,
+      MAX(h.tarih) son_hareket
+    FROM stok_hareketler h ${where}
+    GROUP BY h.urun_id`).all(...params);
+  const urunMap = {};
+  for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim, urun_tipi FROM stok_urunler').all()) urunMap[u.id] = u;
+  const bugun = new Date();
+  return rows.filter((r) => urunMap[r.urun_id]?.urun_tipi !== 'demirbas' && r.mevcut > 1e-9).map((r) => {
+    const gunSayisi = r.son_hareket ? Math.floor((bugun - new Date(r.son_hareket)) / 86400000) : null;
+    return {
+      urun_id: r.urun_id, urun_adi: r.urun_adi, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '',
+      birim: urunMap[r.urun_id]?.ana_birim || 'ADET', mevcut: +r.mevcut.toFixed(4), cikis_365: r.cikis_365,
+      devir_hizi: r.mevcut > 0 ? +(r.cikis_365 / r.mevcut).toFixed(2) : 0,
+      son_hareket: r.son_hareket, gun_sayisi: gunSayisi, olu_stok: gunSayisi == null || gunSayisi >= oluEsik,
+    };
+  }).sort((a, b) => (b.gun_sayisi ?? 99999) - (a.gun_sayisi ?? 99999));
+}
+
 function stokFisNoUret(tip) {
   const pre = { giris: 'GRS', cikis: 'CKS', transfer: 'TRF', sayim: 'SAY', talep: 'TLP', iade: 'IAD' }[tip] || 'FIS';
   const yil = new Date().getFullYear();
@@ -1827,27 +1854,7 @@ app.get('/api/stok/rapor/devir', authMiddleware, (req, res) => {
   try {
     const { depo_id, olu_gun } = req.query;
     const oluEsik = Number(olu_gun) > 0 ? Number(olu_gun) : 90;
-    const cond = [], params = [];
-    if (depo_id) { cond.push('h.depo_id=?'); params.push(depo_id); }
-    const where = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
-    const rows = db.prepare(`SELECT h.urun_id, MAX(h.urun_adi) urun_adi,
-        COALESCE(SUM(CASE WHEN h.tip='giris' THEN h.miktar ELSE -h.miktar END),0) mevcut,
-        COALESCE(SUM(CASE WHEN h.tip='cikis' AND h.tarih >= date('now','-365 days') THEN h.miktar ELSE 0 END),0) cikis_365,
-        MAX(h.tarih) son_hareket
-      FROM stok_hareketler h ${where}
-      GROUP BY h.urun_id`).all(...params);
-    const urunMap = {};
-    for (const u of db.prepare('SELECT id, kod, grup_adi, ana_birim, urun_tipi FROM stok_urunler').all()) urunMap[u.id] = u;
-    const bugun = new Date();
-    const out = rows.filter((r) => urunMap[r.urun_id]?.urun_tipi !== 'demirbas' && r.mevcut > 1e-9).map((r) => {
-      const gunSayisi = r.son_hareket ? Math.floor((bugun - new Date(r.son_hareket)) / 86400000) : null;
-      return {
-        urun_id: r.urun_id, urun_adi: r.urun_adi, urun_kodu: urunMap[r.urun_id]?.kod || '', grup: urunMap[r.urun_id]?.grup_adi || '',
-        birim: urunMap[r.urun_id]?.ana_birim || 'ADET', mevcut: +r.mevcut.toFixed(4), cikis_365: r.cikis_365,
-        devir_hizi: r.mevcut > 0 ? +(r.cikis_365 / r.mevcut).toFixed(2) : 0,
-        son_hareket: r.son_hareket, gun_sayisi: gunSayisi, olu_stok: gunSayisi == null || gunSayisi >= oluEsik,
-      };
-    }).sort((a, b) => (b.gun_sayisi ?? 99999) - (a.gun_sayisi ?? 99999));
+    const out = stokDevirHesapla(depo_id, oluEsik);
     res.json({ rows: out, olu_esik: oluEsik, olu_sayisi: out.filter((r) => r.olu_stok).length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2346,8 +2353,12 @@ app.get('/api/stok/dashboard', authMiddleware, (req, res) => {
         partiMap[`${p.urun_id}|${p.depo_id}`] = p.k || 0;
       fifoTutarsiz = bakiye.filter((r) => Math.abs((r.m || 0) - (partiMap[`${r.urun_id}|${r.depo_id}`] || 0)) > 0.001).length;
     } catch { fifoTutarsiz = 0; }
+    const devirListe = stokDevirHesapla();
+    const oluStok = devirListe.filter((r) => r.olu_stok).length;
+    const devirOrtalama = devirListe.length ? +(devirListe.reduce((a, r) => a + r.devir_hizi, 0) / devirListe.length).toFixed(2) : 0;
     res.json({
       stok_biten: stokBiten, kritik, bugun_giris: bugunGiris, bugun_cikis: bugunCikis, fifo_tutarsiz: fifoTutarsiz,
+      olu_stok: oluStok, devir_hizi: devirOrtalama,
       is_kuyrugu: { bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep, sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan },
       son_hareket: sonHareket, en_cok_calisan: enCokCalisan || null,
     });

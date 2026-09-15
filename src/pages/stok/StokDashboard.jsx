@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { flowApi } from "@/api/flowApiClient";
 import {
   LayoutDashboard, PackageX, AlertTriangle, ArrowDownToLine, ArrowUpFromLine,
-  ClipboardCheck, Undo2, CalendarClock, FileText,
+  ClipboardCheck, Undo2, CalendarClock, FileText, TrendingDown, RefreshCw,
 } from "lucide-react";
 
 export default function StokDashboard() {
@@ -30,9 +30,11 @@ export default function StokDashboard() {
 
       {isLoading ? <p className="text-muted-foreground">Yükleniyor...</p> : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
             <Kart icon={PackageX} lbl="Stok Biten" val={data.stok_biten} alt="mevcut ≤ 0" to="/stok/raporlar" cls="text-red-500" />
             <Kart icon={AlertTriangle} lbl="Kritik Stok" val={data.kritik} alt="min. seviyenin altında" to="/stok/raporlar" cls="text-amber-500" />
+            <Kart icon={TrendingDown} lbl="Ölü Stok" val={data.olu_stok} alt="90+ gün hareketsiz" to="/stok/raporlar" cls="text-red-500" />
+            <Kart icon={RefreshCw} lbl="Devir Hızı" val={`${data.devir_hizi ?? 0}x`} alt="genel ortalama (yıllık)" to="/stok/raporlar" cls="text-indigo-500" />
             <Kart icon={ArrowDownToLine} lbl="Bugün Giriş" val={data.bugun_giris?.m} alt={`${data.bugun_giris?.n || 0} fiş`} cls="text-emerald-600" />
             <Kart icon={ArrowUpFromLine} lbl="Bugün Çıkış/Transfer" val={data.bugun_cikis?.m} alt={`${data.bugun_cikis?.n || 0} fiş`} cls="text-red-600" />
             <Kart icon={FileText} lbl="En Çok Çalışan" val={data.en_cok_calisan?.hareket || 0} alt={data.en_cok_calisan?.kullanici || "—"} />

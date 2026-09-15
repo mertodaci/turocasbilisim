@@ -8,23 +8,36 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Trash2, Calendar } from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Calendar, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
 const statusConfig = {
-  yapilacak: { label: "Yapılacak", icon: Circle, color: "text-slate-500", bg: "bg-slate-100" },
-  devam_ediyor: { label: "Devam Ediyor", icon: Clock, color: "text-blue-500", bg: "bg-blue-100" },
-  tamamlandi: { label: "Tamamlandı", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-100" },
-  ertelendi: { label: "Ertelendi", icon: AlertCircle, color: "text-amber-500", bg: "bg-amber-100" },
+  yapilacak: { label: "Yapılacak", icon: Circle, color: "text-slate-600", bg: "bg-white/70" },
+  devam_ediyor: { label: "Devam Ediyor", icon: Clock, color: "text-blue-700", bg: "bg-white/70" },
+  tamamlandi: { label: "Tamamlandı", icon: CheckCircle2, color: "text-green-700", bg: "bg-white/70" },
+  ertelendi: { label: "Ertelendi", icon: AlertCircle, color: "text-amber-700", bg: "bg-white/70" },
 };
 
 const priorityConfig = {
-  dusuk: { label: "Düşük", color: "text-slate-500 border-slate-300" },
-  orta: { label: "Orta", color: "text-amber-600 border-amber-300" },
-  yuksek: { label: "Yüksek", color: "text-red-500 border-red-300" },
+  dusuk: { label: "Düşük", color: "text-slate-600 border-slate-400/50" },
+  orta: { label: "Orta", color: "text-amber-700 border-amber-500/50" },
+  yuksek: { label: "Yüksek", color: "text-red-700 border-red-500/50" },
 };
+
+// Post-it paleti — todos'un sırasına göre döngüsel atanır (backend'de
+// renk alanı yok, yeni bir DB kolonu eklemeden çeşitlilik sağlar).
+const NOTE_PALETTE = [
+  { bg: "bg-yellow-200 dark:bg-yellow-900/50", pin: "bg-yellow-500" },
+  { bg: "bg-pink-200 dark:bg-pink-900/50", pin: "bg-pink-500" },
+  { bg: "bg-sky-200 dark:bg-sky-900/50", pin: "bg-sky-500" },
+  { bg: "bg-green-200 dark:bg-green-900/50", pin: "bg-green-500" },
+  { bg: "bg-orange-200 dark:bg-orange-900/50", pin: "bg-orange-500" },
+  { bg: "bg-purple-200 dark:bg-purple-900/50", pin: "bg-purple-500" },
+  { bg: "bg-teal-200 dark:bg-teal-900/50", pin: "bg-teal-500" },
+];
+const noteRotation = (i) => `${((i % 5) - 2) * 1.5}deg`;
 
 export default function Todos() {
   const { user } = useAuth();
@@ -64,15 +77,10 @@ export default function Todos() {
   const filtered = filter === "hepsi" ? todos : todos.filter(t => t.status === filter);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Yapılacaklar</h1>
-          <p className="text-sm text-muted-foreground mt-1">Kişisel görev listeniz</p>
-        </div>
-        <Button onClick={() => setShowForm(!showForm)} className="rounded-xl gap-2">
-          <Plus className="w-4 h-4" /> Görev Ekle
-        </Button>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Yapılacaklar</h1>
+        <p className="text-sm text-muted-foreground mt-1">Kişisel görev panonuz</p>
       </div>
 
       {showForm && (
@@ -82,6 +90,7 @@ export default function Todos() {
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             className="rounded-xl"
+            autoFocus
           />
           <Textarea
             placeholder="Açıklama (opsiyonel)"
@@ -139,72 +148,91 @@ export default function Todos() {
         ))}
       </div>
 
-      {/* Liste */}
+      {/* Pano */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p>Görev bulunmuyor</p>
-        </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((todo) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pt-2">
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="min-h-[160px] rounded-md border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-muted-foreground/60 transition-colors"
+            >
+              <Plus className="w-6 h-6" />
+              <span className="text-sm font-medium">Yeni Not Ekle</span>
+            </button>
+          )}
+
+          {filtered.length === 0 && showForm === false && todos.length === 0 && (
+            <div className="col-span-full text-center py-10 text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">Görev bulunmuyor</p>
+            </div>
+          )}
+
+          {filtered.map((todo, i) => {
             const st = statusConfig[todo.status] || statusConfig.yapilacak;
             const Icon = st.icon;
             const pri = priorityConfig[todo.priority] || priorityConfig.orta;
+            const note = NOTE_PALETTE[i % NOTE_PALETTE.length];
             return (
               <div
                 key={todo.id}
+                style={{ transform: `rotate(${noteRotation(i)})` }}
                 className={cn(
-                  "bg-card border border-border/50 rounded-xl p-4 flex items-start gap-3 shadow-sm transition-all",
-                  todo.status === "tamamlandi" && "opacity-60"
+                  "relative rounded-md p-4 pt-5 shadow-md hover:shadow-lg hover:rotate-0 hover:scale-105 transition-all min-h-[160px] flex flex-col",
+                  note.bg
                 )}
               >
+                <span className={cn("absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full ring-2 ring-white/70 dark:ring-black/30", note.pin)} />
+
+                <button
+                  onClick={() => deleteMutation.mutate(todo.id)}
+                  className="absolute top-2 right-2 text-black/30 hover:text-destructive transition-colors"
+                  title="Sil"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
                 <button
                   onClick={() => {
                     const next = { yapilacak: "devam_ediyor", devam_ediyor: "tamamlandi", tamamlandi: "yapilacak", ertelendi: "yapilacak" };
                     updateMutation.mutate({ id: todo.id, data: { status: next[todo.status] || "yapilacak" } });
                   }}
-                  className="mt-0.5 shrink-0"
+                  className="self-start mb-1.5"
+                  title="Durumu ilerlet"
                 >
                   <Icon className={cn("w-5 h-5", st.color)} />
                 </button>
-                <div className="flex-1 min-w-0">
-                  <p className={cn("font-medium text-sm", todo.status === "tamamlandi" && "line-through text-muted-foreground")}>
-                    {todo.title}
-                  </p>
-                  {todo.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{todo.description}</p>
+
+                <p className={cn("font-semibold text-sm text-slate-900 pr-4", todo.status === "tamamlandi" && "line-through opacity-60")}>
+                  {todo.title}
+                </p>
+                {todo.description && (
+                  <p className="text-xs text-slate-700/80 mt-1 line-clamp-3">{todo.description}</p>
+                )}
+
+                <div className="mt-auto pt-3 flex items-center gap-1.5 flex-wrap">
+                  <Badge variant="outline" className={cn("text-[10px] bg-white/50", pri.color)}>{pri.label}</Badge>
+                  <Select value={todo.status} onValueChange={(v) => updateMutation.mutate({ id: todo.id, data: { status: v } })}>
+                    <SelectTrigger className={cn("h-6 px-2 text-[10px] rounded-lg border-0", st.bg, st.color, "w-auto gap-1")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusConfig).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {todo.due_date && (
+                    <span className="flex items-center gap-1 text-[10px] text-slate-700/80">
+                      <Calendar className="w-3 h-3" />
+                      {format(new Date(todo.due_date), "d MMM", { locale: tr })}
+                    </span>
                   )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className={cn("text-xs", pri.color)}>{pri.label}</Badge>
-                    <Select value={todo.status} onValueChange={(v) => updateMutation.mutate({ id: todo.id, data: { status: v } })}>
-                      <SelectTrigger className={cn("h-6 px-2 text-xs rounded-lg border-0", st.bg, st.color, "w-auto gap-1")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(statusConfig).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {todo.due_date && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(todo.due_date), "d MMM", { locale: tr })}
-                      </span>
-                    )}
-                  </div>
                 </div>
-                <button
-                  onClick={() => deleteMutation.mutate(todo.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             );
           })}

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { flowApi } from "@/api/flowApiClient";
@@ -74,6 +75,11 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const { data: educationLevelOptions = [] } = useQuery({
     queryKey: ["definitions", "egitim_seviyesi"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "egitim_seviyesi", is_active: true }),
+  });
+
+  const { data: uyrukOptions = [] } = useQuery({
+    queryKey: ["definitions", "uyruk"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "uyruk", is_active: true }),
   });
 
   const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
@@ -299,7 +305,8 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="mb-1.5 block">Uyruk</Label>
-                  <Input value={form.uyruk} onChange={(e) => setForm({ ...form, uyruk: e.target.value })} placeholder="Türkiye" />
+                  <SearchableSelect value={form.uyruk} onChange={(v) => setForm({ ...form, uyruk: v })}
+                    options={uyrukOptions.map((u) => ({ value: u.value, label: u.label }))} placeholder="Uyruk seçin" fixDialogWheelScroll />
                 </div>
                 <div>
                   <Label className="mb-1.5 block">TC Kimlik No{(form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye" ? " *" : ""}</Label>

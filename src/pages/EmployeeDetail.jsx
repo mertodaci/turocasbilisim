@@ -546,7 +546,7 @@ export default function EmployeeDetail() {
             <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
               <Paperclip className="w-4 h-4 text-primary" /> Özlük Belgeleri
             </h3>
-            <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} />
+            <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} readOnly />
           </div>
         </TabsContent>
       )}

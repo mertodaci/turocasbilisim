@@ -34,7 +34,7 @@ function useBelgeTurleri() {
   return { tipler, tipLabel };
 }
 
-export function PersonelEvraklari({ personelId, personelAdi }) {
+export function PersonelEvraklari({ personelId, personelAdi, readOnly = false }) {
   const qc = useQueryClient();
   const { tipler, tipLabel } = useBelgeTurleri();
   const [tip, setTip] = useState("diger");
@@ -87,25 +87,27 @@ export function PersonelEvraklari({ personelId, personelAdi }) {
 
   return (
     <div className="space-y-4">
-      <input ref={replaceInputRef} type="file" className="hidden" onChange={onReplaceFile} />
-      <div className="flex gap-2 flex-wrap items-end">
-        <div className="w-44">
-          <Label className="mb-1.5 block text-xs">Evrak Tipi</Label>
-          <Select value={tip} onValueChange={setTip}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{tipler.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
-          </Select>
+      {!readOnly && <input ref={replaceInputRef} type="file" className="hidden" onChange={onReplaceFile} />}
+      {!readOnly && (
+        <div className="flex gap-2 flex-wrap items-end">
+          <div className="w-44">
+            <Label className="mb-1.5 block text-xs">Evrak Tipi</Label>
+            <Select value={tip} onValueChange={setTip}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{tipler.map((t) => <SelectItem key={t} value={t}>{tipLabel(t)}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <Label className="mb-1.5 block text-xs">Açıklama</Label>
+            <Input value={aciklama} onChange={(e) => setAciklama(e.target.value)} />
+          </div>
+          <Button asChild disabled={!personelId || busy}>
+            <label className="cursor-pointer"><Upload className="w-4 h-4 mr-1.5" /> {busy ? "Yükleniyor..." : "Evrak Yükle"}
+              <input type="file" className="hidden" onChange={onFile} disabled={!personelId || busy} />
+            </label>
+          </Button>
         </div>
-        <div className="flex-1 min-w-[160px]">
-          <Label className="mb-1.5 block text-xs">Açıklama</Label>
-          <Input value={aciklama} onChange={(e) => setAciklama(e.target.value)} />
-        </div>
-        <Button asChild disabled={!personelId || busy}>
-          <label className="cursor-pointer"><Upload className="w-4 h-4 mr-1.5" /> {busy ? "Yükleniyor..." : "Evrak Yükle"}
-            <input type="file" className="hidden" onChange={onFile} disabled={!personelId || busy} />
-          </label>
-        </Button>
-      </div>
+      )}
 
       <div className="bg-card border rounded-2xl overflow-x-auto">
         {!personelId ? <div className="h-32 flex items-center justify-center text-muted-foreground text-sm">Personel seçin.</div> :
@@ -127,8 +129,12 @@ export function PersonelEvraklari({ personelId, personelAdi }) {
                   <td className="px-4 py-2.5 text-muted-foreground">{r.aciklama || "—"}</td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setDetayRow(r)} title="Detay"><Info className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => baslatDegistir(r.id)} disabled={busy} title="Değiştir"><RefreshCw className="w-3.5 h-3.5" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Evrak silinsin mi?")) delM.mutate(r.id); }} title="Sil"><Trash2 className="w-3.5 h-3.5" /></Button>
+                    {!readOnly && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => baslatDegistir(r.id)} disabled={busy} title="Değiştir"><RefreshCw className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Evrak silinsin mi?")) delM.mutate(r.id); }} title="Sil"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

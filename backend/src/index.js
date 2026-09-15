@@ -2375,6 +2375,7 @@ app.get('/api/stok/uyarilar', authMiddleware, (req, res) => {
     const sktGecen = db.prepare("SELECT id, urun_id, urun_adi, depo_adi, lot_no, skt, kalan_bakiye FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) < ? ORDER BY skt LIMIT 100").all(bugun);
     const sktYaklasan = db.prepare("SELECT id, urun_id, urun_adi, depo_adi, lot_no, skt, kalan_bakiye FROM stok_partiler WHERE durum!='kapali' AND kalan_bakiye>0 AND skt IS NOT NULL AND skt<>'' AND substr(skt,1,10) >= ? AND substr(skt,1,10) <= date(?, '+30 days') ORDER BY skt LIMIT 100").all(bugun, bugun);
     const bekleyenFis = db.prepare("SELECT COUNT(*) n FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
+    const bekleyenFisEnEski = db.prepare("SELECT created_date FROM stok_fisler WHERE durum IN ('taslak','onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL) ORDER BY created_date ASC LIMIT 1").get();
     const bekleyenTalep = db.prepare("SELECT COUNT(*) n FROM stok_talepler WHERE durum IN ('onay_bekliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const sayimGorevi = db.prepare("SELECT COUNT(*) n FROM stok_sayimlar WHERE durum IN ('taslak','sayiliyor') AND (is_deleted=0 OR is_deleted IS NULL)").get().n;
     const gecikenZimmet = db.prepare("SELECT COUNT(*) n FROM stok_zimmetler WHERE durum='acik' AND termin_tarihi IS NOT NULL AND termin_tarihi<>'' AND substr(termin_tarihi,1,10) < ?").get(bugun).n;
@@ -2382,7 +2383,8 @@ app.get('/api/stok/uyarilar', authMiddleware, (req, res) => {
     res.json({
       toplam,
       kritik, skt_gecen: sktGecen, skt_yaklasan: sktYaklasan,
-      bekleyen_fis: bekleyenFis, bekleyen_talep: bekleyenTalep,
+      bekleyen_fis: bekleyenFis, bekleyen_fis_en_eski_tarih: bekleyenFisEnEski?.created_date || null,
+      bekleyen_talep: bekleyenTalep,
       sayim_gorevi: sayimGorevi, geciken_zimmet: gecikenZimmet,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }

@@ -282,4 +282,5 @@ export function getBreadcrumbTrail(pathname) {
 // değiştirir.
 export const DETAIL_ROUTE_PARENTS = [
   { prefix: "/calisan/", leafPath: "/calisanlar" },
+  { prefix: "/atlas", leafPath: "/" },
 ];

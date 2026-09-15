@@ -20,6 +20,7 @@ const Employees = lazy(() => import('./pages/Employees'));
 const PersonnelMovements = lazy(() => import('./pages/PersonnelMovements'));
 const CardManagement = lazy(() => import('./pages/CardManagement'));
 const EmployeeDetail = lazy(() => import('./pages/EmployeeDetail'));
+const Atlas = lazy(() => import('./pages/Atlas'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Customers = lazy(() => import('./pages/Customers'));
 const CustomerMap = lazy(() => import('./pages/CustomerMap'));
@@ -213,6 +214,7 @@ const AuthenticatedApp = () => {
         <Route path="/kisisel-takvim" element={guard("personal_calendar", <PersonalCalendar />)} />
         <Route path="/calisanlar" element={guard("employees", <Employees />)} />
         <Route path="/calisan/:id" element={guard("employees", <EmployeeDetail />)} />
+        <Route path="/atlas" element={guard("dashboard", <Atlas />)} />
         <Route path="/calisan-raporu" element={guard("employee_report", <EmployeeReport />)} />
         <Route path="/hakedisler" element={guard("hakedisler", <Hakedisler />)} />
         <Route path="/sozlesmeler" element={guard("sozlesmeler", <Sozlesmeler />)} />

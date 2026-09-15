@@ -187,6 +187,9 @@ export default function AdminDashboard() {
         <div className="text-right">
           <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
           <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
+          <Link to="/atlas" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-1.5">
+            Atlas Görünümü <ArrowUpRight className="w-3 h-3" />
+          </Link>
         </div>
       </div>
 

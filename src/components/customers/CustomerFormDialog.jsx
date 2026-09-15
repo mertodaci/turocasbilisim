@@ -14,7 +14,7 @@ const empty = {
   district: "", top_manager: "", address: "",
 };
 
-export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading, customer }) {
+export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading, customer, embedded = false }) {
   const [form, setForm] = useState(empty);
 
   const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
@@ -31,12 +31,7 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const handleSubmit = (e) => { e.preventDefault(); onSubmit(form); };
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{customer ? "Müşteriyi Düzenle" : "Yeni Müşteri"}</DialogTitle>
-        </DialogHeader>
+  const formBody = (
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
 
           {/* Firma Bilgileri */}
@@ -96,10 +91,31 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={onClose}>İptal</Button>
+            {!embedded && <Button type="button" variant="outline" onClick={onClose}>İptal</Button>}
             <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Kaydet"}</Button>
           </div>
         </form>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-lg font-bold">Müşteriyi Düzenle</h2>
+          <p className="text-sm text-muted-foreground mt-1">Bilgileri güncelleyin.</p>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{customer ? "Müşteriyi Düzenle" : "Yeni Müşteri"}</DialogTitle>
+        </DialogHeader>
+        {formBody}
       </DialogContent>
     </Dialog>
   );

@@ -143,12 +143,11 @@ function ContactFormDialogInline({ open, onClose, onSubmit, isLoading, contact }
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const TABS = ["Kişiler", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
+const BASE_TABS = ["Kişiler", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
 
 export default function CustomerDetail() {
   const customerId = window.location.pathname.split("/").pop();
   const [activeTab, setActiveTab] = useState("Kişiler");
-  const [editOpen, setEditOpen] = useState(false);
   const [statusDropdown, setStatusDropdown] = useState(false);
   const { user } = useAuth();
   const { can } = useRolePermissions();
@@ -157,6 +156,7 @@ export default function CustomerDetail() {
     user?.role === "yonetici" ||
     can(user?.role, "customers", "edit") ||
     can(user?.role, "customers", "add");
+  const TABS = canEdit ? [...BASE_TABS, "Düzenle"] : BASE_TABS;
 
   const [contactDialog, setContactDialog] = useState({ open: false, contact: null });
   const [moduleDialog, setModuleDialog] = useState({ open: false, module: null });
@@ -230,7 +230,6 @@ export default function CustomerDetail() {
     mutationFn: (data) => flowApi.entities.Customer.update(customerId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
-      setEditOpen(false);
     },
   });
 
@@ -434,7 +433,7 @@ export default function CustomerDetail() {
             {/* Sag: Sorumlular + Duzenle */}
             <div className="flex flex-col gap-3 lg:w-64 shrink-0">
               <div className="flex justify-end">
-                <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setEditOpen(true)}>
+                <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={() => setActiveTab("Düzenle")}>
                   <Pencil className="w-3.5 h-3.5" /> Duzenle
                 </Button>
               </div>
@@ -752,27 +751,29 @@ export default function CustomerDetail() {
             />
           )}
 
+          {/* Düzenle */}
+          {activeTab === "Düzenle" && canEdit && (
+            <CustomerFormDialog
+              embedded
+              customer={customer}
+              onSubmit={async (data) => {
+                const wasEnabled = customer?.use_job_tracking == 1 || customer?.use_job_tracking === true;
+                const willEnable = data.use_job_tracking === true || data.use_job_tracking === 1;
+                await flowApi.entities.Customer.update(customerId, data);
+                if (!wasEnabled && willEnable) {
+                  await ensureJobTrackingDefaults(customerId, data.company_name);
+                }
+                queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+                setActiveTab("Kişiler");
+              }}
+              isLoading={updateCustomerMutation.isPending}
+            />
+          )}
+
         </div>
       </div>
 
       {/* Diyaloglar */}
-      <CustomerFormDialog
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        customer={customer}
-        onSubmit={async (data) => {
-          const wasEnabled = customer?.use_job_tracking == 1 || customer?.use_job_tracking === true;
-          const willEnable = data.use_job_tracking === true || data.use_job_tracking === 1;
-          await flowApi.entities.Customer.update(customerId, data);
-          if (!wasEnabled && willEnable) {
-            await ensureJobTrackingDefaults(customerId, data.company_name);
-          }
-          queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
-          setEditOpen(false);
-        }}
-        isLoading={updateCustomerMutation.isPending}
-      />
-
       <ContactFormDialog
         open={contactDialog.open}
         onClose={() => setContactDialog({ open: false, contact: null })}

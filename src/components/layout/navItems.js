@@ -12,27 +12,27 @@ export const allNavItems = [
   labelKey: "insan_kaynaklari", path: null, icon: Users, roles: ["admin", "yonetici", "kullanici", "ik"],
   children: [
     {
-      labelKey: "ik_grp_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
+      labelKey: "ik_grp_calisan_org", path: null, icon: Users, roles: ["admin", "yonetici", "ik"],
       children: [
         { labelKey: "ik_tanimlar", path: "/ik-tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+        { labelKey: "employees", path: "/calisanlar", icon: Users, roles: ["admin", "yonetici", "kullanici"] },
+        { labelKey: "org_chart", path: "/org-sema", icon: Users, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
-      labelKey: "ik_grp_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"],
+      labelKey: "ik_grp_ozluk_izin", path: null, icon: Umbrella, roles: ["admin", "yonetici", "ik"],
       children: [
-        { labelKey: "employees", path: "/calisanlar", icon: Users, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "ikb_zam", path: "/ik/zam", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ozluk_evrak", path: "/ik/ozluk-evrak", icon: FileText, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_tutanak", path: "/ik/tutanak", icon: ScrollText, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "org_chart", path: "/org-sema", icon: Users, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ik_leave_requests", path: "/ik-izin-yonetimi", icon: Umbrella, roles: ["admin", "yonetici"] },
         { labelKey: "ikb_izin_evrak", path: "/ik/izin-evrak", icon: ClipboardCheck, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ik_expense_requests", path: "/ik-harcama-yonetimi", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
-      labelKey: "ik_grp_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
+      labelKey: "ik_grp_islem_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
       children: [
+        { labelKey: "ikb_tutanak", path: "/ik/tutanak", icon: ScrollText, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "employee_report", path: "/calisan-raporu", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "quick_report", path: "/hizli-rapor", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] },
       ]
@@ -67,21 +67,21 @@ export const allNavItems = [
   labelKey: "devriye_yonetimi", path: null, icon: Radar, roles: ["admin", "yonetici", "guvenlik"],
   children: [
     {
-      labelKey: "devriye_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
+      labelKey: "devriye_grp_tanim_personel", path: null, icon: Wrench, roles: ["admin", "yonetici"],
       children: [
         { labelKey: "devriye_tanimlar", path: "/devriye/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+        { labelKey: "devriye_personel", path: "/devriye/personel", icon: Users, roles: ["admin", "yonetici"] },
       ]
     },
     {
-      labelKey: "devriye_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "guvenlik"],
+      labelKey: "devriye_grp_saha", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "guvenlik"],
       children: [
         { labelKey: "devriye_atama", path: "/devriye/atama", icon: CalendarDays, roles: ["admin", "yonetici"] },
-        { labelKey: "devriye_personel", path: "/devriye/personel", icon: Users, roles: ["admin", "yonetici"] },
         { labelKey: "devriye_qr_saha", path: "/devriye/qr-saha", icon: QrCode, roles: ["admin", "yonetici", "guvenlik"] },
       ]
     },
     {
-      labelKey: "devriye_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici"],
+      labelKey: "devriye_grp_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici"],
       children: [
         { labelKey: "devriye_okuma_rapor", path: "/devriye/raporlar", icon: FileSpreadsheet, roles: ["admin", "yonetici"] },
         { labelKey: "devriye_saat_rapor", path: "/devriye/saat-raporu", icon: BarChart3, roles: ["admin", "yonetici"] },
@@ -94,26 +94,26 @@ export const allNavItems = [
   labelKey: "maas_bordro", path: null, icon: Calculator, roles: ["admin", "yonetici", "ik"],
   children: [
     {
-      labelKey: "maas_bordro_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
+      labelKey: "bordro_grp_puantaj", path: null, icon: CalendarClock, roles: ["admin", "yonetici", "ik"],
       children: [
         { labelKey: "bordro_tanimlar", path: "/ik/bordro-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_puantaj", path: "/ik/puantaj", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_mesai", path: "/ik/mesai", icon: Clock, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
-      labelKey: "maas_bordro_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"],
+      labelKey: "bordro_grp_kesinti", path: null, icon: Wallet, roles: ["admin", "yonetici", "ik"],
       children: [
-        { labelKey: "ikb_puantaj", path: "/ik/puantaj", icon: CalendarClock, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_mesai", path: "/ik/mesai", icon: Clock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_kesinti", path: "/ik/kesinti", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_ic_borc", path: "/ik/ic-borc", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_personel_masraf", path: "/ik/personel-masraf", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_bordro", path: "/ik/bordro", icon: Calculator, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_ay_kapanis", path: "/ik/ay-kapanis", icon: Lock, roles: ["admin", "yonetici", "ik"] },
       ]
     },
     {
-      labelKey: "maas_bordro_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
+      labelKey: "bordro_grp_sonuc", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
       children: [
+        { labelKey: "ikb_bordro", path: "/ik/bordro", icon: Calculator, roles: ["admin", "yonetici", "ik"] },
+        { labelKey: "ikb_ay_kapanis", path: "/ik/ay-kapanis", icon: Lock, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_puantaj_rapor", path: "/ik/puantaj-rapor", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
         { labelKey: "ikb_maas_ozet", path: "/ik/maas-ozet", icon: FileSpreadsheet, roles: ["admin", "yonetici", "ik"] },
       ]
@@ -124,19 +124,24 @@ export const allNavItems = [
   labelKey: "stok_yonetimi", path: null, icon: Boxes, roles: ["admin", "yonetici", "kullanici"],
   children: [
     {
-      labelKey: "stok_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici"],
+      labelKey: "stok_grp_tanim_mobil", path: null, icon: Wrench, roles: ["admin", "yonetici", "kullanici"],
       children: [
         { labelKey: "stok_tanimlar", path: "/stok/tanimlar", icon: Wrench, roles: ["admin", "yonetici", "kullanici"] },
+        { labelKey: "stok_mobil", path: "/stok/mobil", icon: Smartphone, roles: ["admin", "yonetici", "kullanici"] },
       ]
     },
     {
-      labelKey: "stok_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "kullanici"],
+      labelKey: "stok_grp_islemler", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "kullanici"],
       children: [
-        { labelKey: "stok_mobil", path: "/stok/mobil", icon: Smartphone, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_fisler", path: "/stok/fisler", icon: FileText, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_sayim", path: "/stok/sayim", icon: ClipboardCheck, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_satinalma", path: "/stok/satin-alma", icon: ShoppingCart, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_zimmet", path: "/stok/zimmet", icon: HardHat, roles: ["admin", "yonetici", "kullanici"] },
+      ]
+    },
+    {
+      labelKey: "stok_grp_belge", path: null, icon: Tags, roles: ["admin", "yonetici", "kullanici"],
+      children: [
         { labelKey: "stok_etiket", path: "/stok/etiket", icon: Tags, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_demirbas_sorgula", path: "/stok/demirbas-sorgula", icon: ScanSearch, roles: ["admin", "yonetici", "kullanici"] },
         { labelKey: "stok_excel", path: "/stok/excel", icon: FileUp, roles: ["admin", "yonetici", "kullanici"] },
@@ -243,6 +248,19 @@ export function getAllLeafItems() {
 // Ata-zinciri: verilen path'e eşleşen yaprağa kadar geçilen tüm düğümlerin
 // labelKey'lerini (ata grupları + yaprağın kendisi) sıralı dizi olarak döner.
 // AppLayout'taki breadcrumb bunu kullanır. Eşleşme yoksa [] döner.
+// Bir üst-seviye grubun flyout başlığındaki "Tüm modülü aç" linkinin
+// gittiği, o grubu en iyi temsil eden sayfa — yeni bir "tüm modül" ekranı
+// icat edilmiyor, mevcut merkezi/gösterge niteliğindeki sayfaya gidilir.
+export const PRIMARY_PATH = {
+  insan_kaynaklari: "/calisanlar",
+  stok_yonetimi: "/stok",
+  maas_bordro: "/ik/bordro",
+  devriye_yonetimi: "/devriye/atama",
+  pdks_vardiya: "/kart-yonetimi",
+  is_takibi: "/is-takibi/dashboard",
+  sozlesme_yonetimi: "/sozlesmeler",
+};
+
 export function getBreadcrumbTrail(pathname) {
   function walk(list, trail) {
     for (const item of list) {

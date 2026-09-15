@@ -1,12 +1,25 @@
-import { Link, useLocation } from "react-router-dom";
-import { Star, ChevronRight } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Star, ChevronRight, ArrowUpRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications, useStokAlerts } from "@/lib/NotificationContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
-import { allNavItems } from "./navItems";
+import { allNavItems, PRIMARY_PATH } from "./navItems";
+import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
+
+// Bir düğümün altındaki tüm tıklanabilir yaprak sayısını özyinelemeli sayar.
+function countLeaves(node) {
+  if (!node.children || node.children.length === 0) return 1;
+  return node.children.reduce((sum, c) => sum + countLeaves(c), 0);
+}
+
+// Bir düğümün altındaki tüm yaprakların labelKey'lerini düz bir diziye toplar.
+function collectLeafKeys(node) {
+  if (!node.children || node.children.length === 0) return [node.labelKey];
+  return node.children.flatMap(collectLeafKeys);
+}
 
 // Alt navigasyon çubuğu — sol dikey menünün yerini alan tek navigasyon.
 // Üst-seviye 8 öğe ikon+etiket olarak sabit barda durur; alt öğesi olan
@@ -15,7 +28,9 @@ import { allNavItems } from "./navItems";
 // — yalnız yönü sağa değil yukarı).
 export default function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const recentlyVisited = useRecentlyVisited();
   const { unreadMessageCount } = useMessages();
   const { unreadTodoCount } = useTodos();
   const { pendingLeaveCount } = useLeave();
@@ -108,6 +123,7 @@ export default function BottomNav() {
         {showMessageBadge && <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full">{unreadMessageCount}</span>}
         {showTodoBadge && <span className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-[10px] font-bold rounded-full">{unreadTodoCount}</span>}
         {showStokBadge && <span className="flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-[10px] font-bold rounded-full">{stokUyariCount}</span>}
+        {active && <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-white/20 shrink-0">şu an</span>}
         <button
           onClick={(e) => toggleFavorite(e, it.labelKey)}
           className={cn("opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted shrink-0", isFav && "opacity-100")}
@@ -145,6 +161,12 @@ export default function BottomNav() {
 
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
   const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;
+  const flyoutLeafCount = flyoutItem ? countLeaves(flyoutItem) : 0;
+  const flyoutPrimaryPath = flyoutItem ? PRIMARY_PATH[flyoutItem.labelKey] : null;
+  const flyoutLeafKeys = flyoutItem ? collectLeafKeys(flyoutItem) : [];
+  const flyoutRecent = flyoutItem
+    ? recentlyVisited.filter((v) => flyoutLeafKeys.includes(v.labelKey)).slice(0, 3)
+    : [];
 
   return (
     <>
@@ -203,12 +225,37 @@ export default function BottomNav() {
               flyoutHasSubgroups ? "w-[min(92vw,820px)]" : "w-64"
             )}
             style={{ left: flyout.left, bottom: flyout.bottom }}>
-            <p className="px-4 pt-3 pb-1 text-sm font-bold text-foreground">{t(flyoutItem.labelKey)}</p>
+            <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1">
+              <p className="text-sm font-bold text-foreground">
+                {t(flyoutItem.labelKey)}
+                <span className="ml-1.5 font-normal text-muted-foreground">· {flyoutLeafCount} işlem</span>
+              </p>
+              {flyoutPrimaryPath && (
+                <button
+                  type="button"
+                  onClick={() => { setFlyout(null); navigate(flyoutPrimaryPath); }}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
+                >
+                  Tüm modülü aç <ArrowUpRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
             <div
               className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
               style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" } : undefined}>
               {flyoutItem.children.map(renderFlyoutColumn)}
             </div>
+            {flyoutRecent.length > 0 && (
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 px-4 py-2 border-t border-border text-xs text-muted-foreground bg-muted/30">
+                <span className="shrink-0">Son kullanılan:</span>
+                {flyoutRecent.map((v, i) => (
+                  <span key={v.path} className="flex items-center gap-1.5">
+                    <Link to={v.path} onClick={() => setFlyout(null)} className="text-primary hover:underline">{t(v.labelKey)}</Link>
+                    {i < flyoutRecent.length - 1 && <span className="text-muted-foreground/40">·</span>}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}

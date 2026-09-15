@@ -10,14 +10,24 @@ import { Switch } from "@/components/ui/switch";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import CameraScanDialog from "@/components/stok/CameraScanDialog";
 import { SEBEP_LISTESI } from "@/lib/stokSebepleri";
-import { ScanLine, Minus, Plus, Trash2, Check, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, Camera, Link2, PackagePlus } from "lucide-react";
+import { ScanLine, Minus, Plus, Trash2, Check, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, Camera, Link2, PackagePlus, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
+// Sayfa yenilenirse/sekme kapanip acilirsa (baglanti kopmasi, kaza vb.) devam
+// eden bir sayim veya henuz kaydedilmemis giris/cikis satirlari kaybolmasin
+// diye tarayici localStorage'inda saklanir (#StokMobil degerlendirmesi,
+// madde 1 ve 3). Sadece bu cihaz/tarayicida gecerli, sunucuya gitmez.
+const TASLAK_KEY = "stok_mobil_taslak_v1";
+const taslakYukle = () => { try { return JSON.parse(localStorage.getItem(TASLAK_KEY) || "null"); } catch { return null; } };
+const taslakKaydet = (d) => { try { localStorage.setItem(TASLAK_KEY, JSON.stringify(d)); } catch {} };
+const taslakSil = () => { try { localStorage.removeItem(TASLAK_KEY); } catch {} };
+
 export default function StokMobil() {
-  const [mode, setMode] = useState("giris"); // giris | cikis | sayim
-  const [depoId, setDepoId] = useState("");
-  const [sahaId, setSahaId] = useState("");
-  const [lines, setLines] = useState([]);
+  const ilkTaslak = useRef(taslakYukle()).current;
+  const [mode, setMode] = useState(ilkTaslak?.mode || "giris"); // giris | cikis | sayim
+  const [depoId, setDepoId] = useState(ilkTaslak?.depoId || "");
+  const [sahaId, setSahaId] = useState(ilkTaslak?.sahaId || "");
+  const [lines, setLines] = useState(ilkTaslak?.lines || []);
   const [scan, setScan] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -27,13 +37,27 @@ export default function StokMobil() {
   const [yeniUrunAdi, setYeniUrunAdi] = useState("");
   const [yeniUrunDemirbas, setYeniUrunDemirbas] = useState(false);
   const [baglanacakUrunId, setBaglanacakUrunId] = useState("");
-  const [sebepKodu, setSebepKodu] = useState(SEBEP_LISTESI.giris[0].value);
+  const [sebepKodu, setSebepKodu] = useState(ilkTaslak?.sebepKodu || SEBEP_LISTESI.giris[0].value);
   const [oneriler, setOneriler] = useState([]); // isimle arama sonuçları (2+ karakter sonrası)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
   // sayım için
-  const [sayimId, setSayimId] = useState(null);
-  const [sayimSatirlari, setSayimSatirlari] = useState([]); // backend satır kayıtları (id, urun_id, urun_adi, sistem_miktar, sayilan_miktar)
+  const [sayimId, setSayimId] = useState(ilkTaslak?.sayimId || null);
+  const [sayimSatirlari, setSayimSatirlari] = useState(ilkTaslak?.sayimSatirlari || []); // backend satır kayıtları (id, urun_id, urun_adi, sistem_miktar, sayilan_miktar)
   const [sayimBaslatiliyor, setSayimBaslatiliyor] = useState(false);
+
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener("online", on); window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+
+  // Taslagi her degisiklikte guncelle -- kaydedilmis/onaylanmis veri yok,
+  // sadece "kaldigi yerden devam" icin.
+  useEffect(() => {
+    taslakKaydet({ mode, depoId, sahaId, lines, sebepKodu, sayimId, sayimSatirlari });
+  }, [mode, depoId, sahaId, lines, sebepKodu, sayimId, sayimSatirlari]);
 
   // Mobil ekran tüm ürün/barkod kataloğunu indirmez — barkod sunucuda çözülür.
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
@@ -64,6 +88,14 @@ export default function StokMobil() {
   };
 
   const ekle = (u) => {
+    // Masaustunde (FisForm.jsx) demirbas Cikis fisine giremez -- burada erken
+    // uyarmazsak kullanici tum listeyi okuttuktan sonra Kaydet'te reddedilirdi.
+    // Mobilde sicil-no secimi/zimmet kontrolu olmadigindan hurda/kayip istisnasi
+    // da desteklenmiyor, tamamen masaustune yonlendiriyoruz (#StokMobil madde 2).
+    if (mode === "cikis" && u.urun_tipi === "demirbas") {
+      toast.error(`"${u.ad}" bir demirbaş — Çıkış fişine eklenemez. Zimmet ekranını veya masaüstünü kullanın.`);
+      return;
+    }
     const serili = u.seri_no_takip === 1 || u.seri_no_takip === true;
     setLines((ls) => {
       const i = ls.findIndex((l) => l.urun_id === u.id);
@@ -182,6 +214,13 @@ export default function StokMobil() {
     finally { setSaving(false); }
   };
 
+  // Depo bu islem icin kapatilmissa (StokDepolar.jsx > Islem Kurallari)
+  // secilemesin -- masaustunde reddedilecek bir islemi taramaya baslamadan
+  // once engelliyoruz (#StokMobil madde 2).
+  const depoOptsGirisCikis = depolar
+    .filter((d) => mode === "giris" ? (d.kural_giris ?? 1) : (d.kural_cikis ?? 1))
+    .map((d) => ({ value: d.id, label: d.ad }));
+
   const toplam = lines.reduce((a, l) => a + (l.miktar || 0), 0);
   const sayilanSatirlar = sayimSatirlari.filter((s) => s.sayilan_miktar != null);
 
@@ -201,6 +240,11 @@ export default function StokMobil() {
 
   return (
     <div className="max-w-md mx-auto space-y-4 pb-16">
+      {!online && (
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl px-3 py-2 text-sm">
+          <WifiOff className="w-4 h-4 shrink-0" /> Bağlantı yok — tarama ve kaydetme çalışmaz. Girdikleriniz cihazda saklanıyor, bağlantı gelince devam edebilirsiniz.
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <Button variant={mode === "giris" ? "default" : "outline"} className="h-12 text-sm" onClick={() => modDegistir("giris")}>
           <ArrowDownToLine className="w-4 h-4 mr-1.5" /> Giriş
@@ -216,7 +260,7 @@ export default function StokMobil() {
       {mode !== "sayim" ? (
         <>
           <div className="space-y-2">
-            <SearchableSelect value={depoId} onChange={setDepoId} options={depolar.map((d) => ({ value: d.id, label: d.ad }))} placeholder={mode === "giris" ? "Hedef depo" : "Kaynak depo"} className="h-11" />
+            <SearchableSelect value={depoId} onChange={setDepoId} options={depoOptsGirisCikis} placeholder={mode === "giris" ? "Hedef depo" : "Kaynak depo"} className="h-11" />
             {mode === "cikis" && <SearchableSelect value={sahaId} onChange={setSahaId} options={[{ value: "", label: "Hedef: aynı depo" }, ...sahalar.map((s) => ({ value: s.id, label: "Saha: " + s.ad }))]} placeholder="Hedef saha (ops.)" className="h-11" />}
             {SEBEP_LISTESI[mode] && (
               <Select value={sebepKodu} onValueChange={setSebepKodu}>
@@ -233,8 +277,8 @@ export default function StokMobil() {
               <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
                 onChange={(e) => setScan(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") onScan(); if (e.key === "Escape") setOneriler([]); }} />
-              <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
-              <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+              <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut" disabled={!online}><Camera className="w-5 h-5" /></Button>
+              <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning || !online}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
             </div>
             {oneriListesi}
           </div>
@@ -258,7 +302,7 @@ export default function StokMobil() {
 
           <div className="fixed inset-x-0 bottom-32 z-40 flex justify-center px-4 pointer-events-none">
             <div className="w-full max-w-md pointer-events-auto">
-              <Button className="w-full h-14 text-base shadow-lg" disabled={saving || !lines.length || !depoId} onClick={kaydet}>
+              <Button className="w-full h-14 text-base shadow-lg" disabled={saving || !lines.length || !depoId || !online} onClick={() => setConfirmOpen(true)}>
                 <Check className="w-5 h-5 mr-2" /> {saving ? "Kaydediliyor..." : `Kaydet ve Onayla (${lines.length} kalem · ${toplam})`}
               </Button>
             </div>
@@ -281,8 +325,8 @@ export default function StokMobil() {
                   <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
                     onChange={(e) => setScan(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") onScan(); if (e.key === "Escape") setOneriler([]); }} />
-                  <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut"><Camera className="w-5 h-5" /></Button>
-                  <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
+                  <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut" disabled={!online}><Camera className="w-5 h-5" /></Button>
+                  <Button className="h-12 px-4" onClick={() => onScan()} disabled={scanning || !online}><ScanLine className={`w-5 h-5 ${scanning ? "animate-pulse" : ""}`} /></Button>
                 </div>
                 {oneriListesi}
               </div>
@@ -311,6 +355,33 @@ export default function StokMobil() {
       )}
 
       <CameraScanDialog open={kameraAcik} onOpenChange={setKameraAcik} onScan={(kod) => onScan(kod)} />
+
+      {/* Giris/Cikis stoğu hemen ONAYLI hale getirip geri donusu zorlastiran
+          islem oldugundan, tek dokunusla kaydetmek yerine bir son kontrol
+          ekrani gosteriyoruz (#StokMobil madde 4). */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>{mode === "giris" ? "Girişi Onayla" : "Çıkışı Onayla"}</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">Bu işlem onaylandığında stok bakiyesi hemen güncellenir, geri alınamaz.</p>
+            <div className="bg-muted/40 rounded-xl p-3 space-y-1">
+              <p><span className="text-muted-foreground">Depo:</span> {depolar.find((d) => d.id === depoId)?.ad || "—"}</p>
+              {mode === "cikis" && sahaId && <p><span className="text-muted-foreground">Hedef Saha:</span> {sahalar.find((s) => s.id === sahaId)?.ad}</p>}
+              <p><span className="text-muted-foreground">Sebep:</span> {SEBEP_LISTESI[mode]?.find((s) => s.value === sebepKodu)?.label}</p>
+              <p><span className="text-muted-foreground">Kalem:</span> {lines.length} ürün · {toplam} adet</p>
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-0.5 max-h-32 overflow-y-auto">
+              {lines.map((l) => <li key={l.urun_id}>• {l.urun_adi} — {l.miktar} {l.birim}</li>)}
+            </ul>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>Vazgeç</Button>
+            <Button className="flex-1" disabled={saving} onClick={() => { setConfirmOpen(false); kaydet(); }}>
+              {saving ? "Kaydediliyor..." : "Evet, Onayla"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!bilinmeyen} onOpenChange={(v) => !v && setBilinmeyen(null)}>
         <DialogContent className="sm:max-w-sm">

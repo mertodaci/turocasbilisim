@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus, XCircle, Clock, Calendar, Pencil, Trash2, Eye, FileText } from "lucide-react";
+import { Plus, XCircle, Clock, Calendar, Pencil, Trash2, Eye, FileText, Paperclip } from "lucide-react";
 import LeaveRequestForm from "@/components/leave/LeaveRequestForm";
 import LeaveApprovalHistoryDialog from "@/components/leave/LeaveApprovalHistoryDialog";
 import LeaveFormPrint from "@/components/leave/LeaveFormPrint";
@@ -65,6 +65,16 @@ export default function MyLeaveRequests() {
     enabled: !!user?.email,
   });
   const { entitled: myEntitled, used: myUsed, remaining: myRemaining } = useLeaveBalance(myEmployee);
+
+  // #1051: taranmis islak imzali izin evraki hangi ekrandan gorulecegi
+  // belirsizdi -- artik izin satirinda varsa dogrudan "Belge" linki cikiyor
+  // (evraklar personel bazinda IkIzinEvrak ekranindan yukleniyor, leave_id ile eslesiyor).
+  const { data: izinEvraklari = [] } = useQuery({
+    queryKey: ["my-izin-evrak", myEmployee?.id],
+    queryFn: () => flowApi.entities.IkIzinEvrak.filter({ personel_id: myEmployee.id }),
+    enabled: !!myEmployee?.id,
+  });
+  const evrakByLeave = izinEvraklari.reduce((m, e) => { if (e.leave_id && e.dosya_url) m[e.leave_id] = e.dosya_url; return m; }, {});
 
   const cancelMutation = useMutation({
     mutationFn: (id) => flowApi.entities.LeaveRequest.update(id, { status: "iptal_edildi" }),
@@ -217,6 +227,14 @@ export default function MyLeaveRequests() {
                           <FileText className="w-3 h-3" />
                           Form
                         </Button>
+                        {evrakByLeave[leave.id] && (
+                          <Button size="sm" variant="outline" className="gap-1" asChild>
+                            <a href={evrakByLeave[leave.id]} target="_blank" rel="noreferrer">
+                              <Paperclip className="w-3 h-3" />
+                              Belge
+                            </a>
+                          </Button>
+                        )}
                         {(["ik_onayi_bekliyor", "beklemede", "yonetici_onayi_bekliyor"].includes(leave.status) || user?.role === "admin" || user?.role === "yonetici") && leave.status !== "onaylandi" && (
                           <>
                             <Button

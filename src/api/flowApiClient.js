@@ -242,6 +242,9 @@ export const auth = {
   async users() {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/users`, { headers: authHeaders(), credentials: 'include' }));
   },
+  async usersPublic() {
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/users-public`, { headers: authHeaders(), credentials: 'include' }));
+  },
   async updateUser(id, data) {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify(data) }));
   },

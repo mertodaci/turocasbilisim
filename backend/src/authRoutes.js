@@ -133,6 +133,20 @@ router.get('/users', authMiddleware, (req, res) => {
   }
 });
 
+// Isim cozumleme (herhangi bir giris yapmis kullanici gorebilir) — sadece
+// email+ad-soyad, rol/durum/id gibi hassas alanlar yok. "Olusturan" gibi
+// login e-postasini goruntulenebilir bir isme cevirmesi gereken ekranlar icin
+// (ör. bilet detayinda employees/customer_contacts'ta karsiligi olmayan,
+// sadece users tablosunda kaydi olan hesaplar).
+router.get('/users-public', authMiddleware, (req, res) => {
+  try {
+    const rows = db.prepare('SELECT email, full_name FROM users').all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // KULLANICI GÜNCELLE
 router.put('/users/:id', authMiddleware, (req, res) => {
   try {

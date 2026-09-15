@@ -212,12 +212,18 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   // net bir mesaj gosterir -- oncesinde Kaydet butonu sessizce disabled
   // kaliyordu, kullanici hangi alanin eksik oldugunu tab'lar arasinda
   // gezerek bulmak zorunda kaliyordu (bkz. #1036).
+  // TC/Dogum Tarihi/Departman sadece YENI calisan eklenirken zorunlu --
+  // bu kural sonradan eklendigi icin, zaten kayitli olup bu alanlari eksik/
+  // hatali olan calisanlarin duzenlenmesini (ör. sadece Egitim sekmesini
+  // guncellemek) engellemeyelim; #1037 testinde bu yuzden kayit hic calismiyordu.
   const getValidationError = () => {
     if (!form.full_name.trim()) return { tab: "kisisel", message: "Ad Soyad zorunlu" };
-    const turkiyeMi = (form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye";
-    if (turkiyeMi && !/^[0-9]{11}$/.test(form.tc || "")) return { tab: "kisisel", message: "TC Kimlik No zorunlu ve 11 haneli olmalı" };
-    if (!form.birth_date) return { tab: "kisisel", message: "Doğum Tarihi zorunlu" };
-    if (!form.department) return { tab: "kisisel", message: "Departman zorunlu" };
+    if (!employee) {
+      const turkiyeMi = (form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye";
+      if (turkiyeMi && !/^[0-9]{11}$/.test(form.tc || "")) return { tab: "kisisel", message: "TC Kimlik No zorunlu ve 11 haneli olmalı" };
+      if (!form.birth_date) return { tab: "kisisel", message: "Doğum Tarihi zorunlu" };
+      if (!form.department) return { tab: "kisisel", message: "Departman zorunlu" };
+    }
     return null;
   };
 

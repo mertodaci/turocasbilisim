@@ -98,6 +98,23 @@ function killAllSessions() {
   }
 }
 
+// GUVENLIK: hareketsiz kalan oturumlari sifreler -- asil reddi authMiddleware
+// her istekte zaten yapiyor, bu sadece Oturum Yonetimi listesinin o kullanici
+// yeni bir istek atmasa bile suresi dolmus oturumlari gecikmeden gostermesi icin.
+function sweepIdleSessions() {
+  try {
+    const row = db.prepare('SELECT idle_timeout_dakika FROM guvenlik_ayarlari WHERE id = ?').get('varsayilan');
+    const dakika = row ? Number(row.idle_timeout_dakika) : 60;
+    if (!dakika || dakika <= 0) return;
+    const info = db.prepare(
+      "UPDATE sessions SET revoked = 1 WHERE revoked = 0 AND last_seen_at < datetime('now', '-' || ? || ' minutes')"
+    ).run(dakika);
+    if (info.changes > 0) console.log(`⏰ Cron: ${info.changes} hareketsiz oturum süpürüldü (>${dakika} dk).`);
+  } catch (err) {
+    console.error('Hareketsizlik süpürme cron hatası:', err);
+  }
+}
+
 // Her gun belirtilen saat:dakikada bir fn'i calistirir (sunucu ayaga
 // kalkinca hemen degil -- sadece ilk hedef saate kadar bekler, sonra 24
 // saatte bir tekrarlar).
@@ -119,7 +136,8 @@ function startCronJobs() {
 
   scheduleDaily(2, 0, runTicketCronJobs);
   scheduleDaily(21, 0, killAllSessions);
-  console.log('⏰ Cron job başlatıldı (bilet temizliği 02:00, oturum kill 21:00)');
+  setInterval(sweepIdleSessions, 60 * 1000);
+  console.log('⏰ Cron job başlatıldı (bilet temizliği 02:00, oturum kill 21:00, hareketsizlik süpürme 60sn)');
 }
 
 module.exports = { startCronJobs };

@@ -1452,6 +1452,18 @@ function initDb() {
         UNIQUE(kapsam)
       );
       INSERT OR IGNORE INTO ik_sirket_bilgileri (id, kapsam, unvan) VALUES ('genel-default', 'genel', 'Turkonix — Sınırsız İletişim');
+      -- Güvenlik ayarları: hareketsizlik zaman aşımı + çalışma saatleri kısıtı (tek satır, global)
+      CREATE TABLE IF NOT EXISTS guvenlik_ayarlari (
+        id TEXT PRIMARY KEY,
+        idle_timeout_dakika INTEGER DEFAULT 60,
+        calisma_saatleri_aktif INTEGER DEFAULT 0,
+        calisma_baslangic TEXT DEFAULT '08:00',
+        calisma_bitis TEXT DEFAULT '19:00',
+        calisma_gunleri TEXT DEFAULT '1,2,3,4,5',
+        updated_by TEXT,
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      INSERT OR IGNORE INTO guvenlik_ayarlari (id) VALUES ('varsayilan');
       -- Toplu Excel yükleme kayıtları (geri alınabilir)
       CREATE TABLE IF NOT EXISTS ik_toplu_yukleme (
         id TEXT PRIMARY KEY, tur TEXT,        -- temel_bilgi | donem_hakedis

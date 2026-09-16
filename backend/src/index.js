@@ -212,6 +212,7 @@ app.use('/api/entities/ik_personel_masraf',    createEntityRouter('ik_personel_m
 app.use('/api/entities/ik_bordro_donemleri',   createEntityRouter('ik_bordro_donemleri'));
 app.use('/api/entities/ik_bordro_satirlari',   createEntityRouter('ik_bordro_satirlari'));
 app.use('/api/entities/ik_sirket_bilgileri',   createEntityRouter('ik_sirket_bilgileri'));
+app.use('/api/entities/guvenlik_ayarlari',     createEntityRouter('guvenlik_ayarlari'));
 app.use('/api/entities/ik_toplu_yukleme',      createEntityRouter('ik_toplu_yukleme'));
 app.use('/api/entities/ik_ozluk_evraklari',    createEntityRouter('ik_ozluk_evraklari'));
 app.use('/api/entities/ik_tutanaklar',         createEntityRouter('ik_tutanaklar'));

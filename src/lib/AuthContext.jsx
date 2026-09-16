@@ -13,13 +13,18 @@ export const AuthProvider = ({ children }) => {
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const timeoutRef = useRef(null);
   const warningRef = useRef(null);
-  const TIMEOUT_MS = 60 * 60 * 1000; // 60 dakika
+  // Sunucudan gelen (Oturum Yönetimi'nden yapılandırılabilir) hareketsizlik
+  // süresi -- değer henüz yüklenmemişse (ilk render) mevcut varsayılan 60 dk
+  // kullanılır. Asıl zorlama artık sunucu tarafında (authMiddleware) da var;
+  // bu zamanlayıcı yalnızca kullanıcıya erken uyarı + istemci tarafı çıkış içindir.
+  const idleTimeoutRef = useRef(60);
   const WARNING_MS = 60 * 1000; // uyarıdan sonra 60 saniye
 
   const resetTimer = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (warningRef.current) clearTimeout(warningRef.current);
     setShowSessionWarning(false);
+    const timeoutMs = Math.max(1, idleTimeoutRef.current) * 60 * 1000;
     timeoutRef.current = setTimeout(() => {
       setShowSessionWarning(true);
       warningRef.current = setTimeout(() => {
@@ -27,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         auth.logout();
       }, WARNING_MS);
-    }, TIMEOUT_MS - WARNING_MS);
+    }, Math.max(0, timeoutMs - WARNING_MS));
   }, []);
 
   useEffect(() => {
@@ -47,6 +52,8 @@ export const AuthProvider = ({ children }) => {
       const currentUser = await auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
+      if (currentUser?.idle_timeout_dakika > 0) idleTimeoutRef.current = currentUser.idle_timeout_dakika;
+      resetTimer();
     } catch (error) {
       setIsAuthenticated(false);
       if (error.status === 401 || error.status === 403) {
@@ -68,6 +75,8 @@ export const AuthProvider = ({ children }) => {
     setUser(data.user);
     setIsAuthenticated(true);
     setAuthError(null);
+    if (data.user?.idle_timeout_dakika > 0) idleTimeoutRef.current = data.user.idle_timeout_dakika;
+    resetTimer();
     return data;
   };
 

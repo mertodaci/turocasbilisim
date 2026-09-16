@@ -55,6 +55,15 @@ router.post('/login', async (req, res) => {
     if (user.status === 'pasif') {
       return res.status(403).json({ error: 'Hesabınız pasif durumda. Yönetici ile iletişime geçin.' });
     }
+    // GUVENLIK: calisma saatleri kisiti -- kilitlenmeyi onlemek icin admin muaf.
+    const guvenlikAyarlari = authMiddleware.getGuvenlikAyarlari();
+    if (guvenlikAyarlari && guvenlikAyarlari.calisma_saatleri_aktif && user.role !== 'admin') {
+      if (!authMiddleware.isWithinWorkingHours(guvenlikAyarlari)) {
+        return res.status(403).json({
+          error: `Çalışma saatleri dışında giriş yapılamaz (${guvenlikAyarlari.calisma_baslangic}–${guvenlikAyarlari.calisma_bitis})`,
+        });
+      }
+    }
     // OTURUM YONETIMI: her girişte bir sessions kaydı açılır -- token'ın
     // kendisi artık tek başına yeterli değil, authMiddleware her istekte bu
     // kaydın hala iptal edilmemiş (revoked=0) olduğunu da kontrol ediyor.
@@ -67,8 +76,10 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
     const userPerms = db.prepare("SELECT module, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE role_name = ?").all(user.role);
+    let idleTimeoutDakika = 60;
+    try { const g = authMiddleware.getGuvenlikAyarlari(); if (g) idleTimeoutDakika = Number(g.idle_timeout_dakika); } catch (e) {}
     res.cookie('auth_token', token, { httpOnly: true, secure: COOKIE_SECURE, sameSite: 'Strict', maxAge: 24 * 60 * 60 * 1000 });
-    res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, customer_id: user.customer_id, avatar_url: user.avatar_url, permissions: userPerms, must_change_password: user.must_change_password || 0 } });
+    res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, customer_id: user.customer_id, avatar_url: user.avatar_url, permissions: userPerms, must_change_password: user.must_change_password || 0, idle_timeout_dakika: idleTimeoutDakika } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -80,6 +91,10 @@ router.get('/me', authMiddleware, (req, res) => {
   try {
     const user = db.prepare('SELECT id, email, full_name, role, customer_id, must_change_password, avatar_url FROM users WHERE id = ?').get(req.user.id);
     try { user.permissions = db.prepare("SELECT module, can_view, can_add, can_edit, can_delete FROM role_permissions WHERE role_name = ?").all(user.role); } catch(e) { user.permissions = []; }
+    try {
+      const guvenlikAyarlari = authMiddleware.getGuvenlikAyarlari();
+      user.idle_timeout_dakika = guvenlikAyarlari ? Number(guvenlikAyarlari.idle_timeout_dakika) : 60;
+    } catch (e) { user.idle_timeout_dakika = 60; }
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });

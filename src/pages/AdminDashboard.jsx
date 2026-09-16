@@ -252,58 +252,26 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* GÖREVLERİM + EKİP BUGÜN — mockup'taki My Tasks + Team Overview eşleşmesi */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
-        {gorevler.length > 0 && (
-          <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 lg:col-span-2">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
-              <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
-              <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
-              <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
-            </div>
-            <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
-              {gorevler.map((g) => (
-                <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
-                  <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
-                  <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
-                  {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
-                  <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
-                </div>
-              ))}
-            </div>
+      {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
+      {gorevler.length > 0 && (
+        <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
+            <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
           </div>
-        )}
-
-        {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
-        <div className={cn("bg-card rounded-2xl border border-border/50 shadow-sm p-4", gorevler.length === 0 && "lg:col-span-3")}>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Ekip Bugün</h3>
-          <div className="space-y-3">
-            {[
-              { icon: Umbrella, tone: "amber", label: "Bugün İzinli", list: izinliList.map((l) => l.employee_full_name) },
-              { icon: Cake, tone: "pink", label: "Bugün Doğum Günü", list: dogumGunu },
-            ].map((row) => (
-              <div key={row.label} className="flex items-center gap-3">
-                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE[row.tone])}><row.icon className="w-4 h-4" /></span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{row.label}</p>
-                  <p className="text-xs text-muted-foreground">{row.list.length > 0 ? `${row.list.length} Personel` : "Yok"}</p>
-                </div>
-                {row.list.length > 0 && (
-                  <div className="flex -space-x-2 shrink-0">
-                    {row.list.slice(0, 4).map((name, i) => (
-                      <span key={i} title={name} className={cn("w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-card", ICON_SQUARE[row.tone])}>
-                        {initialsOf(name)}
-                      </span>
-                    ))}
-                    {row.list.length > 4 && <span className="w-7 h-7 rounded-full bg-muted text-[10px] font-bold flex items-center justify-center border-2 border-card">+{row.list.length - 4}</span>}
-                  </div>
-                )}
+          <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
+            {gorevler.map((g) => (
+              <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
+                <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
+                <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
+                {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
+                <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
 
       {/* MODÜL KPI BANNER — 6 kart, tam tek satır */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -404,8 +372,37 @@ export default function AdminDashboard() {
       </div>
       </div>
 
-      {/* SAĞ KOLON — Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
+      {/* SAĞ KOLON — Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
+        {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Ekip Bugün</h3>
+          <div className="space-y-3">
+            {[
+              { icon: Umbrella, tone: "amber", label: "Bugün İzinli", list: izinliList.map((l) => l.employee_full_name) },
+              { icon: Cake, tone: "pink", label: "Bugün Doğum Günü", list: dogumGunu },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center gap-3">
+                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE[row.tone])}><row.icon className="w-4 h-4" /></span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{row.label}</p>
+                  <p className="text-xs text-muted-foreground">{row.list.length > 0 ? `${row.list.length} Personel` : "Yok"}</p>
+                </div>
+                {row.list.length > 0 && (
+                  <div className="flex -space-x-2 shrink-0">
+                    {row.list.slice(0, 4).map((name, i) => (
+                      <span key={i} title={name} className={cn("w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-card", ICON_SQUARE[row.tone])}>
+                        {initialsOf(name)}
+                      </span>
+                    ))}
+                    {row.list.length > 4 && <span className="w-7 h-7 rounded-full bg-muted text-[10px] font-bold flex items-center justify-center border-2 border-card">+{row.list.length - 4}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
             <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>

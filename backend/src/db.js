@@ -445,6 +445,34 @@ function initDb() {
     "ALTER TABLE job_ticket_statuses ADD COLUMN board_id TEXT",
     "ALTER TABLE job_ticket_statuses ADD COLUMN board_ids TEXT DEFAULT '[]'",
     "ALTER TABLE job_ticket_statuses ADD COLUMN group_key TEXT DEFAULT 'diger'",
+    // Kök neden düzeltmesi: "Varsayılanları Yükle" DEFAULT_STATUSES'ta group_key
+    // hiç belirtmiyordu, bu yüzden DB varsayılanı 'diger' devreye girip TÜM
+    // varsayılan durumlar (Analiz/Geliştirme/Test-Onay/Tamamlanan dahil) "Diğer"
+    // grubuna düşüyordu — Biletler ekranındaki grup kartları bomboş görünüyordu.
+    // Yalnızca hâlâ 'diger' olan (elle değiştirilmemiş) bilinen anahtarları doğru
+    // gruba taşır; kullanıcının özel oluşturduğu durumlara dokunmaz, idempotenttir.
+    `UPDATE job_ticket_statuses SET group_key = CASE key
+      WHEN 'musteri_talep' THEN 'talep'
+      WHEN 'cevap_bekleniyor' THEN 'talep'
+      WHEN 'analiz_gelistiriliyor' THEN 'analiz'
+      WHEN 'analiz_onaylandi' THEN 'analiz'
+      WHEN 'acil_isler' THEN 'gelistirme'
+      WHEN 'yapilacak' THEN 'gelistirme'
+      WHEN 'merge_bekleniyor' THEN 'gelistirme'
+      WHEN 'yazilim_gelistiriliyor' THEN 'gelistirme'
+      WHEN 'guncelleme_bekleniyor' THEN 'gelistirme'
+      WHEN 'yazilim_onay_bekliyor' THEN 'test_onay'
+      WHEN 'musteri_testten_donen' THEN 'test_onay'
+      WHEN 'testten_donen' THEN 'test_onay'
+      WHEN 'musteri_onay' THEN 'test_onay'
+      WHEN 'sonuclanan' THEN 'tamamlanan'
+      ELSE group_key END
+    WHERE group_key = 'diger' AND key IN (
+      'musteri_talep','cevap_bekleniyor','analiz_gelistiriliyor','analiz_onaylandi',
+      'acil_isler','yapilacak','merge_bekleniyor','yazilim_gelistiriliyor',
+      'guncelleme_bekleniyor','yazilim_onay_bekliyor','musteri_testten_donen',
+      'testten_donen','musteri_onay','sonuclanan'
+    )`,
     "ALTER TABLE job_projects ADD COLUMN type TEXT DEFAULT 'kurulum'",
     "ALTER TABLE job_kanban_boards ADD COLUMN is_active INTEGER DEFAULT 1",
     "ALTER TABLE job_kanban_boards ADD COLUMN color TEXT DEFAULT 'blue'",

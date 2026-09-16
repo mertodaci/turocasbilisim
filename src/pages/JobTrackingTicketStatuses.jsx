@@ -35,21 +35,21 @@ const COLOR_BADGE = {
 };
 
 const DEFAULT_STATUSES = [
-  { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0 },
-  { name: "Cevap Bekleniyor", key: "cevap_bekleniyor", color: "yellow", sort_order: 2, is_active: 1, is_final: 0 },
-  { name: "Analiz Gelistiriliyor", key: "analiz_gelistiriliyor", color: "blue", sort_order: 3, is_active: 1, is_final: 0 },
-  { name: "Analiz Onaylandi", key: "analiz_onaylandi", color: "teal", sort_order: 4, is_active: 1, is_final: 0 },
-  { name: "Acil Isler", key: "acil_isler", color: "red", sort_order: 5, is_active: 1, is_final: 0 },
-  { name: "Yazilim Onay Bekliyor", key: "yazilim_onay_bekliyor", color: "orange", sort_order: 6, is_active: 1, is_final: 0 },
-  { name: "Yapilacak", key: "yapilacak", color: "slate", sort_order: 7, is_active: 1, is_final: 0 },
-  { name: "Merge Bekleniyor", key: "merge_bekleniyor", color: "purple", sort_order: 8, is_active: 1, is_final: 0 },
-  { name: "Yazilim Gelistiriliyor", key: "yazilim_gelistiriliyor", color: "blue", sort_order: 9, is_active: 1, is_final: 0 },
-  { name: "Musteri Testten Donen", key: "musteri_testten_donen", color: "yellow", sort_order: 10, is_active: 1, is_final: 0 },
-  { name: "Testten Donen", key: "testten_donen", color: "orange", sort_order: 11, is_active: 1, is_final: 0 },
-  { name: "Guncelleme Bekleniyor", key: "guncelleme_bekleniyor", color: "pink", sort_order: 12, is_active: 1, is_final: 0 },
-  { name: "Musteri Onay", key: "musteri_onay", color: "teal", sort_order: 13, is_active: 1, is_final: 0 },
-  { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 14, is_active: 1, is_final: 1 },
-  { name: "Iptal", key: "iptal", color: "red", sort_order: 15, is_active: 1, is_final: 1 },
+  { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0, group_key: "talep" },
+  { name: "Cevap Bekleniyor", key: "cevap_bekleniyor", color: "yellow", sort_order: 2, is_active: 1, is_final: 0, group_key: "talep" },
+  { name: "Analiz Gelistiriliyor", key: "analiz_gelistiriliyor", color: "blue", sort_order: 3, is_active: 1, is_final: 0, group_key: "analiz" },
+  { name: "Analiz Onaylandi", key: "analiz_onaylandi", color: "teal", sort_order: 4, is_active: 1, is_final: 0, group_key: "analiz" },
+  { name: "Acil Isler", key: "acil_isler", color: "red", sort_order: 5, is_active: 1, is_final: 0, group_key: "gelistirme" },
+  { name: "Yazilim Onay Bekliyor", key: "yazilim_onay_bekliyor", color: "orange", sort_order: 6, is_active: 1, is_final: 0, group_key: "test_onay" },
+  { name: "Yapilacak", key: "yapilacak", color: "slate", sort_order: 7, is_active: 1, is_final: 0, group_key: "gelistirme" },
+  { name: "Merge Bekleniyor", key: "merge_bekleniyor", color: "purple", sort_order: 8, is_active: 1, is_final: 0, group_key: "gelistirme" },
+  { name: "Yazilim Gelistiriliyor", key: "yazilim_gelistiriliyor", color: "blue", sort_order: 9, is_active: 1, is_final: 0, group_key: "gelistirme" },
+  { name: "Musteri Testten Donen", key: "musteri_testten_donen", color: "yellow", sort_order: 10, is_active: 1, is_final: 0, group_key: "test_onay" },
+  { name: "Testten Donen", key: "testten_donen", color: "orange", sort_order: 11, is_active: 1, is_final: 0, group_key: "test_onay" },
+  { name: "Guncelleme Bekleniyor", key: "guncelleme_bekleniyor", color: "pink", sort_order: 12, is_active: 1, is_final: 0, group_key: "gelistirme" },
+  { name: "Musteri Onay", key: "musteri_onay", color: "teal", sort_order: 13, is_active: 1, is_final: 0, group_key: "test_onay" },
+  { name: "Sonuclanan", key: "sonuclanan", color: "green", sort_order: 14, is_active: 1, is_final: 1, group_key: "tamamlanan" },
+  { name: "Iptal", key: "iptal", color: "red", sort_order: 15, is_active: 1, is_final: 1, group_key: "diger" },
 ];
 
 const STATUS_GROUPS = [

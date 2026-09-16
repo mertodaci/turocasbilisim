@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarDays, CheckSquare, Umbrella } from "lucide-react";
+import { CalendarDays, CheckSquare, Umbrella, CalendarClock, Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const leaveTypeLabels = {
@@ -28,16 +29,23 @@ const todoPriorityColors = {
   dusuk: "text-green-600",
 };
 
-export default function PersonalCalendarDayDetail({ date, todos = [], leaves = [] }) {
-  const hasEvents = todos.length > 0 || leaves.length > 0;
+export default function PersonalCalendarDayDetail({ date, todos = [], leaves = [], events = [], onAddEvent, onDeleteEvent }) {
+  const hasEvents = todos.length > 0 || leaves.length > 0 || events.length > 0;
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5 space-y-4 h-fit">
-      <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-        <CalendarDays className="w-4 h-4 text-primary" />
-        <h3 className="font-semibold text-foreground capitalize text-sm">
-          {format(date, "d MMMM yyyy, EEEE", { locale: tr })}
-        </h3>
+      <div className="flex items-center justify-between pb-2 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold text-foreground capitalize text-sm">
+            {format(date, "d MMMM yyyy, EEEE", { locale: tr })}
+          </h3>
+        </div>
+        {onAddEvent && (
+          <Button size="icon" variant="ghost" className="h-7 w-7" title="Etkinlik ekle" onClick={onAddEvent}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {!hasEvents && (
@@ -89,6 +97,41 @@ export default function PersonalCalendarDayDetail({ date, todos = [], leaves = [
                 <p className="text-xs text-muted-foreground">
                   {l.start_date} → {l.end_date} · {l.day_count} gün
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Etkinlikler */}
+      {events.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <CalendarClock className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Etkinlikler</span>
+          </div>
+          <div className="space-y-2">
+            {events.map((e) => (
+              <div key={e.id} className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{e.baslik}</p>
+                  {(e.baslangic_saat || e.bitis_saat) && (
+                    <p className="text-xs text-muted-foreground">
+                      {e.baslangic_saat || "—"}{e.bitis_saat ? ` - ${e.bitis_saat}` : ""}
+                    </p>
+                  )}
+                  {e.aciklama && <p className="text-xs text-muted-foreground mt-0.5">{e.aciklama}</p>}
+                </div>
+                {onDeleteEvent && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteEvent(e.id)}
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    title="Etkinliği sil"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

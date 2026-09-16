@@ -1464,6 +1464,20 @@ function initDb() {
         updated_date TEXT DEFAULT (datetime('now'))
       );
       INSERT OR IGNORE INTO guvenlik_ayarlari (id) VALUES ('varsayilan');
+      -- Kişisel Takvim: serbest etkinlik/toplantı/hatırlatma kayıtları (owner_email'e özel)
+      CREATE TABLE IF NOT EXISTS takvim_etkinlikleri (
+        id TEXT PRIMARY KEY,
+        baslik TEXT NOT NULL,
+        aciklama TEXT,
+        tarih TEXT NOT NULL,
+        baslangic_saat TEXT,
+        bitis_saat TEXT,
+        owner_email TEXT NOT NULL,
+        created_date TEXT DEFAULT (datetime('now')),
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_takvim_etkinlikleri_owner ON takvim_etkinlikleri(owner_email);
+      CREATE INDEX IF NOT EXISTS idx_takvim_etkinlikleri_tarih ON takvim_etkinlikleri(tarih);
       -- Toplu Excel yükleme kayıtları (geri alınabilir)
       CREATE TABLE IF NOT EXISTS ik_toplu_yukleme (
         id TEXT PRIMARY KEY, tur TEXT,        -- temel_bilgi | donem_hakedis

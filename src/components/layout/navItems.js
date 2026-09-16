@@ -237,6 +237,7 @@ export const allNavItems = [
     { labelKey: "todos", path: "/yapilacaklar", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
     { labelKey: "expenses", path: "/harcamalar", icon: FileSpreadsheet, roles: ["admin", "yonetici", "kullanici", "ik"] },
     { labelKey: "my_leave_requests", path: "/izinlerim", icon: Umbrella, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
+    { labelKey: "personal_calendar", path: "/kisisel-takvim", icon: CalendarDays, roles: ["admin", "yonetici", "kullanici", "ik", "stajer"] },
   ]
 },
 ];

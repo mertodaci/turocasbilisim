@@ -119,6 +119,7 @@ const ENTITY_MAP = {
   IkBordroSatir:     'ik_bordro_satirlari',
   IkSirket:          'ik_sirket_bilgileri',
   GuvenlikAyarlari:  'guvenlik_ayarlari',
+  TakvimEtkinlik:    'takvim_etkinlikleri',
   IkTopluYukleme:    'ik_toplu_yukleme',
   IkOzlukEvrak:      'ik_ozluk_evraklari',
   IkTutanak:         'ik_tutanaklar',

@@ -5,8 +5,11 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Square, Star } from "lucide-react";
+import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
@@ -224,7 +227,24 @@ export default function AdminDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
+          <div className="flex items-center justify-end gap-2">
+            <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" title="Takvim">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0">
+                <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
+                <div className="border-t p-2">
+                  <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                    Takvimi Aç <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
           <Link to="/atlas" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-1.5">
             Atlas Görünümü <ArrowUpRight className="w-3 h-3" />

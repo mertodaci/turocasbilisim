@@ -158,7 +158,7 @@ export default function BottomNav() {
     );
   };
   const renderFlyoutColumn = (child) => (
-    <div key={child.labelKey} className="min-w-[220px]">{renderFlyoutNode(child, 0)}</div>
+    <div key={child.labelKey} className="min-w-[260px]">{renderFlyoutNode(child, 0)}</div>
   );
 
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
@@ -231,7 +231,7 @@ export default function BottomNav() {
             onMouseLeave={scheduleCloseFlyout}
             className={cn(
               "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
-              flyoutHasSubgroups ? "w-[min(92vw,820px)]" : "w-64"
+              flyoutHasSubgroups ? "w-[min(92vw,900px)]" : "w-64"
             )}
             style={{ left: flyout.left, bottom: flyout.bottom }}>
             <div className="px-4 pt-3 pb-1">
@@ -242,7 +242,7 @@ export default function BottomNav() {
             </div>
             <div
               className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
-              style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" } : undefined}>
+              style={flyoutHasSubgroups ? { gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" } : undefined}>
               {flyoutItem.children.map(renderFlyoutColumn)}
             </div>
             {flyoutRecent.length > 0 && (

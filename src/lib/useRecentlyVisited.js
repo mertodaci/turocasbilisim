@@ -19,8 +19,10 @@ function readStored() {
 export function recordVisit(path, labelKey) {
   if (!path || !labelKey) return;
   try {
-    const list = readStored().filter((it) => it.path !== path);
-    list.unshift({ path, labelKey, ts: Date.now() });
+    const stored = readStored();
+    const prevCount = stored.find((it) => it.path === path)?.count || 0;
+    const list = stored.filter((it) => it.path !== path);
+    list.unshift({ path, labelKey, ts: Date.now(), count: prevCount + 1 });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX_ITEMS)));
   } catch {
     // localStorage kullanılamıyorsa sessizce yok say

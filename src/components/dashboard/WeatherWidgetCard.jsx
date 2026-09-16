@@ -41,16 +41,14 @@ export default function WeatherWidgetCard({ iconSquareTone }) {
         <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", iconSquareTone)}><Icon className="w-4 h-4" /></span>
         <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Hava Durumu</h3>
       </div>
-      <div className="p-4 pt-3">
+      <div className="p-4 pt-3 flex items-center justify-center text-center">
         {!current ? (
-          <p className="text-xs text-muted-foreground">Yükleniyor…</p>
+          <p className="text-xs text-muted-foreground py-2">Yükleniyor…</p>
         ) : (
-          <div className="flex items-center gap-3">
-            <Icon className="w-8 h-8 text-amber-500 shrink-0" />
-            <div>
-              <p className="text-2xl font-bold text-foreground leading-none">{Math.round(current.temperature)}°C</p>
-              <p className="text-xs text-muted-foreground mt-1">İstanbul{label ? ` · ${label}` : ""}</p>
-            </div>
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <Icon className="w-10 h-10 text-amber-500" />
+            <p className="text-3xl font-bold text-foreground leading-none">{Math.round(current.temperature)}°C</p>
+            <p className="text-xs text-muted-foreground">İstanbul{label ? ` · ${label}` : ""}</p>
           </div>
         )}
       </div>

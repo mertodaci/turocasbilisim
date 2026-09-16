@@ -241,9 +241,9 @@ export default function AdminDashboard() {
   const widgetNodes = {
     profil_karti: (
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-        <div className="h-14 bg-gradient-to-br from-violet-600 to-fuchsia-600" />
-        <div className="px-4 pb-4 -mt-8">
-          <div className="w-16 h-16 rounded-2xl border-4 border-card bg-primary/15 flex items-center justify-center overflow-hidden text-lg font-bold text-primary shrink-0">
+        <div className="h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600" />
+        <div className="px-4 pb-4 -mt-10">
+          <div className="w-24 h-24 rounded-2xl border-[5px] border-card bg-primary/15 flex items-center justify-center overflow-hidden text-2xl font-bold text-primary shrink-0 shadow-lg">
             {(user?.avatar_url || myEmployee?.avatar_url) ? (
               <img src={user?.avatar_url || myEmployee?.avatar_url} alt={user?.full_name} className="w-full h-full object-cover" />
             ) : initialsOf(user?.full_name)}
@@ -343,8 +343,11 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-1">
               {recentlyVisited.map((v) => (
-                <Link key={v.path} to={v.path} className="block px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm truncate">
-                  {t(v.labelKey)}
+                <Link key={v.path} to={v.path} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm">
+                  <span className="truncate">{t(v.labelKey)}</span>
+                  {v.count > 1 && (
+                    <span className="ml-auto shrink-0 text-[10px] font-semibold text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">×{v.count}</span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -711,23 +714,25 @@ export default function AdminDashboard() {
 
 
   const content = (
-    <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
-      {renderColumn("sol", "space-y-4 xl:sticky xl:top-24 order-2 xl:order-1")}
-
-      <div className="order-1 xl:order-2 min-w-0 space-y-5">
-        {/* BAŞLIK */}
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <p className="text-lg text-muted-foreground">{greeting}, {firstName}</p>
-            <h1 className="text-lg font-normal mt-0.5">Yönetim Merkezi</h1>
-            <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
-            <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
-          </div>
+    <div className="space-y-5">
+      {/* BAŞLIK — üç sütunlu grid'in dışında, tam genişlik; böylece sol/orta/sağ
+          sütunlar ilk gerçek widget'larıyla aynı satırda hizalı başlar. */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-lg text-muted-foreground">{greeting}, {firstName}</p>
+          <h1 className="text-lg font-normal mt-0.5">Yönetim Merkezi</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
         </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
+          <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
+        </div>
+      </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
+        {renderColumn("sol", "space-y-4 xl:sticky xl:top-24 order-2 xl:order-1")}
+
+        <div className="order-1 xl:order-2 min-w-0 space-y-5">
         {editMode && (
           <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -762,9 +767,10 @@ export default function AdminDashboard() {
         <div className="text-center text-xs text-muted-foreground pb-2">
           Canlı veri · Her 10 dakikada otomatik yenilenir
         </div>
-      </div>
+        </div>
 
-      {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3")}
+        {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3")}
+      </div>
     </div>
   );
 

@@ -2,17 +2,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, Compass, Settings2, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp, Mail, Phone, Briefcase } from "lucide-react";
+import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp, Mail, Phone, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import MiniCalendarWidget from "@/components/dashboard/MiniCalendarWidget";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
@@ -114,6 +112,14 @@ export default function AdminDashboard() {
 
   const startEdit = () => { setDraftLayout(reconcileLayout(savedLayout)); setEditMode(true); };
   const cancelEdit = () => { setDraftLayout(reconcileLayout(savedLayout)); setEditMode(false); };
+
+  // TopBar'daki "Widget'ları Düzenle" ikonu başka bir sayfadan buraya
+  // ?edit=widgets ile yönlendirebiliyor -- geldiyse düzenleme modu otomatik açılır.
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("edit") === "widgets") startEdit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const removeWidget = (id) => {
     setDraftLayout((prev) => {
       const columns = {};
@@ -689,33 +695,6 @@ export default function AdminDashboard() {
     )
   );
 
-  const toolbarBtn = "h-8 w-8 shrink-0 bg-card border border-border shadow-sm text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors";
-
-  const sagToolbar = (
-    <div className="flex items-center justify-end gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm w-fit ml-auto mb-1">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="icon" variant="ghost" className={toolbarBtn} title="Takvim">
-            <CalendarDays className="w-4 h-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-auto p-0">
-          <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
-          <div className="border-t p-2">
-            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </PopoverContent>
-      </Popover>
-      <Button size="icon" variant="ghost" className={toolbarBtn} title="Atlas Görünümü" asChild>
-        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
-      </Button>
-      <Button size="icon" variant="ghost" className={cn(toolbarBtn, editMode && "bg-primary text-primary-foreground border-primary")} title="Widget'ları Düzenle" onClick={() => (editMode ? cancelEdit() : startEdit())}>
-        <Settings2 className="w-4 h-4" />
-      </Button>
-    </div>
-  );
 
   const content = (
     <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
@@ -771,7 +750,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3", sagToolbar)}
+      {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3")}
     </div>
   );
 

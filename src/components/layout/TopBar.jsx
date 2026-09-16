@@ -1,16 +1,50 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
-import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown } from "lucide-react";
+import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
 import turkonixLogo from "@/assets/turkonix-logo.png";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from "@/lib/NotificationContext";
 import { useQuery } from "@tanstack/react-query";
+
+const topbarToolbarBtn = "h-8 w-8 shrink-0 bg-card border border-border shadow-sm text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors";
+
+function DashboardToolbar() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex items-center gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm shrink-0">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Takvim">
+            <CalendarDays className="w-4 h-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-auto p-0">
+          <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
+          <div className="border-t p-2">
+            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Atlas Görünümü" asChild>
+        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
+      </Button>
+      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Widget'ları Düzenle" onClick={() => navigate("/?edit=widgets")}>
+        <Settings2 className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+}
 
 const themes = [
   { value: "light", icon: Sun, label: "Açık" },
@@ -276,6 +310,7 @@ export default function TopBar() {
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <GlobalSearch />
         <WeatherWidget />
+        <DashboardToolbar />
         <ThemeToggle />
         <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">
           <HelpCircle className="w-5 h-5" />

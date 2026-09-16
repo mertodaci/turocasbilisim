@@ -67,6 +67,19 @@ const ICON_SQUARE = {
   red: "bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400",
 };
 
+// KPI banner kartlarının kendi zemini — önceden yalnız küçük ikon karesi
+// renkliydi, kart gövdesi düz bg-card idi; artık her kart kendi tonuna
+// göre hafif renkli bir zemin+kenarlık alıyor (pastel, okunabilirlik
+// bozulmadan).
+const KPI_CARD_TONES = {
+  blue: "bg-blue-50 dark:bg-blue-950/20 border-blue-200/70 dark:border-blue-900/50",
+  sky: "bg-sky-50 dark:bg-sky-950/20 border-sky-200/70 dark:border-sky-900/50",
+  indigo: "bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200/70 dark:border-indigo-900/50",
+  slate: "bg-slate-50 dark:bg-slate-900/30 border-slate-200/70 dark:border-slate-800/60",
+  rose: "bg-rose-50 dark:bg-rose-950/20 border-rose-200/70 dark:border-rose-900/50",
+  teal: "bg-teal-50 dark:bg-teal-950/20 border-teal-200/70 dark:border-teal-900/50",
+};
+
 const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yok: "Oluşmadı" };
 
 const initialsOf = (name) => name?.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";
@@ -704,7 +717,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {visibleKpis.map((k) => (
           <Link key={k.id} to={k.path}
-            className="relative bg-card rounded-2xl border border-border/50 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 block">
+            className={cn("relative rounded-2xl border shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 block", KPI_CARD_TONES[k.tone])}>
             {editMode && (
               <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeWidget(k.id); }}
                 className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">

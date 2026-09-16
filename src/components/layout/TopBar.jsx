@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
-import { Sun, Moon, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
+import { Sun, Moon, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
@@ -210,50 +210,6 @@ function DashboardToolbar() {
   );
 }
 
-// İstanbul sabit konum — Open-Meteo, API anahtarı gerektirmez.
-const ISTANBUL_LAT = 41.0082;
-const ISTANBUL_LON = 28.9784;
-
-// WMO hava kodu -> ikon/kısa Türkçe açıklama (https://open-meteo.com/en/docs)
-function weatherFromCode(code) {
-  if (code === 0) return { icon: Sun, label: "Açık" };
-  if ([1, 2].includes(code)) return { icon: CloudSun, label: "Parçalı bulutlu" };
-  if (code === 3) return { icon: Cloud, label: "Bulutlu" };
-  if ([45, 48].includes(code)) return { icon: CloudFog, label: "Sisli" };
-  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { icon: CloudRain, label: "Yağmurlu" };
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { icon: CloudSnow, label: "Karlı" };
-  if ([95, 96, 99].includes(code)) return { icon: CloudLightning, label: "Fırtınalı" };
-  return { icon: Cloud, label: "" };
-}
-
-function WeatherWidget() {
-  const { data } = useQuery({
-    queryKey: ["weather-istanbul"],
-    queryFn: async () => {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${ISTANBUL_LAT}&longitude=${ISTANBUL_LON}&current_weather=true`
-      );
-      if (!res.ok) throw new Error("weather fetch failed");
-      return res.json();
-    },
-    staleTime: 30 * 60 * 1000, // 30 dakika
-    retry: 1,
-  });
-
-  const current = data?.current_weather;
-  if (!current) return null;
-
-  const { icon: Icon, label } = weatherFromCode(current.weathercode);
-
-  return (
-    <div className="hidden sm:flex items-center gap-1.5 px-2 text-sm text-muted-foreground" title={label}>
-      <Icon className="w-4 h-4 text-amber-500" />
-      <span className="font-medium text-foreground">{Math.round(current.temperature)}°C</span>
-      <span className="text-xs">İstanbul</span>
-    </div>
-  );
-}
-
 // Sağ üstteki kullanıcı bloğu (avatar + isim + rol) — tıklayınca Profilim /
 // Çıkış Yap içeren küçük panel açılır. Önceki turlarda sidebar'da yaşayan
 // profil bloğu + kullanıcı menüsünün birleşimi; sidebar kalktığı için doğal
@@ -329,7 +285,6 @@ export default function TopBar() {
       </Link>
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <GlobalSearch />
-        <WeatherWidget />
         <DashboardToolbar />
         <ProfileMenu />
       </div>

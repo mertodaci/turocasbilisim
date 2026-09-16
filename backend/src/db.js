@@ -416,6 +416,21 @@ function initDb() {
     "ALTER TABLE users ADD COLUMN dashboard_layout TEXT DEFAULT NULL",
     "ALTER TABLE users ADD COLUMN customer_id TEXT",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT",
+    // EBYS — correspondences tablosu zaten vardı ama hiç kullanılmıyordu;
+    // entityRouter.js'in ALLOWED_COLUMNS'unda yazılabilir olarak tanımlı
+    // olan direction/customer_id/customer_name/date aslında tabloda hiç
+    // yoktu (sessizce yok sayılıyorlardı) — burada gerçekten ekleniyor,
+    // + KEP/e-imza "hazır altyapı" alanları.
+    "ALTER TABLE correspondences ADD COLUMN direction TEXT DEFAULT 'giden'",
+    "ALTER TABLE correspondences ADD COLUMN customer_id TEXT",
+    "ALTER TABLE correspondences ADD COLUMN customer_name TEXT",
+    "ALTER TABLE correspondences ADD COLUMN date TEXT",
+    "ALTER TABLE correspondences ADD COLUMN kep_no TEXT",
+    "ALTER TABLE correspondences ADD COLUMN kep_durum TEXT DEFAULT 'gonderilmedi'",
+    "ALTER TABLE correspondences ADD COLUMN eimza_durum TEXT DEFAULT 'imzalanmadi'",
+    "ALTER TABLE correspondences ADD COLUMN eimza_tarihi TEXT",
+    "ALTER TABLE correspondences ADD COLUMN eimza_imzalayan TEXT",
+    "ALTER TABLE correspondences ADD COLUMN is_deleted INTEGER DEFAULT 0",
     "ALTER TABLE announcements ADD COLUMN target_roles TEXT DEFAULT 'all'",
     "ALTER TABLE announcements ADD COLUMN start_date TEXT",
     "ALTER TABLE announcements ADD COLUMN end_date TEXT",
@@ -716,6 +731,10 @@ function initDb() {
       // ── Modül "Tanım" konsolidasyonu (Genel Tanımlar deseni) ──────
       'is_takibi_tanimlar_v2','pdks_tanimlar','devriye_tanimlar','bordro_tanimlar','stok_tanimlar',
       'musteri_tanimlari',
+      // ── EBYS (Elektronik Belge Yönetim Sistemi) ────────────────────
+      'ebys_evraklar','ebys_tanimlar','ebys_ayarlari',
+      // ── Arşiv Yönetimi ──────────────────────────────────────────────
+      'arsiv_ozet','arsiv_sozlesme','arsiv_musteri','arsiv_ik','arsiv_is_takibi','arsiv_bordro',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -1465,6 +1484,22 @@ function initDb() {
         updated_date TEXT DEFAULT (datetime('now'))
       );
       INSERT OR IGNORE INTO guvenlik_ayarlari (id) VALUES ('varsayilan');
+      -- EBYS ayarları — KEP/e-imza "hazır altyapı": gerçek sağlayıcı
+      -- hesabı/API anahtarı geldiğinde bu tek-satır ayara işlenir, o âna
+      -- kadar aktif switch'leri kapalı kalır (evrak gönderim/imza
+      -- butonları bu yüzden pasif).
+      CREATE TABLE IF NOT EXISTS ebys_ayarlari (
+        id TEXT PRIMARY KEY,
+        kep_kullanici_adi TEXT,
+        kep_api_anahtari TEXT,
+        kep_aktif INTEGER DEFAULT 0,
+        eimza_saglayici TEXT,
+        eimza_api_anahtari TEXT,
+        eimza_aktif INTEGER DEFAULT 0,
+        updated_by TEXT,
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      INSERT OR IGNORE INTO ebys_ayarlari (id) VALUES ('varsayilan');
       -- Kişisel Takvim: serbest etkinlik/toplantı/hatırlatma kayıtları (owner_email'e özel)
       CREATE TABLE IF NOT EXISTS takvim_etkinlikleri (
         id TEXT PRIMARY KEY,
@@ -1499,6 +1534,16 @@ function initDb() {
       CREATE TABLE IF NOT EXISTS ik_ozluk_evraklari (
         id TEXT PRIMARY KEY, personel_id TEXT NOT NULL, personel_adi TEXT,
         evrak_tipi TEXT,                        -- kimlik | diploma | sozlesme | saglik_raporu | ehliyet | ...
+        dosya_url TEXT, dosya_adi TEXT, tarih TEXT, aciklama TEXT, yukleyen TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
+      );
+      -- Müşteri evrak arşivi — ik_ozluk_evraklari ile birebir aynı desen,
+      -- müşteri kartına genel amaçlı bir "Evraklar" sekmesi kazandırır ve
+      -- Arşiv Yönetimi > Müşteri Evrakları'nın kaynağıdır.
+      CREATE TABLE IF NOT EXISTS musteri_evraklari (
+        id TEXT PRIMARY KEY, customer_id TEXT NOT NULL, customer_name TEXT,
+        evrak_tipi TEXT,                        -- sozlesme | kimlik | vergi_levhasi | yetki_belgesi | ...
         dosya_url TEXT, dosya_adi TEXT, tarih TEXT, aciklama TEXT, yukleyen TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))

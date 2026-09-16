@@ -13,7 +13,7 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
   'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
   'ik_ozluk_evraklari','ik_tutanaklar','ik_izin_evraklari',
-  'ik_bordro_satirlari'];
+  'ik_bordro_satirlari','correspondences','musteri_evraklari'];
 
 // Denetim Kaydı: generic create/update/delete için bu tablolarda loglama
 // atlanır — kullanıcının doğrudan yönettiği bir "ekran" değil, otomatik
@@ -112,7 +112,9 @@ const TABLE_TO_MODULE = {
   customer_modules: 'customers',
   products: 'definitions',
   product_modules: 'definitions',
-  correspondences: 'messages',
+  correspondences: 'ebys_evraklar',
+  musteri_evraklari: 'customers',
+  ebys_ayarlari: 'ebys_ayarlari',
   conversations: 'messages',
   messages: 'messages',
   leave_allowances: 'leave_requests',
@@ -317,7 +319,9 @@ const ALLOWED_COLUMNS = {
   customer_modules: ['customer_id','module_name','is_active','notes'],
   products: ['name','description','is_active','sort_order'],
   product_modules: ['product_id','name','description','is_active','sort_order'],
-  correspondences: ['title','type','direction','customer_id','customer_name','recipient_ids','recipient_names','content','attachments','tags','status','date'],
+  correspondences: ['document_number','subject','document_type','direction','customer_id','customer_name','recipient_ids','recipient_names','content','attachments','tags','status','date','author_id','author_name','approver_id','approver_name','approval_note','approved_at','related_task_id','kep_no','kep_durum','eimza_durum','eimza_tarihi','eimza_imzalayan'],
+  musteri_evraklari: ['customer_id','customer_name','evrak_tipi','dosya_url','dosya_adi','tarih','aciklama','yukleyen'],
+  ebys_ayarlari: ['kep_kullanici_adi','kep_api_anahtari','kep_aktif','eimza_saglayici','eimza_api_anahtari','eimza_aktif','updated_by'],
   conversations: ['title','type','name','participants','last_message','last_message_id','last_message_at','last_message_sender_email','last_read_message_id_by_user','status','archived_by','deleted_by'],
   messages: ['conversation_id','content','sender_id','sender_name','sender_email','message_type','file_url','file_name','file_size','file_type','meet_link','reply_to_id','reactions'],
   definitions: ['category','name','value','description','is_active','sort_order','color','icon','label'],
@@ -759,6 +763,21 @@ function createEntityRouter(tableName) {
       // ulasmadan hataya dusuyordu. Diger tum id/token'lar gibi burada uretilir.
       if (tableName === 'devriye_noktalar' && !data.qr_token) {
         data.qr_token = uuidv4();
+      }
+
+      // EBYS: evrak numarası boşsa yıl bazlı sıra no üret (ör. 2026/00001).
+      if (tableName === 'correspondences' && !data.document_number) {
+        const yil = new Date().getFullYear();
+        const maxRow = db.prepare(
+          "SELECT MAX(CAST(substr(document_number, instr(document_number,'/')+1) AS INTEGER)) as mx FROM correspondences WHERE document_number LIKE ?"
+        ).get(`${yil}/%`);
+        const nextNum = (maxRow?.mx || 0) + 1;
+        data.document_number = `${yil}/${String(nextNum).padStart(5, '0')}`;
+      }
+      if (tableName === 'correspondences') {
+        if (!data.author_id) data.author_id = req.user?.id || null;
+        if (!data.author_name) data.author_name = req.user?.full_name || req.user?.email || null;
+        if (!data.status) data.status = 'taslak';
       }
 
       // job_tickets için otomatik bilet numarası

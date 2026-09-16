@@ -46,6 +46,9 @@ export const MODULES = [
   { key: "sozlesme_urunler",    label: "Ürünler",                path: "/sozlesme-urunler" },
   { key: "sozlesme_moduller",   label: "Modüller",               path: "/sozlesme-moduller" },
   { key: "sozlesme_tanimlar",   label: "Genel Tanımlar",          path: "/sozlesme-tanimlar" },
+  { key: "ebys_evraklar",       label: "EBYS — Gelen/Giden Evrak", path: "/ebys/evraklar" },
+  { key: "ebys_tanimlar",       label: "EBYS — Evrak Tanımları",  path: "/ebys/tanimlar" },
+  { key: "ebys_ayarlari",       label: "EBYS — Ayarlar",         path: "/ebys/ayarlar" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
   { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
   { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },

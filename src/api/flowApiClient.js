@@ -50,6 +50,8 @@ const ENTITY_MAP = {
   CustomerContract: 'customer_contracts',
   CustomerModule:   'customer_modules',
   Correspondence:   'correspondences',
+  MusteriEvrak:     'musteri_evraklari',
+  EbysAyarlar:      'ebys_ayarlari',
   Conversation:     'conversations',
   Message:          'messages',
   LeaveAllowance:   'leave_allowances',

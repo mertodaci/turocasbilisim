@@ -50,6 +50,9 @@ const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
 const SozlesmeTurleri = lazy(() => import('./pages/SozlesmeTurleri'));
+const EbysEvraklar = lazy(() => import('./pages/ebys/EbysEvraklar'));
+const EbysTanimlar = lazy(() => import('./pages/ebys/EbysTanimlar'));
+const EbysAyarlar = lazy(() => import('./pages/ebys/EbysAyarlar'));
 const MusteriTanimlari = lazy(() => import('./pages/MusteriTanimlari'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
@@ -317,6 +320,9 @@ const AuthenticatedApp = () => {
         <Route path="/ik/tutanak" element={guard("ikb_tutanak", <IkTutanak />)} />
         <Route path="/ik/hareket-rapor" element={<Navigate to="/ik/maas-ozet" replace />} />
         <Route path="/ik/izin-evrak" element={guard("ikb_izin_evrak", <IkIzinEvrak />)} />
+        <Route path="/ebys/evraklar" element={guard("ebys_evraklar", <EbysEvraklar />)} />
+        <Route path="/ebys/tanimlar" element={guard("ebys_tanimlar", <EbysTanimlar />)} />
+        <Route path="/ebys/ayarlar" element={guard("ebys_ayarlari", <EbysAyarlar />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

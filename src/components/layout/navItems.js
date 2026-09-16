@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity, FileSignature } from "lucide-react";
 
 // Tek doğruluk kaynağı: uygulamanın tüm navigasyon ağacı. BottomNav.jsx
 // (alt bar + uçan alt-menüler) ve GlobalSearch.jsx (⌘K hızlı atlama) buradan
@@ -152,6 +152,14 @@ export const allNavItems = [
     { labelKey: "sozlesme_tanimlar", path: "/sozlesme-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
     { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
     { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
+  ]
+},
+{
+  labelKey: "ebys", path: null, icon: FileSignature, roles: ["admin", "yonetici", "ik"],
+  children: [
+    { labelKey: "ebys_evraklar", path: "/ebys/evraklar", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "ebys_tanimlar", path: "/ebys/tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "ebys_ayarlari", path: "/ebys/ayarlar", icon: Lock, roles: ["admin"] },
   ]
 },
 {

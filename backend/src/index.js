@@ -126,6 +126,8 @@ app.use('/api/entities/customer_contacts', createEntityRouter('customer_contacts
 app.use('/api/entities/customer_contracts',createEntityRouter('customer_contracts'));
 app.use('/api/entities/customer_modules',  createEntityRouter('customer_modules'));
 app.use('/api/entities/correspondences',   createEntityRouter('correspondences'));
+app.use('/api/entities/musteri_evraklari', createEntityRouter('musteri_evraklari'));
+app.use('/api/entities/ebys_ayarlari',     createEntityRouter('ebys_ayarlari'));
 app.use('/api/entities/conversations',     createEntityRouter('conversations'));
 app.use('/api/entities/messages',          createEntityRouter('messages'));
 app.use('/api/entities/leave_allowances',  createEntityRouter('leave_allowances'));

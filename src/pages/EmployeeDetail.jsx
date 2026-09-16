@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Navigate } from "react-router-dom";
-import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning } from "lucide-react";
+import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning, MapPin, Wallet } from "lucide-react";
 import { format, differenceInYears, addYears } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,11 @@ export default function EmployeeDetail() {
     queryFn: () => flowApi.entities.Definition.filter({ category: "ayrilis_nedeni" }),
   });
   const getExitReasonLabel = (val) => exitReasonDefs.find(r => r.value === val)?.label || val;
+  const { data: subeler = [] } = useQuery({
+    queryKey: ["ik_subeler_min"],
+    queryFn: () => flowApi.entities.IkSube.list("ad", 2000),
+  });
+  const getSubeAdi = (id) => subeler.find((s) => s.id === id)?.ad;
 
   const { data: tutanaklar = [] } = useQuery({
     queryKey: ["ik_tutanaklar", employeeId],
@@ -387,6 +392,28 @@ export default function EmployeeDetail() {
               <div>
                 <p className="text-[11px] text-muted-foreground">Bağlı Olduğu Yönetici</p>
                 <p className="text-sm font-medium">{employee.manager_name}</p>
+              </div>
+            </div>
+          )}
+          {employee.sube_id && getSubeAdi(employee.sube_id) && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-cyan-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Şube</p>
+                <p className="text-sm font-medium">{getSubeAdi(employee.sube_id)}</p>
+              </div>
+            </div>
+          )}
+          {isPrivileged && Number(employee.aylik_ucret) > 0 && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-lime-50 flex items-center justify-center shrink-0">
+                <Wallet className="w-4 h-4 text-lime-600" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Maaş</p>
+                <p className="text-sm font-medium">{Number(employee.aylik_ucret).toLocaleString("tr-TR")} ₺</p>
               </div>
             </div>
           )}

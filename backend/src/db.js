@@ -1718,6 +1718,21 @@ function initDb() {
     }
   } catch(e) { console.error('belge turu seed:', e.message); }
 
+  // ── Calisan Uyruk: ulke listesi (idempotent) ──
+  // Definitions.jsx'teki "Uyruklar" kategorisinden yonetilir; Calisan
+  // Tanim ekranindaki Uyruk alani artik serbest metin degil, bu listeden
+  // secilen bir SearchableSelect (#1050 — yazim hatalarini onlemek icin).
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const uyrukVar = db.prepare("SELECT 1 FROM definitions WHERE category='uyruk' LIMIT 1").get();
+    if (!uyrukVar) {
+      const ulkeler = ["Afganistan","Almanya","Amerika Birleşik Devletleri","Andorra","Angola","Arjantin","Arnavutluk","Avustralya","Avusturya","Azerbaycan","Bahamalar","Bahreyn","Bangladeş","Belçika","Belarus (Beyaz Rusya)","Birleşik Arap Emirlikleri","Birleşik Krallık (İngiltere)","Bolivya","Bosna-Hersek","Brezilya","Bulgaristan","Cezayir","Çekya (Çek Cumhuriyeti)","Çin","Danimarka","Dominik Cumhuriyeti","Ekvador","Endonezya","Ermenistan","Estonya","Etiyopya","Fas","Filipinler","Filistin","Finlandiya","Fransa","Güney Afrika Cumhuriyeti","Güney Kore","Gürcistan","Hırvatistan","Hindistan","Hollanda","Irak","İran","İrlanda","İspanya","İsrail","İsveç","İsviçre","İtalya","İzlanda","Japonya","Kanada","Katar","Kazakistan","Kenya","Kırgızistan","Kolombiya","Kosta Rika","Kuveyt","Küba","Letonya","Libya","Litvanya","Lübnan","Lüksemburg","Macaristan","Malezya","Malta","Meksika","Mısır","Moğolistan","Moldova","Monako","Norveç","Özbekistan","Pakistan","Panama","Paraguay","Peru","Polonya","Portekiz","Romanya","Rusya","Sırbistan","Singapur","Slovakya","Slovenya","Suriye","Suudi Arabistan","Şili","Tacikistan","Tayland","Tayvan","Tunus","Türkiye","Türkmenistan","Ukrayna","Uruguay","Ürdün","Venezuela","Vietnam","Yeni Zelanda","Yunanistan"];
+      const ins = db.prepare("INSERT INTO definitions (id, category, label, value, is_active, sort_order, created_by, created_date, updated_date) VALUES (?,?,?,?,1,?,?,?,?)");
+      ulkeler.forEach((ulke, i) => ins.run(uuidv4(), 'uyruk', ulke, ulke, i, 'sistem', now, now));
+    }
+  } catch(e) { console.error('uyruk seed:', e.message); }
+
   console.log('✅ Veritabanı tabloları hazır');
 }
 

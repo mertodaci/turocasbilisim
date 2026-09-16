@@ -99,7 +99,7 @@ export default function AppLayout() {
         />
         <div className="min-h-screen flex flex-col" id="main-content">
           <TopBar />
-          <main className={cn("flex-1 px-4 pt-6 pb-40 w-full overflow-x-hidden mx-auto", isDashboard ? "max-w-none" : "max-w-7xl")}>
+          <main className={cn("flex-1 px-4 pt-6 pb-40 sm:pb-6 sm:pl-64 w-full overflow-x-hidden mx-auto", isDashboard ? "max-w-none" : "max-w-7xl")}>
             <AppBreadcrumb />
             <Outlet />
           </main>

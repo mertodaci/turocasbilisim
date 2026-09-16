@@ -8,7 +8,7 @@ import {
 import { flowApi } from "@/api/flowApiClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Clock, Calendar, User, Eye, Search } from "lucide-react";
+import { Clock, Calendar, User, Eye, Search, Paperclip } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import LeaveApprovalDialog from "@/components/leave/LeaveApprovalDialog";
 import LeaveApprovalHistoryDialog from "@/components/leave/LeaveApprovalHistoryDialog";
@@ -81,6 +81,14 @@ export default function IKLeaveRequests() {
     queryKey: ["employees-list"],
     queryFn: () => flowApi.entities.Employee.filter({ status: "aktif" }),
   });
+
+  // #1051: taranmis islak imzali izin evraki hangi ekrandan gorulecegi
+  // belirsizdi -- artik izin satirinda varsa dogrudan "Belge" linki cikiyor.
+  const { data: izinEvraklari = [] } = useQuery({
+    queryKey: ["ik_izin_evrak_all"],
+    queryFn: () => flowApi.entities.IkIzinEvrak.list("-created_date", 5000),
+  });
+  const evrakByLeave = izinEvraklari.reduce((m, e) => { if (e.leave_id && e.dosya_url) m[e.leave_id] = e.dosya_url; return m; }, {});
 
   const departments = [...new Set(employees.map(e => e.department).filter(Boolean))];
 
@@ -239,6 +247,14 @@ export default function IKLeaveRequests() {
                         <Button size="sm" variant="outline" onClick={() => setSelectedLeave(leave)}>
                           <Eye className="w-3 h-3 mr-1" />
                           İncele
+                        </Button>
+                      )}
+                      {evrakByLeave[leave.id] && (
+                        <Button size="sm" variant="outline" className="gap-1 ml-1" asChild>
+                          <a href={evrakByLeave[leave.id]} target="_blank" rel="noreferrer">
+                            <Paperclip className="w-3 h-3" />
+                            Belge
+                          </a>
                         </Button>
                       )}
                     </td>

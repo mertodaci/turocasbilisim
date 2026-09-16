@@ -476,7 +476,17 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
   // login e-postasi ile employees.email arasinda buyuk/kucuk harf farki
   // olabildigi icin (ör. Ahmet.Yilmaz@ vs ahmet.yilmaz@) eslesme case-insensitive.
   const creatorEmp = (employees || []).find(e => e.email && ticket?.created_by && e.email.toLowerCase() === ticket.created_by.toLowerCase());
-  const creatorName = ticket?.customer_contact_name || creatorEmp?.full_name || ticket?.created_by || 'Bilinmiyor';
+  // employees/customer_contacts'ta karsiligi olmayan (ör. sadece giris hesabi
+  // olan admin/test kullanicilari) olusturanlar icin son bir kaynak: users
+  // tablosu — #1045 testinde bu yuzden hala ham email gorunuyordu.
+  const { data: loginUsers = [] } = useQuery({
+    queryKey: ["users-public-lookup"],
+    queryFn: () => flowApi.auth.usersPublic(),
+    enabled: !!ticket?.created_by && !creatorEmp,
+    staleTime: 5 * 60 * 1000,
+  });
+  const creatorLoginUser = loginUsers.find(u => u.email && ticket?.created_by && u.email.toLowerCase() === ticket.created_by.toLowerCase());
+  const creatorName = ticket?.customer_contact_name || creatorEmp?.full_name || creatorLoginUser?.full_name || ticket?.created_by || 'Bilinmiyor';
 
   const historyEntries = (() => {
     const systemComments = comments.filter(c => c.comment_type === 'system' && (!isMusteri || !c.is_internal));

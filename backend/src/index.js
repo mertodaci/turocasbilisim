@@ -1996,7 +1996,7 @@ app.get('/api/stok/barkod-coz', authMiddleware, (req, res) => {
   try {
     const kod = (req.query.kod || '').trim();
     const q = (req.query.q || '').trim();
-    const alanlar = 'id, kod, ad, barkod, ana_birim, alis_fiyati, satis_fiyati, seri_no_takip';
+    const alanlar = 'id, kod, ad, barkod, ana_birim, alis_fiyati, satis_fiyati, seri_no_takip, urun_tipi';
     let urun = null;
     if (kod) {
       urun = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (barkod=? OR UPPER(kod)=UPPER(?)) LIMIT 1`).get(kod, kod);

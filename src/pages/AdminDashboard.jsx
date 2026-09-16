@@ -273,22 +273,64 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
-      {gorevler.length > 0 && (
-        <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
-            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
-            <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
+      {/* GÖREVLERİM + BENİM İŞLERİM — yan yana */}
+      {gorevler.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
+              <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
+              <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
+            </div>
+            <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
+              {gorevler.map((g) => (
+                <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
+                  <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
+                  <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
+                  {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
+                  <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
-            {gorevler.map((g) => (
-              <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
-                <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
-                <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
-                {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
-                <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
-              </div>
+
+          <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+              <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
+            </div>
+            <div className="p-3 space-y-2">
+              {benimIslerim.map((it, i) => (
+                <Link key={i} to={it.to} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm", TONES[it.tone])}>
+                  <span className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-card/70")}>
+                    <it.icon className={cn("w-5 h-5", ICON_TONES[it.tone])} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-xl font-bold leading-none", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</p>
+                    <p className="text-xs text-foreground/80 truncate mt-1">{it.label}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3">
+            {benimIslerim.map((it, i) => (
+              <Link key={i} to={it.to} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm", TONES[it.tone])}>
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-card/70">
+                  <it.icon className={cn("w-5 h-5", ICON_TONES[it.tone])} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("text-xl font-bold leading-none", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</p>
+                  <p className="text-xs text-foreground/80 truncate mt-1">{it.label}</p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -393,10 +435,31 @@ export default function AdminDashboard() {
       </div>
       </div>
 
-      {/* SAĞ KOLON — Takvim + Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
+      {/* SAĞ KOLON — Takvim + Yaklaşan Takvim + Ekip Bugün + Son İşlemler */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
 
         <MiniCalendarWidget />
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.blue)}><CalendarClock className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Yaklaşan Takvim</h3>
+          </div>
+          <div className="p-4 pt-3">
+          {sozlesmeYaklasan.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Yaklaşan bir şey yok</p>
+          ) : (
+            <div className="space-y-1.5">
+              {sozlesmeYaklasan.slice(0, 5).map((c) => (
+                <Link key={c.id} to={`/musteri/${c.customer_id}`} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
+                  <span className="text-xs truncate">{sozlesmeFirmaAdi(c.customer_id)}</span>
+                  <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+          </div>
+        </div>
 
         {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
@@ -429,24 +492,6 @@ export default function AdminDashboard() {
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
-          </div>
-          <div className="space-y-1.5 p-4 pt-3">
-            {benimIslerim.map((it, i) => (
-              <Link key={i} to={it.to} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors">
-                <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", TONES[it.tone])}>
-                  <it.icon className={cn("w-3.5 h-3.5", ICON_TONES[it.tone])} />
-                </span>
-                <span className="flex-1 text-sm truncate">{it.label}</span>
-                <span className={cn("text-sm font-bold", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
             <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.teal)}><TrendingUp className="w-4 h-4" /></span>
             <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Son İşlemler</h3>
           </div>
@@ -463,27 +508,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.blue)}><CalendarClock className="w-4 h-4" /></span>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Yaklaşan Takvim</h3>
-          </div>
-          <div className="p-4 pt-3">
-          {sozlesmeYaklasan.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Yaklaşan bir şey yok</p>
-          ) : (
-            <div className="space-y-1.5">
-              {sozlesmeYaklasan.slice(0, 5).map((c) => (
-                <Link key={c.id} to={`/musteri/${c.customer_id}`} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors">
-                  <span className="text-xs truncate">{sozlesmeFirmaAdi(c.customer_id)}</span>
-                  <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
-                </Link>
-              ))}
-            </div>
-          )}
           </div>
         </div>
       </aside>

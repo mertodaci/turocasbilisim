@@ -464,6 +464,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        <MiniCalendarWidget />
+
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
             <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.blue)}><CalendarClock className="w-4 h-4" /></span>
@@ -484,8 +486,6 @@ export default function AdminDashboard() {
           )}
           </div>
         </div>
-
-        <MiniCalendarWidget />
       </aside>
     </div>
   );

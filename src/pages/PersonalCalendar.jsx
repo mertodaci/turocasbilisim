@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
+  format, parse, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, addMonths, subMonths, isSameMonth, isSameDay, isToday,
 } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -22,8 +23,11 @@ const emptyEventForm = { baslik: "", aciklama: "", tarih: "", baslangic_saat: ""
 export default function PersonalCalendar() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [searchParams] = useSearchParams();
+  const dayParam = searchParams.get("day");
+  const initialDay = dayParam ? parse(dayParam, "yyyy-MM-dd", new Date()) : new Date();
+  const [currentMonth, setCurrentMonth] = useState(initialDay);
+  const [selectedDay, setSelectedDay] = useState(initialDay);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [eventForm, setEventForm] = useState(emptyEventForm);
 

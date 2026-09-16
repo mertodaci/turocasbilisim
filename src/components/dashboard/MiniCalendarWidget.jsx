@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { flowApi } from "@/api/flowApiClient";
 import { useAuth } from "@/lib/AuthContext";
 import {
@@ -18,6 +18,7 @@ const WEEK_DAYS = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
 // cache'i paylaşılır, ekstra ağ isteği olmaz.
 export default function MiniCalendarWidget() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [month, setMonth] = useState(new Date());
 
   const { data: todos = [] } = useQuery({
@@ -87,7 +88,12 @@ export default function MiniCalendarWidget() {
             const inMonth = isSameMonth(day, month);
             const today = isToday(day);
             return (
-              <div key={i} className="flex flex-col items-center gap-0.5">
+              <button
+                type="button"
+                key={i}
+                onClick={() => navigate(`/kisisel-takvim?day=${format(day, "yyyy-MM-dd")}`)}
+                className="flex flex-col items-center gap-0.5 py-0.5 rounded-lg hover:bg-muted/60 transition-colors"
+              >
                 <span
                   className={cn(
                     "w-6 h-6 flex items-center justify-center rounded-full text-[11px]",
@@ -106,7 +112,7 @@ export default function MiniCalendarWidget() {
                     </>
                   )}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>

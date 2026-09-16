@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Building2, ClipboardList } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
@@ -14,20 +15,37 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 
-// TopBar'daki arama kutusu. Şimdilik yalnız "sayfaya git" hızlı atlaması —
-// mevcut menü ağacında arar (backend yok, yeni sorgu yok, sıfır maliyetli).
-// Gerçek kayıt araması (personel/müşteri/bilet vb.) ayrı bir turda eklenecek.
+// TopBar'daki arama kutusu. Menü sayfaları + favoriler (statik) yanında,
+// dialog açıldığında müşteri ve bilet/talep kayıtlarını da (mevcut
+// Customers.jsx/JobTrackingTickets.jsx'teki "sınırlı sayıda çek + client-side
+// filtrele" deseniyle) getirip arama sonucuna katar. cmdk'nin kendi fuzzy
+// filtresi her CommandItem'ın `value`'suna bakar, ayrı bir filtre motoru
+// yazmaya gerek yok.
 export default function GlobalSearch() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     if (!user) return;
     flowApi.auth.getFavorites().then(setFavorites).catch(() => setFavorites([]));
   }, [user]);
+
+  const { data: searchCustomers = [] } = useQuery({
+    queryKey: ["global-search-customers"],
+    queryFn: () => flowApi.entities.Customer.list("company_name", 2000),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: searchTickets = [] } = useQuery({
+    queryKey: ["global-search-tickets"],
+    queryFn: () => flowApi.entities.JTTicket.list("-created_date", 2000),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // ⌘K / Ctrl+K global kısayolu.
   useEffect(() => {
@@ -56,8 +74,20 @@ export default function GlobalSearch() {
 
   const go = (path) => {
     setOpen(false);
+    setQuery("");
     navigate(path);
   };
+
+  // Müşteri/bilet listeleri 2000'e kadar kayıt taşıyabildiği için, sorgu
+  // en az 2 karakter olmadan hiç render edilmez ve eşleşenler ilk 8 ile
+  // sınırlanır — dialog binlerce CommandItem ile açılıp yavaşlamaz.
+  const q = query.trim().toLowerCase();
+  const matchedCustomers = q.length < 2 ? [] : searchCustomers
+    .filter((c) => `${c.company_name || ""} ${c.city || ""}`.toLowerCase().includes(q))
+    .slice(0, 8);
+  const matchedTickets = q.length < 2 ? [] : searchTickets
+    .filter((tk) => `${tk.title || ""} ${tk.ticket_number || ""} ${tk.customer_name || ""}`.toLowerCase().includes(q))
+    .slice(0, 8);
 
   return (
     <>
@@ -77,8 +107,8 @@ export default function GlobalSearch() {
         <Search className="w-5 h-5" />
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Sayfa ara... (kişi/müşteri/talep araması yakında)" />
+      <CommandDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery(""); }}>
+        <CommandInput placeholder="Sayfa, müşteri veya bilet/talep ara..." value={query} onValueChange={setQuery} />
         <CommandList>
           <CommandEmpty>Sonuç bulunamadı.</CommandEmpty>
           {favoriteItems.length > 0 && (
@@ -99,6 +129,28 @@ export default function GlobalSearch() {
               </CommandItem>
             ))}
           </CommandGroup>
+          {matchedCustomers.length > 0 && (
+            <CommandGroup heading="Müşteriler">
+              {matchedCustomers.map((c) => (
+                <CommandItem key={c.id} value={`${c.company_name || ""} ${c.city || ""}`} onSelect={() => go(`/musteri/${c.id}`)}>
+                  <Building2 className="w-4 h-4" />
+                  <span className="truncate">{c.company_name || "İsimsiz Müşteri"}</span>
+                  {c.city && <span className="ml-auto text-xs text-muted-foreground shrink-0">{c.city}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {matchedTickets.length > 0 && (
+            <CommandGroup heading="Bilet / Talepler">
+              {matchedTickets.map((tk) => (
+                <CommandItem key={tk.id} value={`${tk.title || ""} ${tk.ticket_number || ""} ${tk.customer_name || ""}`} onSelect={() => go("/is-takibi/tickets")}>
+                  <ClipboardList className="w-4 h-4" />
+                  <span className="truncate">{tk.title || "İsimsiz Bilet"}</span>
+                  <span className="ml-auto text-xs text-muted-foreground shrink-0">{tk.ticket_number || ""}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </CommandList>
       </CommandDialog>
     </>

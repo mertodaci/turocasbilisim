@@ -629,13 +629,30 @@ export default function AdminDashboard() {
     )
   );
 
+  const toolbarBtn = "h-8 w-8 shrink-0 bg-card border border-border shadow-sm text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors";
+
   const sagToolbar = (
-    <div className="flex items-center justify-end gap-2">
-      <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" title="Atlas Görünümü" asChild>
-        <Link to="/atlas"><Compass className="w-3.5 h-3.5" /></Link>
+    <div className="flex items-center justify-end gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm w-fit ml-auto mb-1">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="icon" variant="ghost" className={toolbarBtn} title="Takvim">
+            <CalendarDays className="w-4 h-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-auto p-0">
+          <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
+          <div className="border-t p-2">
+            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button size="icon" variant="ghost" className={toolbarBtn} title="Atlas Görünümü" asChild>
+        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
       </Button>
-      <Button size="icon" variant={editMode ? "default" : "outline"} className="h-7 w-7 shrink-0" title="Widget'ları Düzenle" onClick={() => (editMode ? cancelEdit() : startEdit())}>
-        <Settings2 className="w-3.5 h-3.5" />
+      <Button size="icon" variant="ghost" className={cn(toolbarBtn, editMode && "bg-primary text-primary-foreground border-primary")} title="Widget'ları Düzenle" onClick={() => (editMode ? cancelEdit() : startEdit())}>
+        <Settings2 className="w-4 h-4" />
       </Button>
     </div>
   );
@@ -653,24 +670,7 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground mt-1">Tüm operasyonlarınız bugün de sorunsuz ilerliyor.</p>
           </div>
           <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
-              <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" title="Takvim">
-                    <CalendarDays className="w-3.5 h-3.5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-auto p-0">
-                  <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
-                  <div className="border-t p-2">
-                    <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-                      Takvimi Aç <ArrowUpRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+            <p className="text-sm font-medium text-foreground capitalize">{dayName}, {dateStr}</p>
             <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
           </div>
         </div>

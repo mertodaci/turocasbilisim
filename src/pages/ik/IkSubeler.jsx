@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 const empty = {
   ad: "", adres: "", ip_araligi: "", gps_enlem: "", gps_boylam: "", sapma_metre: 0,
-  telefon: "", yetkili: "", sira: 0, aktif: 1,
+  telefon: "", yetkili: "", aktif: 1,
 };
 
 export default function IkSubeler() {
@@ -27,7 +27,7 @@ export default function IkSubeler() {
 
   const { data: subeler = [], isLoading } = useQuery({
     queryKey: ["ik_subeler"],
-    queryFn: () => flowApi.entities.IkSube.list("sira", 2000),
+    queryFn: () => flowApi.entities.IkSube.list("ad", 2000),
   });
   const { data: personeller = [] } = useQuery({
     queryKey: ["ik_personel_min"],
@@ -61,7 +61,7 @@ export default function IkSubeler() {
     const f = {
       ad: s.ad || "", adres: s.adres || "", ip_araligi: s.ip_araligi || "",
       gps_enlem: s.gps_enlem ?? "", gps_boylam: s.gps_boylam ?? "", sapma_metre: s.sapma_metre ?? 0,
-      telefon: s.telefon || "", yetkili: s.yetkili || "", sira: s.sira ?? 0, aktif: s.aktif ?? 1,
+      telefon: s.telefon || "", yetkili: s.yetkili || "", aktif: s.aktif ?? 1,
     };
     setForm(f); setInitialForm(f);
     setFormOpen({ open: true, item: s });
@@ -80,7 +80,6 @@ export default function IkSubeler() {
       gps_enlem: form.gps_enlem === "" ? null : Number(form.gps_enlem),
       gps_boylam: form.gps_boylam === "" ? null : Number(form.gps_boylam),
       sapma_metre: Number(form.sapma_metre) || 0,
-      sira: Number(form.sira) || 0,
     };
     if (formOpen.item) updateMutation.mutate({ id: formOpen.item.id, data });
     else createMutation.mutate(data);
@@ -134,15 +133,9 @@ export default function IkSubeler() {
               <Input type="number" value={form.sapma_metre} onChange={(e) => setForm({ ...form, sapma_metre: e.target.value })} />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1.5 block">Sıra</Label>
-              <Input type="number" value={form.sira} onChange={(e) => setForm({ ...form, sira: e.target.value })} />
-            </div>
-            <div className="flex items-end gap-3 pb-1">
-              <Switch checked={form.aktif === 1} onCheckedChange={(v) => setForm({ ...form, aktif: v ? 1 : 0 })} />
-              <Label>Aktif</Label>
-            </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={form.aktif === 1} onCheckedChange={(v) => setForm({ ...form, aktif: v ? 1 : 0 })} />
+            <Label>Aktif</Label>
           </div>
           <div className="flex items-end justify-end gap-2 pt-2">
             <Button type="button" size="sm" variant="ghost" onClick={closeForm}>

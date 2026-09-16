@@ -20,7 +20,6 @@ const topbarToolbarBtn = "h-8 w-8 shrink-0 rounded-lg text-muted-foreground hove
 const themes = [
   { value: "light", icon: Sun, label: "Açık" },
   { value: "dark", icon: Moon, label: "Koyu" },
-  { value: "atlas", icon: Compass, label: "Atlas" },
 ];
 
 export function NotificationBell() {
@@ -125,7 +124,6 @@ export function NotificationBell() {
 // (NotificationBell/ProfileMenu ile aynı açılır-panel deseni).
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const current = themes.find((t) => t.value === theme) || themes[0];
 
@@ -146,7 +144,7 @@ function ThemeToggle() {
             {themes.map(({ value, icon: Icon, label }) => (
               <button
                 key={value}
-                onClick={() => { if (value === "atlas") { navigate("/atlas"); } else { setTheme(value); } setOpen(false); }}
+                onClick={() => { setTheme(value); setOpen(false); }}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
                   theme === value ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:bg-muted"
@@ -184,6 +182,9 @@ function DashboardToolbar() {
           </div>
         </PopoverContent>
       </Popover>
+      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Atlas Görünümü" asChild>
+        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
+      </Button>
       <ThemeToggle />
       <Link to="/yardim" className={cn(topbarToolbarBtn, "flex items-center justify-center")} title="Yardım">
         <HelpCircle className="w-4 h-4" />

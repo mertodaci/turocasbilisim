@@ -413,6 +413,7 @@ function initDb() {
     "ALTER TABLE employees ADD COLUMN education_history TEXT DEFAULT '[]'",
     "ALTER TABLE employees ADD COLUMN certificates TEXT DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN favorites TEXT DEFAULT '[]'",
+    "ALTER TABLE users ADD COLUMN dashboard_layout TEXT DEFAULT NULL",
     "ALTER TABLE users ADD COLUMN customer_id TEXT",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT",
     "ALTER TABLE announcements ADD COLUMN target_roles TEXT DEFAULT 'all'",

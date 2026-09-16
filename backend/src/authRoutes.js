@@ -234,6 +234,28 @@ router.put('/favorites', authMiddleware, (req, res) => {
   }
 });
 
+// YÖNETİM MERKEZİ WIDGET DÜZENİ — GETİR
+router.get('/dashboard-layout', authMiddleware, (req, res) => {
+  try {
+    const user = db.prepare('SELECT dashboard_layout FROM users WHERE id = ?').get(req.user.id);
+    const layout = user?.dashboard_layout ? JSON.parse(user.dashboard_layout) : null;
+    res.json(layout);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// YÖNETİM MERKEZİ WIDGET DÜZENİ — GÜNCELLE
+router.put('/dashboard-layout', authMiddleware, (req, res) => {
+  try {
+    const { layout } = req.body;
+    db.prepare('UPDATE users SET dashboard_layout = ? WHERE id = ?').run(JSON.stringify(layout), req.user.id);
+    res.json({ success: true, layout });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ENGELLİ IP LİSTESİ
 router.get('/blocked-ips', authMiddleware, (req, res) => {
   try {

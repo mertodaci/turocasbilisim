@@ -259,6 +259,12 @@ export const auth = {
   async updateFavorites(favorites) {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/favorites`, { method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify({ favorites }) }));
   },
+  async getDashboardLayout() {
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/dashboard-layout`, { headers: authHeaders(), credentials: 'include' }));
+  },
+  async updateDashboardLayout(layout) {
+    return handleResponse(await fetch(`${BASE_URL}/api/auth/dashboard-layout`, { method: 'PUT', headers: authHeaders(), credentials: 'include', body: JSON.stringify({ layout }) }));
+  },
   async deleteUser(id) {
     return handleResponse(await fetch(`${BASE_URL}/api/auth/users/${id}`, { method: 'DELETE', headers: authHeaders(), credentials: 'include' }));
   },

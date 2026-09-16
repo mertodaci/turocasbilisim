@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, CheckCircle2, Pencil, Check, X, ChevronUp, ChevronDown, Flag } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Trash2, CheckCircle2, Pencil, ChevronUp, ChevronDown, Flag } from "lucide-react";
 import { toast } from "sonner";
 
 const COLOR_OPTIONS = [
@@ -198,9 +199,9 @@ function AddStatusForm({ onAdd, isPending, boards = [] }) {
 // ekranına taşındı. İşlevsellik birebir aynı.
 export default function JobTrackingTicketStatuses() {
   const queryClient = useQueryClient();
-  const [editingStatusId, setEditingStatusId] = useState(null);
-  const [editingStatusName, setEditingStatusName] = useState("");
   const [selectedBoardId, setSelectedBoardId] = useState("");
+  const [editStatus, setEditStatus] = useState(null); // düzenlenen tam satır (dialog açıksa dolu)
+  const [editForm, setEditForm] = useState(null);
 
   // NOT: TQ Tanimlar TUM durumlari (is_active=0 dahil) ceker -> kendi anahtari
   // ["tq-statuses-all"]. Diger tum ekranlar ["tq-statuses"] altinda yalniz aktif
@@ -227,12 +228,12 @@ export default function JobTrackingTicketStatuses() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => flowApi.entities.JTTicketStatus.update(id, data),
-    onSuccess: () => { refreshStatuses(); setEditingStatusId(null); },
+    onSuccess: () => { refreshStatuses(); setEditStatus(null); },
   });
 
   const bulkUpdateMutation = useMutation({
     mutationFn: ({ ids, data }) => Promise.all(ids.map((id) => flowApi.entities.JTTicketStatus.update(id, data))),
-    onSuccess: () => { refreshStatuses(); setEditingStatusId(null); },
+    onSuccess: () => { refreshStatuses(); setEditStatus(null); },
   });
 
   const deleteMutation = useMutation({
@@ -259,6 +260,32 @@ export default function JobTrackingTicketStatuses() {
     for (const id of statusIdsForAction(status)) await flowApi.entities.JTTicketStatus.update(id, { is_default: 1 });
     refreshStatuses();
     toast.success("Talep başlangıç durumu güncellendi");
+  };
+
+  // Kalem butonu artık isim-dışındaki tüm alanları (renk/grup/panolar/son
+  // durum/aktiflik) tek bir dialogda gösterip düzenlemeye açıyor — önceki
+  // "yalnız isim" satır-içi düzenlemesinin yerine geçti.
+  const openEdit = (status) => {
+    setEditStatus(status);
+    setEditForm({
+      name: status.name,
+      color: status.color,
+      group_key: status.group_key || "diger",
+      board_ids: Array.isArray(status.board_ids) ? status.board_ids : [],
+      is_final: !!status.is_final,
+      is_active: !!status.is_active,
+    });
+  };
+  const saveEdit = () => {
+    if (!editForm.name.trim()) { toast.error("Durum adi zorunludur!"); return; }
+    applyStatus(editStatus, {
+      name: editForm.name,
+      color: editForm.color,
+      group_key: editForm.group_key,
+      board_ids: editForm.board_ids,
+      is_final: editForm.is_final ? 1 : 0,
+      is_active: editForm.is_active ? 1 : 0,
+    });
   };
 
   const handleSeedDefaults = async () => {
@@ -363,25 +390,7 @@ export default function JobTrackingTicketStatuses() {
                 </div>
                 <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${COLOR_OPTIONS.find(c => c.value === status.color)?.dot || "bg-slate-400"}`} />
 
-                {editingStatusId === status.id ? (
-                  <>
-                    <Input
-                      value={editingStatusName}
-                      onChange={(e) => setEditingStatusName(e.target.value)}
-                      className="h-7 text-sm flex-1"
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600"
-                      onClick={() => applyStatus(status, { name: editingStatusName })}>
-                      <Check className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7"
-                      onClick={() => setEditingStatusId(null)}>
-                      <X className="w-3.5 h-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
+                <>
                     <Badge className={`${COLOR_BADGE[status.color] || "bg-slate-100 text-slate-700"} text-xs shrink-0`}>
                       {status.name}
                     </Badge>
@@ -448,7 +457,7 @@ export default function JobTrackingTicketStatuses() {
                         </SelectContent>
                       </Select>
                       <Button size="icon" variant="ghost" className="h-7 w-7"
-                        onClick={() => { setEditingStatusId(status.id); setEditingStatusName(status.name); }}>
+                        onClick={() => openEdit(status)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       <Button
@@ -460,8 +469,7 @@ export default function JobTrackingTicketStatuses() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                  </>
-                )}
+                </>
               </div>
             ))}
           </div>
@@ -469,6 +477,90 @@ export default function JobTrackingTicketStatuses() {
 
         <AddStatusForm boards={boards} onAdd={(data) => createMutation.mutate({ ...data, sort_order: statuses.length + 1 })} isPending={createMutation.isPending} />
       </div>
+
+      <Dialog open={!!editStatus} onOpenChange={(open) => { if (!open) setEditStatus(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Durumu Düzenle</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Durum Adı</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Sistem Anahtarı (değiştirilemez)</Label>
+                <Input value={editStatus?.key || ""} disabled className="text-muted-foreground" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Renk</Label>
+                  <Select value={editForm.color} onValueChange={(v) => setEditForm({ ...editForm, color: v })}>
+                    <SelectTrigger>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${COLOR_OPTIONS.find(c => c.value === editForm.color)?.dot}`} />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COLOR_OPTIONS.map(c => (
+                        <SelectItem key={c.value} value={c.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${c.dot}`} />
+                            {c.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Durum Grubu</Label>
+                  <Select value={editForm.group_key} onValueChange={(v) => setEditForm({ ...editForm, group_key: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_GROUPS.map(g => (
+                        <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Panolar (seçili değilse tümünde görünür)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {boards.map(b => {
+                    const sel = editForm.board_ids.includes(b.id);
+                    return (
+                      <button type="button" key={b.id}
+                        onClick={() => setEditForm({ ...editForm, board_ids: sel ? editForm.board_ids.filter(x => x !== b.id) : [...editForm.board_ids, b.id] })}
+                        className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${sel ? "bg-indigo-600 text-white border-indigo-600" : "bg-background text-muted-foreground border-border/50 hover:bg-muted"}`}>
+                        {b.name}
+                      </button>
+                    );
+                  })}
+                  {boards.length === 0 && <p className="text-xs text-muted-foreground">Pano yok</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch checked={editForm.is_active} onCheckedChange={(v) => setEditForm({ ...editForm, is_active: v })} />
+                  <Label className="text-xs text-muted-foreground">Aktif</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={editForm.is_final} onCheckedChange={(v) => setEditForm({ ...editForm, is_final: v })} />
+                  <Label className="text-xs text-muted-foreground">Son Durum</Label>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditStatus(null)}>Vazgeç</Button>
+            <Button onClick={saveEdit} disabled={updateMutation.isPending || bulkUpdateMutation.isPending}>Kaydet</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

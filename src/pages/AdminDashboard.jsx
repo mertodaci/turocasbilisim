@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp, Mail, Phone, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,7 @@ export default function AdminDashboard() {
   const { data: savedLayout } = useQuery({ queryKey: ["dashboard-layout"], queryFn: () => flowApi.auth.getDashboardLayout() });
   const [editMode, setEditMode] = useState(false);
   const [draftLayout, setDraftLayout] = useState(DEFAULT_LAYOUT);
+  const [biletChartType, setBiletChartType] = useState("bar");
   const [showAllGorevler, setShowAllGorevler] = useState(false);
   useEffect(() => {
     if (!editMode) setDraftLayout(reconcileLayout(savedLayout));
@@ -506,21 +507,44 @@ export default function AdminDashboard() {
               <X className="w-3 h-3" />
             </button>
           )}
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><TrendingUp className="w-3.5 h-3.5" /></span> Son 7 Gün · Bilet Hareketi
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><TrendingUp className="w-3.5 h-3.5" /></span> Son 7 Gün · Bilet Hareketi
+            </h3>
+            <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+              <button type="button" onClick={() => setBiletChartType("bar")}
+                className={cn("px-2 py-1 rounded-md text-[11px] font-medium transition-colors", biletChartType === "bar" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}>
+                Sütun
+              </button>
+              <button type="button" onClick={() => setBiletChartType("line")}
+                className={cn("px-2 py-1 rounded-md text-[11px] font-medium transition-colors", biletChartType === "line" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}>
+                Çizgi
+              </button>
+            </div>
+          </div>
           {(summary.dailyTrend || []).length === 0 ? (
             <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
           ) : (
             <ResponsiveContainer width="100%" height={140}>
-              <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
-                <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
-                <Legend wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
-                <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
-              </BarChart>
+              {biletChartType === "bar" ? (
+                <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                  <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
+                  <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
+                </BarChart>
+              ) : (
+                <LineChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                  <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                  <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  <Line type="monotone" dataKey="acilan" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} name="Açılan" />
+                  <Line type="monotone" dataKey="kapanan" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} name="Kapanan" />
+                </LineChart>
+              )}
             </ResponsiveContainer>
           )}
         </div>

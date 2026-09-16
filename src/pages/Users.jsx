@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, X, ToggleLeft, ToggleRight, Radar } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Users as UsersIcon, Search, UserCheck, Trash2, UserPlus, ShieldCheck, Shield, User, Briefcase, GraduationCap, X, ToggleLeft, ToggleRight, Radar, ArrowUpRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -10,15 +11,23 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import CreateUserDialog from "@/components/users/CreateUserDialog";
 
-const ROLE_CONFIG = {
-  admin:    { label:"Admin",     bg:"bg-red-500",    light:"bg-red-50 border-red-200 text-red-700",     icon: ShieldCheck },
-  yonetici: { label:"Yönetici",  bg:"bg-purple-500", light:"bg-purple-50 border-purple-200 text-purple-700", icon: Shield },
-  ik:       { label:"IK",        bg:"bg-pink-500",   light:"bg-pink-50 border-pink-200 text-pink-700",   icon: Briefcase },
-  kullanici:{ label:"Kullanıcı", bg:"bg-blue-500",   light:"bg-blue-50 border-blue-200 text-blue-700",   icon: User },
-  stajer:   { label:"Stajer",    bg:"bg-green-500",  light:"bg-green-50 border-green-200 text-green-700", icon: GraduationCap },
-  musteri:  { label:"Müşteri",   bg:"bg-orange-500", light:"bg-orange-50 border-orange-200 text-orange-700", icon: UsersIcon },
-  guvenlik: { label:"Güvenlik",  bg:"bg-slate-500",  light:"bg-slate-50 border-slate-200 text-slate-700", icon: Radar },
+// Bilinen roller için sabit ikon/renk (görsel tutarlılık); DB'de bunların
+// dışında bir rol varsa (RolePermissionsPanel'den eklenmiş) FALLBACK_STYLES
+// döngüsel olarak atanır — artık hiçbir rol sessizce listeden düşmez.
+const KNOWN_STYLES = {
+  admin:    { bg:"bg-red-500",    light:"bg-red-50 border-red-200 text-red-700",     icon: ShieldCheck },
+  yonetici: { bg:"bg-purple-500", light:"bg-purple-50 border-purple-200 text-purple-700", icon: Shield },
+  ik:       { bg:"bg-pink-500",   light:"bg-pink-50 border-pink-200 text-pink-700",   icon: Briefcase },
+  kullanici:{ bg:"bg-blue-500",   light:"bg-blue-50 border-blue-200 text-blue-700",   icon: User },
+  stajer:   { bg:"bg-green-500",  light:"bg-green-50 border-green-200 text-green-700", icon: GraduationCap },
+  musteri:  { bg:"bg-orange-500", light:"bg-orange-50 border-orange-200 text-orange-700", icon: UsersIcon },
+  guvenlik: { bg:"bg-slate-500",  light:"bg-slate-50 border-slate-200 text-slate-700", icon: Radar },
 };
+const FALLBACK_STYLES = [
+  { bg:"bg-teal-500",   light:"bg-teal-50 border-teal-200 text-teal-700",     icon: User },
+  { bg:"bg-cyan-500",   light:"bg-cyan-50 border-cyan-200 text-cyan-700",     icon: User },
+  { bg:"bg-amber-500",  light:"bg-amber-50 border-amber-200 text-amber-700", icon: User },
+];
 
 const getInitials = (name) => name?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "?";
 
@@ -39,6 +48,10 @@ export default function Users() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users-list"],
     queryFn: () => flowApi.auth.users(),
+  });
+  const { data: roles = [] } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => flowApi.entities.Role.list("name", 100),
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
@@ -83,6 +96,22 @@ export default function Users() {
 
   const employeeEmails = new Set(employees.map(e=>e.email).filter(Boolean));
 
+  // Aktif olsun olmasın, DB'deki her rol için (bilinmeyenler dahil) bir
+  // giriş üret — bir önceki hardcoded 7-rol listesi yeni eklenen rolleri
+  // sessizce atlıyordu.
+  const ROLE_CONFIG = roles.reduce((acc, r, idx) => {
+    const style = KNOWN_STYLES[r.name] || FALLBACK_STYLES[idx % FALLBACK_STYLES.length];
+    acc[r.name] = { label: r.label || r.name, ...style };
+    return acc;
+  }, {});
+  // Kullanıcılardaki mevcut rollerden, roles tablosunda henüz karşılığı
+  // olmayanlar varsa (silinmiş/eski kayıt) yine de listede görünsün.
+  for (const u of users) {
+    if (u.role && !ROLE_CONFIG[u.role]) {
+      ROLE_CONFIG[u.role] = { label: u.role, ...FALLBACK_STYLES[Object.keys(ROLE_CONFIG).length % FALLBACK_STYLES.length] };
+    }
+  }
+
   const roleCounts = Object.keys(ROLE_CONFIG).reduce((acc, role) => {
     acc[role] = users.filter(u=>u.role===role && u.status !== 'pasif').length;
     return acc;
@@ -109,7 +138,7 @@ export default function Users() {
       {/* SOL PANEL */}
       <div className="flex-1 min-w-0 space-y-4">
         {/* BAŞLIK */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2"><UsersIcon className="w-6 h-6 text-indigo-500"/>Kullanıcılar</h1>
             {canCreateUser && (
@@ -120,30 +149,22 @@ export default function Users() {
             )}
             <p className="text-sm text-muted-foreground mt-0.5">{users.length} kayıtlı kullanıcı{pasifCount > 0 && <span className="text-amber-500 ml-1">({pasifCount} pasif)</span>}</p>
           </div>
+          <Link to="/musteri-kullanicilari"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground border border-border/50 rounded-xl transition-colors">
+            Müşteri Kullanıcıları <ArrowUpRight className="w-3.5 h-3.5"/>
+          </Link>
         </div>
 
-        {/* ROL ÖZET KARTLARI */}
-        <div className="grid grid-cols-4 gap-2">
-          {Object.entries(ROLE_CONFIG).slice(0,4).map(([key,cfg])=>(
+        {/* ROL ÖZET KARTLARI — kaç rol olursa olsun sarılan bir ızgara */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {Object.entries(ROLE_CONFIG).map(([key,cfg])=>(
             <button key={key} onClick={()=>setFilterRole(filterRole===key?"all":key)}
               className={cn("p-3 rounded-xl border text-left transition-all", filterRole===key?cfg.light+" border-2":"bg-card border-border/50 hover:border-indigo-200")}>
               <div className="flex items-center gap-2 mb-1">
                 <div className={cn("p-1 rounded-lg",cfg.bg)}><cfg.icon className="w-3 h-3 text-white"/></div>
                 <span className="text-lg font-bold">{roleCounts[key]||0}</span>
               </div>
-              <p className="text-xs text-muted-foreground">{cfg.label}</p>
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {Object.entries(ROLE_CONFIG).slice(4).map(([key,cfg])=>(
-            <button key={key} onClick={()=>setFilterRole(filterRole===key?"all":key)}
-              className={cn("p-3 rounded-xl border text-left transition-all", filterRole===key?cfg.light+" border-2":"bg-card border-border/50 hover:border-indigo-200")}>
-              <div className="flex items-center gap-2 mb-1">
-                <div className={cn("p-1 rounded-lg",cfg.bg)}><cfg.icon className="w-3 h-3 text-white"/></div>
-                <span className="text-lg font-bold">{roleCounts[key]||0}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">{cfg.label}</p>
+              <p className="text-xs text-muted-foreground truncate">{cfg.label}</p>
             </button>
           ))}
         </div>

@@ -357,6 +357,7 @@ export default function JTTicketDetailDialog({ ticket, employees, projects, cust
     const finalStatus = statuses.find(s => s.key === newStatus);
     const updateData = { status: newStatus };
     if (finalStatus?.is_final) updateData.resolved_at = new Date().toISOString();
+    else if (ticket.resolved_at) updateData.resolved_at = null; // yeniden açıldı — bayat "kapanış" tarihini temizle
     // Optimistik güncelleme — hemen UI'ı değiştir
     setLocalStatus(newStatus);
     updateTicketMutation.mutate(

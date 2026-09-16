@@ -87,7 +87,11 @@ export default function SessionManagement() {
     setForm((f) => ({ ...f, calisma_gunleri: yeni.join(",") }));
   };
 
-  const isActive = (lastSeenAt) => Date.now() - new Date(lastSeenAt).getTime() < ACTIVE_THRESHOLD_MS;
+  // Backend datetime('now') UTC yazıyor ama "Z" son eki olmadan dönüyor —
+  // new Date(...) bunu yerel saat sanıp yanlış yorumluyor (AuditLog.jsx'teki
+  // aynı düzeltme). Saat kıyaslaması/gösterimi buradan geçmeli.
+  const toLocalDate = (dbTime) => dbTime ? new Date(dbTime.includes("Z") ? dbTime : dbTime + "Z") : null;
+  const isActive = (lastSeenAt) => Date.now() - (toLocalDate(lastSeenAt)?.getTime() || 0) < ACTIVE_THRESHOLD_MS;
 
   return (
     <div className="space-y-6">
@@ -195,10 +199,10 @@ export default function SessionManagement() {
                     <td className="px-4 py-3 text-muted-foreground">{ROLE_LABELS[s.role] || s.role}</td>
                     <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{s.ip || "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {s.created_at ? format(new Date(s.created_at), "d MMM HH:mm", { locale: tr }) : "—"}
+                      {s.created_at ? format(toLocalDate(s.created_at), "d MMM HH:mm", { locale: tr }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {s.last_seen_at ? format(new Date(s.last_seen_at), "d MMM HH:mm", { locale: tr }) : "—"}
+                      {s.last_seen_at ? format(toLocalDate(s.last_seen_at), "d MMM HH:mm", { locale: tr }) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button

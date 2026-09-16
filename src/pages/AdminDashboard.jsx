@@ -13,7 +13,6 @@ import { useContractAlerts } from "@/lib/useContractAlerts";
 import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useLanguage } from "@/lib/LanguageContext";
-import { kisa } from "@/lib/hakedisUtils";
 import { getAllLeafItems } from "@/components/layout/navItems";
 
 const QUICK_ACTIONS = [
@@ -58,6 +57,8 @@ const ICON_SQUARE = {
 
 const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yok: "Oluşmadı" };
 
+const initialsOf = (name) => name?.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";
+
 export default function AdminDashboard() {
   const { statusName } = useTicketStatuses();
   const { user } = useAuth();
@@ -99,10 +100,8 @@ export default function AdminDashboard() {
   const aktifSozlesme = (contracts.stats || []).find(s => s.status === "aktif")?.c || 0;
   const donemDurum = DONEM_DURUM[donem.durum] || "—";
 
-  // ── KPI kartları — İş Takibi bilinçli olarak son 2 kartta ──
   const kpis = [
     { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, tone: "blue", icon: ScrollText, path: "/sozlesmeler" },
-    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", tone: "emerald", icon: DollarSign, path: "/sozlesmeler" },
     { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, tone: "sky", icon: Building2, path: "/musteriler" },
     { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, tone: "indigo", icon: Users, path: "/calisanlar" },
     { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, tone: "slate", icon: Wallet, path: "/ik/bordro" },
@@ -233,118 +232,78 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* DUYURU + GÖREVLERİM — yan yana, yumuşak zeminli */}
-      {(activeAnnouncements.length > 0 || gorevler.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {activeAnnouncements.length > 0 && (
-            <div className={cn(
-              "rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40",
-              !(activeAnnouncements.length > 0 && gorevler.length > 0) && "lg:col-span-2"
-            )}>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-200/50 dark:border-violet-900/40">
-                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.violet)}><Megaphone className="w-4 h-4" /></span>
-                <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Duyuru</h3>
-              </div>
-              <div className="overflow-hidden py-2.5 px-4">
-                <div className="animate-marquee whitespace-nowrap">
-                  {activeAnnouncements.map((a) => (
-                    <span key={a.id} className="inline-flex items-center gap-2 mr-14">
-                      {a.title && <span className="font-semibold text-foreground text-xs">{a.title}:</span>}
-                      <span className="text-muted-foreground text-xs">{a.content}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+      {/* DUYURU — ince tek şerit bant, Görevlerim'den bağımsız */}
+      {activeAnnouncements.length > 0 && (
+        <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40 flex items-stretch">
+          <div className="shrink-0 px-4 py-2 flex items-center gap-2 bg-violet-100/60 dark:bg-violet-900/30">
+            <Megaphone className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+            <span className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Duyuru</span>
+          </div>
+          <div className="overflow-hidden flex-1 py-2 px-4 flex items-center">
+            <div className="animate-marquee whitespace-nowrap">
+              {activeAnnouncements.map((a) => (
+                <span key={a.id} className="inline-flex items-center gap-2 mr-14">
+                  {a.title && <span className="font-semibold text-foreground text-xs">{a.title}:</span>}
+                  <span className="text-muted-foreground text-xs">{a.content}</span>
+                </span>
+              ))}
             </div>
-          )}
-
-          {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
-          {gorevler.length > 0 && (
-            <div className={cn(
-              "rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40",
-              !(activeAnnouncements.length > 0 && gorevler.length > 0) && "lg:col-span-2"
-            )}>
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
-                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
-                <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
-                <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
-              </div>
-              <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
-                {gorevler.map((g) => (
-                  <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
-                    <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
-                    <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
-                    {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
-                    <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* BUGÜN — operasyon paneli */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Bugün İzinli */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.amber)}><Umbrella className="w-3.5 h-3.5" /></span>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün İzinli</h3>
-            <span className="ml-auto text-lg font-black text-amber-600">{izinliList.length}</span>
+      {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
+      {gorevler.length > 0 && (
+        <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
+            <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
           </div>
-          {izinliList.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Bugün izinli personel yok</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {izinliList.slice(0, 10).map((l) => (
-                <span key={l.id} className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">
-                  {l.employee_full_name}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Bugün Doğum Günü */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.pink)}><Cake className="w-3.5 h-3.5" /></span>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün Doğum Günü</h3>
-            <span className="ml-auto text-lg font-black text-pink-600">{dogumGunu.length}</span>
-          </div>
-          {dogumGunu.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Bugün doğum günü yok</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {dogumGunu.map((ad, i) => (
-                <span key={i} className="text-xs bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-400 border border-pink-200 dark:border-pink-900 rounded-full px-2 py-0.5">
-                  🎂 {ad}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Bekleyen Onaylar */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><CheckSquare className="w-3.5 h-3.5" /></span>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bekleyen Onaylar</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {bekleyenOnaylar.map((o, i) => (
-              <Link key={i} to={o.to} className="rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors px-2 py-2 text-center">
-                <div className={cn("text-xl font-black", o.n > 0 ? "text-indigo-600" : "text-muted-foreground/50")}>{o.n}</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">{o.label}</div>
-              </Link>
+          <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
+            {gorevler.map((g) => (
+              <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
+                <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
+                <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
+                {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
+                <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
+              </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4 max-w-md">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Ekip Bugün</h3>
+        <div className="space-y-3">
+          {[
+            { icon: Umbrella, tone: "amber", label: "Bugün İzinli", list: izinliList.map((l) => l.employee_full_name) },
+            { icon: Cake, tone: "pink", label: "Bugün Doğum Günü", list: dogumGunu },
+          ].map((row) => (
+            <div key={row.label} className="flex items-center gap-3">
+              <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE[row.tone])}><row.icon className="w-4 h-4" /></span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{row.label}</p>
+                <p className="text-xs text-muted-foreground">{row.list.length > 0 ? `${row.list.length} Personel` : "Yok"}</p>
+              </div>
+              {row.list.length > 0 && (
+                <div className="flex -space-x-2 shrink-0">
+                  {row.list.slice(0, 4).map((name, i) => (
+                    <span key={i} title={name} className={cn("w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-card", ICON_SQUARE[row.tone])}>
+                      {initialsOf(name)}
+                    </span>
+                  ))}
+                  {row.list.length > 4 && <span className="w-7 h-7 rounded-full bg-muted text-[10px] font-bold flex items-center justify-center border-2 border-card">+{row.list.length - 4}</span>}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* MODÜL KPI BANNER — 8 kart, tam 4×2 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* MODÜL KPI BANNER — 6 kart, tam tek satır */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((item, i) => (
           <Link key={i} to={item.path}
             className="bg-card rounded-2xl border border-border/50 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">

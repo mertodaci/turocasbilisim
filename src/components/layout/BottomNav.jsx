@@ -1,13 +1,12 @@
-import { Link, useLocation } from "react-router-dom";
-import { Star, ChevronRight } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Star, ChevronRight, ArrowUpRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications, useStokAlerts } from "@/lib/NotificationContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
-import { allNavItems } from "./navItems";
+import { allNavItems, PRIMARY_PATH } from "./navItems";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 
 // Bir düğümün altındaki tüm tıklanabilir yaprak sayısını özyinelemeli sayar.
@@ -29,8 +28,8 @@ function collectLeafKeys(node) {
 // — yalnız yönü sağa değil yukarı).
 export default function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const recentlyVisited = useRecentlyVisited();
   const { unreadMessageCount } = useMessages();
   const { unreadTodoCount } = useTodos();
@@ -51,19 +50,8 @@ export default function BottomNav() {
   };
 
   const [favorites, setFavorites] = useState([]);
-  const [flyout, setFlyout] = useState(null); // { key, left, bottom } (alt/mobil) veya { key, left, top, width } (sol/masaüstü)
+  const [flyout, setFlyout] = useState(null); // { key, left, bottom }
   const flyoutTimer = useRef(null);
-
-  // sm breakpoint (640px) ve üzeri: menü sol dikey çubuğa döner (bu ekranın
-  // aslen geldiği yer), altındaki dar ekranlarda mevcut yatay alt çubuk
-  // aynen kalır (kullanıcı isteği: tasarımı bozacaksa mobilde değiştirme).
-  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 640px)");
-    const onChange = (e) => setIsDesktop(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -76,19 +64,10 @@ export default function BottomNav() {
   const openFlyout = (key, el, hasSubgroups) => {
     clearTimeout(flyoutTimer.current);
     const r = el.getBoundingClientRect();
-    if (isDesktop) {
-      // Sol dikey çubukta flyout, tetikleyen öğenin SAĞINDA açılır (orijinal
-      // sidebar mantığı) — genişlik, çubuğun sağında kalan gerçek alana göre sınırlanır.
-      const width = hasSubgroups ? Math.min(680, window.innerWidth - r.right - 24) : Math.min(256, window.innerWidth - r.right - 24);
-      const left = r.right + 8;
-      const top = Math.max(8, Math.min(r.top, window.innerHeight - 8 - 40));
-      setFlyout({ key, left, top, width });
-      return;
-    }
     const width = hasSubgroups ? Math.min(680, window.innerWidth - 16) : 256; // w-64
     const left = Math.max(8, Math.min(r.left + r.width / 2 - width / 2, window.innerWidth - 8 - width));
     const bottom = window.innerHeight - r.top + 12;
-    setFlyout({ key, left, bottom, width });
+    setFlyout({ key, left, bottom });
   };
   const scheduleCloseFlyout = () => {
     clearTimeout(flyoutTimer.current);
@@ -104,7 +83,6 @@ export default function BottomNav() {
       : [...favorites, labelKey];
     setFavorites(newFavorites);
     await flowApi.auth.updateFavorites(newFavorites).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ["favorites"] });
   };
 
   function filterNavTree(items) {
@@ -184,6 +162,7 @@ export default function BottomNav() {
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
   const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;
   const flyoutLeafCount = flyoutItem ? countLeaves(flyoutItem) : 0;
+  const flyoutPrimaryPath = flyoutItem ? PRIMARY_PATH[flyoutItem.labelKey] : null;
   const flyoutLeafKeys = flyoutItem ? collectLeafKeys(flyoutItem) : [];
   const flyoutRecent = flyoutItem
     ? recentlyVisited.filter((v) => flyoutLeafKeys.includes(v.labelKey)).slice(0, 3)
@@ -191,7 +170,7 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-xl rounded-2xl px-2 py-1.5 flex items-center gap-1 overflow-x-auto max-w-[95vw] sm:bottom-auto sm:left-4 sm:top-1/2 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:items-stretch sm:gap-0.5 sm:w-56 sm:px-2 sm:py-2 sm:max-w-none sm:max-h-[85vh] sm:overflow-y-auto sm:overflow-x-visible">
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border shadow-xl rounded-2xl px-2 py-1.5 flex items-center gap-1 overflow-x-auto max-w-[95vw]">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const hasChildren = item.children && item.children.length > 0;
@@ -205,7 +184,6 @@ export default function BottomNav() {
 
           const itemClasses = cn(
             "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[11px] font-medium transition-all shrink-0 relative min-w-[64px]",
-            "sm:flex-row sm:items-center sm:justify-start sm:gap-3 sm:w-full sm:px-3 sm:py-2.5 sm:text-sm sm:min-w-0",
             (isActive || isFlyoutOpen)
               ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/25"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -216,7 +194,7 @@ export default function BottomNav() {
               <Link key={item.labelKey} to={item.path} className={itemClasses}>
                 <item.icon className="w-5 h-5 shrink-0" />
                 <span className="whitespace-nowrap">{t(item.labelKey)}</span>
-                {anyBadge && <span className="absolute top-1.5 right-3 sm:top-1/2 sm:-translate-y-1/2 sm:right-2.5 w-2 h-2 bg-orange-500 rounded-full" />}
+                {anyBadge && <span className="absolute top-1.5 right-3 w-2 h-2 bg-orange-500 rounded-full" />}
               </Link>
             );
           }
@@ -230,7 +208,7 @@ export default function BottomNav() {
               className={itemClasses}>
               <item.icon className="w-5 h-5 shrink-0" />
               <span className="whitespace-nowrap">{t(item.labelKey)}</span>
-              {anyBadge && <span className="absolute top-1.5 right-3 sm:top-1/2 sm:-translate-y-1/2 sm:right-2.5 w-2 h-2 bg-orange-500 rounded-full" />}
+              {anyBadge && <span className="absolute top-1.5 right-3 w-2 h-2 bg-orange-500 rounded-full" />}
             </button>
           );
         })}
@@ -244,14 +222,23 @@ export default function BottomNav() {
             onMouseLeave={scheduleCloseFlyout}
             className={cn(
               "fixed z-[70] bg-card text-foreground border border-border rounded-2xl shadow-2xl overflow-hidden",
-              flyout.width == null && (flyoutHasSubgroups ? "w-[min(92vw,820px)]" : "w-64")
+              flyoutHasSubgroups ? "w-[min(92vw,820px)]" : "w-64"
             )}
-            style={{ left: flyout.left, bottom: flyout.bottom, top: flyout.top, width: flyout.width, maxHeight: flyout.top != null ? "80vh" : undefined }}>
-            <div className="px-4 pt-3 pb-1">
+            style={{ left: flyout.left, bottom: flyout.bottom }}>
+            <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1">
               <p className="text-sm font-bold text-foreground">
                 {t(flyoutItem.labelKey)}
                 <span className="ml-1.5 font-normal text-muted-foreground">· {flyoutLeafCount} işlem</span>
               </p>
+              {flyoutPrimaryPath && (
+                <button
+                  type="button"
+                  onClick={() => { setFlyout(null); navigate(flyoutPrimaryPath); }}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
+                >
+                  Tüm modülü aç <ArrowUpRight className="w-3 h-3" />
+                </button>
+              )}
             </div>
             <div
               className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
@@ -259,7 +246,7 @@ export default function BottomNav() {
               {flyoutItem.children.map(renderFlyoutColumn)}
             </div>
             {flyoutRecent.length > 0 && (
-              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 px-4 py-2 border-t border-border text-xs text-muted-foreground bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20">
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 px-4 py-2 border-t border-border text-xs text-muted-foreground bg-muted/30">
                 <span className="shrink-0">Son kullanılan:</span>
                 {flyoutRecent.map((v, i) => (
                   <span key={v.path} className="flex items-center gap-1.5">

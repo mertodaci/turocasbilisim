@@ -113,11 +113,14 @@ export default function BottomNav() {
       <Link key={it.path} to={it.path}
         onClick={() => setFlyout(null)}
         className={cn(
-          "group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
+          "group flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
           active ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-foreground/70 hover:bg-muted"
         )}>
-        <it.icon className="w-4 h-4 shrink-0" />
-        <span className="truncate flex-1 min-w-0" title={t(it.labelKey)}>{t(it.labelKey)}</span>
+        <it.icon className="w-4 h-4 shrink-0 mt-0.5" />
+        {/* Kırpmak yerine sarıyor — en uzun etiket bile ("Olması Gereken
+            Saatler Raporu" gibi) her zaman tam okunur, sütun genişliğine
+            bağımlı değil. */}
+        <span className="flex-1 min-w-0 leading-snug">{t(it.labelKey)}</span>
         {showLeaveBadge && <span className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full">{pendingLeaveCount}</span>}
         {showExpenseBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseCount}</span>}
         {showExpenseIKBadge && <span className="flex items-center justify-center w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingExpenseIKCount}</span>}
@@ -125,14 +128,14 @@ export default function BottomNav() {
         {showMessageBadge && <span className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full">{unreadMessageCount}</span>}
         {showTodoBadge && <span className="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-[10px] font-bold rounded-full">{unreadTodoCount}</span>}
         {showStokBadge && <span className="flex items-center justify-center min-w-5 h-5 px-1 bg-orange-500 text-white text-[10px] font-bold rounded-full">{stokUyariCount}</span>}
-        {active && <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-white/20 shrink-0">şu an</span>}
+        {active && <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-white/20 shrink-0 mt-0.5">şu an</span>}
         <button
           onClick={(e) => toggleFavorite(e, it.labelKey)}
-          className={cn("opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted shrink-0", isFav && "opacity-100")}
+          className={cn("opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted shrink-0 mt-0.5", isFav && "opacity-100")}
           title={isFav ? "Favorilerden çıkar" : "Favorilere ekle"}>
           <Star className={cn("w-3.5 h-3.5", isFav ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40")} />
         </button>
-        <ChevronRight className="w-3.5 h-3.5 text-current opacity-30 group-hover:opacity-60 shrink-0" />
+        <ChevronRight className="w-3.5 h-3.5 text-current opacity-30 group-hover:opacity-60 shrink-0 mt-0.5" />
       </Link>
     );
   };

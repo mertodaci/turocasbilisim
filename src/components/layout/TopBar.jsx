@@ -49,6 +49,8 @@ export function NotificationBell() {
   }, [total]);
 
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => setOpen(false), 5000);
@@ -68,7 +70,14 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={triggerRef}
+        onClick={() => {
+          if (!open && triggerRef.current) {
+            const r = triggerRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+          }
+          setOpen((v) => !v);
+        }}
         title="Bildirimler"
         className="relative h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
       >
@@ -86,7 +95,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-64 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
+          <div style={{ position: "fixed", top: pos.top, right: pos.right }} className="w-64 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
             <div className="px-4 py-3 border-b">
               <p className="text-sm font-semibold">Bildirimler</p>
             </div>

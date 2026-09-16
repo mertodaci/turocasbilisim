@@ -130,7 +130,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (searchParams.get("edit") === "widgets") startEdit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
   const removeWidget = (id) => {
     setDraftLayout((prev) => {
       const columns = {};

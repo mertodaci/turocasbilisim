@@ -67,6 +67,8 @@ const ALL_IDS = new Set(WIDGET_DEFS.map((w) => w.id));
 // üst-seviye olsun fark etmez).
 export function reconcileLayout(saved) {
   if (!saved || !saved.columns) return DEFAULT_LAYOUT;
+  const hidden = (saved.hidden || []).filter((id) => ALL_IDS.has(id));
+  const hiddenSet = new Set(hidden);
   const seen = new Set();
   const columns = { sol: [], orta: [], sag: [] };
   for (const col of ["sol", "orta", "sag"]) {
@@ -74,10 +76,12 @@ export function reconcileLayout(saved) {
       if (TOP_LEVEL_IDS.has(id) && !seen.has(id)) { columns[col].push(id); seen.add(id); }
     }
   }
+  // Yalnızca bugüne kadar hiç görülmemiş (ne sütunda ne gizli listede olan)
+  // YENİ widget id'leri varsayılan sütununa eklenir — kullanıcının bilerek
+  // "X" ile kapatıp kaydettiği bir widget burada sessizce geri gelmez.
   for (const def of WIDGET_DEFS) {
-    if (def.topLevel && !seen.has(def.id)) columns[def.column].push(def.id);
+    if (def.topLevel && !seen.has(def.id) && !hiddenSet.has(def.id)) columns[def.column].push(def.id);
   }
-  const hidden = (saved.hidden || []).filter((id) => ALL_IDS.has(id));
   return { hidden, columns };
 }
 

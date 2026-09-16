@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, CheckCircle2, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Pencil, Check, X, ChevronUp, ChevronDown, Flag } from "lucide-react";
 import { toast } from "sonner";
 
 const COLOR_OPTIONS = [
@@ -394,19 +394,21 @@ export default function JobTrackingTicketStatuses() {
                     {status.is_final == 1 && (
                       <Badge variant="outline" className="text-xs shrink-0">Son Durum</Badge>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setDefaultRequest(status)}
-                      title="Müşteri yeni bir talep/bilet oluşturduğunda sistem bu durumu başlangıç olarak kullanır"
-                      className={`text-xs shrink-0 px-2 py-1 rounded-full border transition-colors ${
-                        status.is_default == 1
-                          ? "bg-indigo-100 text-indigo-700 border-indigo-300 font-semibold"
-                          : "bg-card text-muted-foreground border-border/50 hover:bg-muted"
-                      }`}
-                    >
-                      {status.is_default == 1 ? "✓ Talep Başlangıcı" : "Talep Başlangıcı Yap"}
-                    </button>
                     <div className="flex items-center gap-2 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => setDefaultRequest(status)}
+                        title={status.is_default == 1
+                          ? "Müşteri talebi bu durumda başlıyor"
+                          : "Müşteri yeni bir talep/bilet oluşturduğunda sistem bu durumu başlangıç olarak kullanır"}
+                        className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                          status.is_default == 1
+                            ? "bg-indigo-100 text-indigo-600 border-indigo-300"
+                            : "bg-card text-muted-foreground/50 border-border/50 hover:text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Flag className="w-3.5 h-3.5" fill={status.is_default == 1 ? "currentColor" : "none"} />
+                      </button>
                       <Switch
                         checked={!!status.is_active}
                         onCheckedChange={(v) => applyStatus(status, { is_active: v ? 1 : 0 })}

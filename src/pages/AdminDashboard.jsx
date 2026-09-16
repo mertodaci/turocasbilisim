@@ -8,7 +8,7 @@ import { tr } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, Compass, Settings2, GripVertical, X, Plus, Save, Undo2 } from "lucide-react";
+import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, Compass, Settings2, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,7 +21,7 @@ import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useLanguage } from "@/lib/LanguageContext";
 import { getAllLeafItems } from "@/components/layout/navItems";
-import { WIDGET_DEFS, DEFAULT_LAYOUT, reconcileLayout, widgetLabel } from "@/lib/dashboardWidgets";
+import { WIDGET_DEFS, DEFAULT_LAYOUT, reconcileLayout, widgetLabel, isTopLevelWidget } from "@/lib/dashboardWidgets";
 
 const QUICK_ACTIONS = [
   { label: "Yeni Müşteri", to: "/musteriler", icon: UserPlus },
@@ -91,6 +91,7 @@ export default function AdminDashboard() {
   const { data: savedLayout } = useQuery({ queryKey: ["dashboard-layout"], queryFn: () => flowApi.auth.getDashboardLayout() });
   const [editMode, setEditMode] = useState(false);
   const [draftLayout, setDraftLayout] = useState(DEFAULT_LAYOUT);
+  const [showAllGorevler, setShowAllGorevler] = useState(false);
   useEffect(() => {
     if (!editMode) setDraftLayout(reconcileLayout(savedLayout));
   }, [savedLayout, editMode]);
@@ -115,6 +116,11 @@ export default function AdminDashboard() {
     });
   };
   const addWidgetBack = (id) => {
+    if (!isTopLevelWidget(id)) {
+      // Alt-öğe (ör. tek bir KPI kartı) — sütuna eklenmez, yalnızca gizli değil sayılır.
+      setDraftLayout((prev) => ({ ...prev, hidden: prev.hidden.filter((x) => x !== id) }));
+      return;
+    }
     const col = WIDGET_DEFS.find((w) => w.id === id)?.column || "orta";
     setDraftLayout((prev) => ({
       hidden: prev.hidden.filter((x) => x !== id),
@@ -268,17 +274,17 @@ export default function AdminDashboard() {
       </div>
     ),
     duyuru: activeAnnouncements.length > 0 ? (
-      <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/95 border border-violet-200/50 dark:border-violet-900/40 flex items-stretch">
-        <div className="shrink-0 px-4 py-2 flex items-center gap-2 bg-violet-100/60 dark:bg-violet-900/90">
-          <Megaphone className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-          <span className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Duyuru</span>
+      <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/95 border border-violet-200/50 dark:border-violet-900/40 flex items-stretch shadow-sm">
+        <div className="shrink-0 px-4 py-3 flex items-center gap-2 bg-violet-100/60 dark:bg-violet-900/90">
+          <Megaphone className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+          <span className="text-sm font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Duyuru</span>
         </div>
-        <div className="overflow-hidden flex-1 py-2 px-4 flex items-center">
+        <div className="overflow-hidden flex-1 py-3 px-4 flex items-center">
           <div className="animate-marquee whitespace-nowrap">
             {activeAnnouncements.map((a) => (
               <span key={a.id} className="inline-flex items-center gap-2 mr-14">
-                {a.title && <span className="font-semibold text-foreground text-xs">{a.title}:</span>}
-                <span className="text-muted-foreground text-xs">{a.content}</span>
+                {a.title && <span className="font-bold text-foreground text-sm">{a.title}:</span>}
+                <span className="text-foreground/80 text-sm sm:text-base font-medium">{a.content}</span>
               </span>
             ))}
           </div>
@@ -289,96 +295,162 @@ export default function AdminDashboard() {
         <p className="text-xs text-violet-700 dark:text-violet-400">Aktif duyuru yok</p>
       </div>
     ),
-    gorevlerim: gorevler.length > 0 ? (
-      <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
-          <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
-          <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
-          <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
-        </div>
-        <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
-          {gorevler.map((g) => (
-            <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
-              <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
-              <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
-              {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
-              <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
+    gorevlerim_pair: (() => {
+      const showGorevlerim = !draftLayout.hidden.includes("gorevlerim");
+      const showBenimIslerim = !draftLayout.hidden.includes("benim_islerim");
+      if (!showGorevlerim && !showBenimIslerim) return null;
+      const visibleGorevler = showAllGorevler ? gorevler : gorevler.slice(0, 5);
+
+      const gorevlerimCard = gorevler.length > 0 ? (
+        <div className="relative rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
+          {editMode && (
+            <button type="button" onClick={() => removeWidget("gorevlerim")} className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
+              {gorevler.length > 5 && (
+                <button type="button" onClick={() => setShowAllGorevler((v) => !v)}
+                  className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+                  title={showAllGorevler ? "Daha az göster" : "Tümünü göster"}>
+                  {showAllGorevler ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
-    ) : (
-      <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40 px-4 py-3">
-        <p className="text-xs text-amber-700 dark:text-amber-400">Bugün için bekleyen bir görev yok</p>
-      </div>
-    ),
-    benim_islerim: (
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-          <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
-          <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
-        </div>
-        <div className="p-3 space-y-2">
-          {benimIslerim.map((it, i) => (
-            <Link key={i} to={it.to} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm", TONES[it.tone])}>
-              <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-card/70">
-                <it.icon className={cn("w-5 h-5", ICON_TONES[it.tone])} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className={cn("text-xl font-bold leading-none", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</p>
-                <p className="text-xs text-foreground/80 truncate mt-1">{it.label}</p>
+          </div>
+          <div className={cn("p-2 space-y-0.5", showAllGorevler && "max-h-72 overflow-y-auto")}>
+            {visibleGorevler.map((g) => (
+              <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
+                <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
+                <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
+                {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
+                <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
               </div>
-            </Link>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    ),
-    yaklasan_sozlesme_bitisleri: (
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.blue)}><ScrollText className="w-3.5 h-3.5" /></span> Yaklaşan Sözleşme Bitişleri
-          </h3>
-          <Link to="/sozlesmeler" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
+      ) : (
+        <div className="relative rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40 px-4 py-3">
+          {editMode && (
+            <button type="button" onClick={() => removeWidget("gorevlerim")} className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <p className="text-xs text-amber-700 dark:text-amber-400">Bugün için bekleyen bir görev yok</p>
         </div>
-        {expiring.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Yaklaşan sözleşme bitişi yok</p></div>
-        ) : (
-          <div className="space-y-2">
-            {expiring.map((c, i) => (
-              <Link key={i} to="/sozlesmeler" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+      );
+
+      const benimIslerimCard = (
+        <div className="relative bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+          {editMode && (
+            <button type="button" onClick={() => removeWidget("benim_islerim")} className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
+          </div>
+          <div className="p-3 space-y-2">
+            {benimIslerim.map((it, i) => (
+              <Link key={i} to={it.to} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm", TONES[it.tone])}>
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-card/70">
+                  <it.icon className={cn("w-5 h-5", ICON_TONES[it.tone])} />
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{c.company_name || "—"}</p>
-                  {c.title && <p className="text-xs text-muted-foreground truncate">{c.title}</p>}
+                  <p className={cn("text-xl font-bold leading-none", it.n > 0 ? ICON_TONES[it.tone] : "text-muted-foreground/50")}>{it.n}</p>
+                  <p className="text-xs text-foreground/80 truncate mt-1">{it.label}</p>
                 </div>
-                <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
               </Link>
             ))}
           </div>
-        )}
-      </div>
-    ),
-    bilet_hareketi: (
-      <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
-        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-          <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><TrendingUp className="w-3.5 h-3.5" /></span> Son 7 Gün · Bilet Hareketi
-        </h3>
-        {(summary.dailyTrend || []).length === 0 ? (
-          <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
-        ) : (
-          <ResponsiveContainer width="100%" height={140}>
-            <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
-              <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
-              <Legend wrapperStyle={{ fontSize: "11px" }} />
-              <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
-              <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    ),
+        </div>
+      );
+
+      if (showGorevlerim && showBenimIslerim) {
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2">{gorevlerimCard}</div>
+            <div>{benimIslerimCard}</div>
+          </div>
+        );
+      }
+      return showGorevlerim ? gorevlerimCard : benimIslerimCard;
+    })(),
+    sozlesme_bilet_pair: (() => {
+      const showSozlesme = !draftLayout.hidden.includes("yaklasan_sozlesme_bitisleri");
+      const showBilet = !draftLayout.hidden.includes("bilet_hareketi");
+      if (!showSozlesme && !showBilet) return null;
+
+      const sozlesmeCard = (
+        <div className="relative bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+          {editMode && (
+            <button type="button" onClick={() => removeWidget("yaklasan_sozlesme_bitisleri")} className="absolute top-3 right-3 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.blue)}><ScrollText className="w-3.5 h-3.5" /></span> Yaklaşan Sözleşme Bitişleri
+            </h3>
+            <Link to="/sozlesmeler" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
+          </div>
+          {expiring.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground"><CheckSquare className="w-10 h-10 mx-auto mb-2 opacity-20" /><p className="text-sm">Yaklaşan sözleşme bitişi yok</p></div>
+          ) : (
+            <div className="space-y-2">
+              {expiring.map((c, i) => (
+                <Link key={i} to="/sozlesmeler" className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{c.company_name || "—"}</p>
+                    {c.title && <p className="text-xs text-muted-foreground truncate">{c.title}</p>}
+                  </div>
+                  <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 shrink-0">{c.end_date}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+      const biletCard = (
+        <div className="relative bg-card rounded-2xl border border-border/50 shadow-sm p-5">
+          {editMode && (
+            <button type="button" onClick={() => removeWidget("bilet_hareketi")} className="absolute top-3 right-3 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><TrendingUp className="w-3.5 h-3.5" /></span> Son 7 Gün · Bilet Hareketi
+          </h3>
+          {(summary.dailyTrend || []).length === 0 ? (
+            <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={(summary.dailyTrend || []).map(d => ({ name: format(new Date(d.d), "EEE", { locale: tr }), acilan: d.opened, kapanan: d.closed }))}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+                <Tooltip contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                <Legend wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="acilan" fill="#6366f1" radius={[4, 4, 0, 0]} name="Açılan" />
+                <Bar dataKey="kapanan" fill="#10b981" radius={[4, 4, 0, 0]} name="Kapanan" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      );
+
+      return (
+        <div className={cn("grid grid-cols-1 gap-5", showSozlesme && showBilet && "lg:grid-cols-2")}>
+          {showSozlesme && sozlesmeCard}
+          {showBilet && biletCard}
+        </div>
+      );
+    })(),
     son_acik_biletler: (
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
@@ -483,22 +555,34 @@ export default function AdminDashboard() {
       </div>
     ),
   };
-  kpis.forEach((k) => {
-    widgetNodes[k.id] = (
-      <Link to={k.path}
-        className="bg-card rounded-2xl border border-border/50 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 block">
-        <div className="flex items-center justify-between mb-3">
-          <span className={cn("w-10 h-10 rounded-xl flex items-center justify-center", ICON_SQUARE[k.tone])}>
-            <k.icon size={20} />
-          </span>
-          <ArrowUpRight size={16} className="text-muted-foreground/40" />
-        </div>
-        <div className="text-2xl font-bold text-foreground truncate">{k.value}</div>
-        <div className="text-sm text-muted-foreground mt-0.5">{k.label}</div>
-        <p className="text-xs text-muted-foreground/80 mt-1 truncate">{k.sub}</p>
-      </Link>
+  widgetNodes.kpi_banner = (() => {
+    const visibleKpis = kpis.filter((k) => !draftLayout.hidden.includes(k.id));
+    if (visibleKpis.length === 0) return null;
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {visibleKpis.map((k) => (
+          <Link key={k.id} to={k.path}
+            className="relative bg-card rounded-2xl border border-border/50 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 block">
+            {editMode && (
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeWidget(k.id); }}
+                className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <div className="flex items-center justify-between mb-3">
+              <span className={cn("w-10 h-10 rounded-xl flex items-center justify-center", ICON_SQUARE[k.tone])}>
+                <k.icon size={20} />
+              </span>
+              <ArrowUpRight size={16} className="text-muted-foreground/40" />
+            </div>
+            <div className="text-2xl font-bold text-foreground truncate">{k.value}</div>
+            <div className="text-sm text-muted-foreground mt-0.5">{k.label}</div>
+            <p className="text-xs text-muted-foreground/80 mt-1 truncate">{k.sub}</p>
+          </Link>
+        ))}
+      </div>
     );
-  });
+  })();
 
   // Düzenleme modunda her widget'ı saran, tutamaç + kaldır (X) butonu
   // ekleyen kabuk. Normal görünümde widget aynen (kabuksuz) render edilir.
@@ -518,11 +602,12 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderColumn = (col, className) => (
+  const renderColumn = (col, className, header) => (
     editMode ? (
       <Droppable droppableId={col} type="widget">
         {(provided) => (
           <div ref={provided.innerRef} {...provided.droppableProps} className={cn(className, "min-h-[60px] rounded-2xl", "outline-dashed outline-1 outline-border/50 p-1")}>
+            {header}
             {draftLayout.columns[col].map((id, index) => (
               <Draggable key={id} draggableId={id} index={index}>
                 {(dragProvided) => (
@@ -538,9 +623,21 @@ export default function AdminDashboard() {
       </Droppable>
     ) : (
       <div className={className}>
+        {header}
         {draftLayout.columns[col].map((id) => <div key={id}>{widgetNodes[id]}</div>)}
       </div>
     )
+  );
+
+  const sagToolbar = (
+    <div className="flex items-center justify-end gap-2">
+      <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" title="Atlas Görünümü" asChild>
+        <Link to="/atlas"><Compass className="w-3.5 h-3.5" /></Link>
+      </Button>
+      <Button size="icon" variant={editMode ? "default" : "outline"} className="h-7 w-7 shrink-0" title="Widget'ları Düzenle" onClick={() => (editMode ? cancelEdit() : startEdit())}>
+        <Settings2 className="w-3.5 h-3.5" />
+      </Button>
+    </div>
   );
 
   const content = (
@@ -573,12 +670,6 @@ export default function AdminDashboard() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" title="Atlas Görünümü" asChild>
-                <Link to="/atlas"><Compass className="w-3.5 h-3.5" /></Link>
-              </Button>
-              <Button size="icon" variant={editMode ? "default" : "outline"} className="h-7 w-7 shrink-0" title="Widget'ları Düzenle" onClick={() => (editMode ? cancelEdit() : startEdit())}>
-                <Settings2 className="w-3.5 h-3.5" />
-              </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-1">İyi bir hafta geçirmeniz dileğiyle.</p>
           </div>
@@ -620,7 +711,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3")}
+      {renderColumn("sag", "space-y-4 xl:sticky xl:top-24 order-3", sagToolbar)}
     </div>
   );
 

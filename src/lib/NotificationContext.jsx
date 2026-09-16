@@ -42,6 +42,12 @@ export const NotificationProvider = ({ children }) => {
             queryClient.invalidateQueries({ queryKey: ['messages'] });
             queryClient.invalidateQueries({ queryKey: ['notif-conversations'] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
+            // Yönetim Merkezi'nin canlı yenilenmesi — aynı SSE sinyali, ek bir
+            // bağlantı/altyapı gerekmeden dashboard sorgularını da tazeler.
+            queryClient.invalidateQueries({ queryKey: ['admin-summary'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-executive'] });
+            queryClient.invalidateQueries({ queryKey: ['ik-dashboard-admin'] });
+            queryClient.invalidateQueries({ queryKey: ['dash-recent'] });
           }
         } catch {}
       };

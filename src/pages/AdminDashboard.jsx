@@ -812,7 +812,7 @@ export default function AdminDashboard() {
         {renderColumn("orta", "space-y-5")}
 
         <div className="text-center text-xs text-muted-foreground pb-2">
-          Canlı veri · Her 10 dakikada otomatik yenilenir
+          Canlı veri · anlık güncelleniyor
         </div>
         </div>
 

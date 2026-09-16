@@ -555,6 +555,11 @@ function pollDB() {
       job_tickets: db.prepare("SELECT COUNT(*) as c FROM job_tickets").get()?.c || 0,
       messages: db.prepare("SELECT COUNT(*) as c FROM messages").get()?.c || 0,
       todos: db.prepare("SELECT COUNT(*) as c FROM todos").get()?.c || 0,
+      // Yönetim Merkezi'nin canlı yenilenmesi için — müşteri/sözleşme/personel
+      // eklenince de değişiklik sinyali gitsin (yalnız bekleyen onaylar değil).
+      customers: db.prepare("SELECT COUNT(*) as c FROM customers").get()?.c || 0,
+      customer_contracts: db.prepare("SELECT COUNT(*) as c FROM customer_contracts").get()?.c || 0,
+      employees: db.prepare("SELECT COUNT(*) as c FROM employees").get()?.c || 0,
       stok_uyari: (() => {
         try {
           return db.prepare(`SELECT

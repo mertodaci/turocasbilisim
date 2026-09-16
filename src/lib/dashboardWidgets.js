@@ -13,6 +13,7 @@
 export const WIDGET_DEFS = [
   // Sol sütun
   { id: "profil_karti", label: "Profil Kartı", column: "sol", topLevel: true },
+  { id: "arama", label: "Arama", column: "sol", topLevel: true },
   { id: "favoriler", label: "Favoriler", column: "sol", topLevel: true },
   { id: "hizli_islemler", label: "Hızlı İşlemler", column: "sol", topLevel: true },
   { id: "son_kullanilanlar", label: "Son Kullanılanlar", column: "sol", topLevel: true },
@@ -26,6 +27,7 @@ export const WIDGET_DEFS = [
   { id: "son_sozlesmeler_widget", label: "Son Sözleşmeler", column: "orta", topLevel: true },
   { id: "son_stok_fisleri", label: "Son Stok Fişleri", column: "orta", topLevel: true },
   { id: "son_calisanlar", label: "Son İşe Alınan Çalışanlar", column: "orta", topLevel: true },
+  { id: "haber_bulteni", label: "Haber Bülteni", column: "orta", topLevel: true },
   // "gorevlerim_pair" alt-öğeleri
   { id: "gorevlerim", label: "Görevlerim", parent: "gorevlerim_pair" },
   { id: "benim_islerim", label: "Benim İşlerim", parent: "gorevlerim_pair" },
@@ -50,9 +52,10 @@ export const WIDGET_DEFS = [
 
 export const DEFAULT_LAYOUT = {
   hidden: [],
+  config: {},
   columns: {
-    sol: ["profil_karti", "favoriler", "hizli_islemler", "son_kullanilanlar"],
-    orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler", "son_musteriler", "son_sozlesmeler_widget", "son_stok_fisleri", "son_calisanlar"],
+    sol: ["profil_karti", "arama", "favoriler", "hizli_islemler", "son_kullanilanlar"],
+    orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler", "son_musteriler", "son_sozlesmeler_widget", "son_stok_fisleri", "son_calisanlar", "haber_bulteni"],
     sag: ["hakedis_ozet", "hava_durumu", "takvim", "yaklasan_takvim", "ekip_bugun", "son_islemler"],
   },
 };
@@ -67,6 +70,7 @@ const ALL_IDS = new Set(WIDGET_DEFS.map((w) => w.id));
 // üst-seviye olsun fark etmez).
 export function reconcileLayout(saved) {
   if (!saved || !saved.columns) return DEFAULT_LAYOUT;
+  const config = saved.config || {};
   const hidden = (saved.hidden || []).filter((id) => ALL_IDS.has(id));
   const hiddenSet = new Set(hidden);
   const seen = new Set();
@@ -82,7 +86,7 @@ export function reconcileLayout(saved) {
   for (const def of WIDGET_DEFS) {
     if (def.topLevel && !seen.has(def.id) && !hiddenSet.has(def.id)) columns[def.column].push(def.id);
   }
-  return { hidden, columns };
+  return { hidden, columns, config };
 }
 
 export function widgetLabel(id) {

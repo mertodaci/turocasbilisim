@@ -15,6 +15,8 @@ import MiniCalendarWidget from "@/components/dashboard/MiniCalendarWidget";
 import WeatherWidgetCard from "@/components/dashboard/WeatherWidgetCard";
 import HakedisWidgetCard from "@/components/dashboard/HakedisWidgetCard";
 import RecentEntityWidgetCard from "@/components/dashboard/RecentEntityWidgetCard";
+import SearchWidgetCard from "@/components/dashboard/SearchWidgetCard";
+import NewsWidgetCard from "@/components/dashboard/NewsWidgetCard";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
@@ -241,6 +243,11 @@ export default function AdminDashboard() {
   // görünürlük artık sabit JSX sırası değil, `draftLayout`'tan okunuyor.
   const roleLabels = { admin: "Sistem Yöneticisi", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri", guvenlik: "Güvenlik" };
 
+  const newsCategories = draftLayout.config?.haber_bulteni?.categories || [];
+  const setNewsCategories = (categories) => {
+    setDraftLayout((prev) => ({ ...prev, config: { ...prev.config, haber_bulteni: { categories } } }));
+  };
+
   const widgetNodes = {
     profil_karti: (
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
@@ -295,6 +302,7 @@ export default function AdminDashboard() {
         </div>
       </div>
     ),
+    arama: <SearchWidgetCard iconSquareTone={ICON_SQUARE.slate} />,
     favoriler: (
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
@@ -607,6 +615,10 @@ export default function AdminDashboard() {
       <RecentEntityWidgetCard title="Son İşe Alınan Çalışanlar" icon={Users} iconSquareTone={ICON_SQUARE.indigo}
         entity="Employee" sort="-hire_date" limit={5} linkTo="/calisanlar"
         mapItem={(e) => ({ label: e.full_name, sub: e.hire_date, to: `/calisan/${e.id}` })} />
+    ),
+    haber_bulteni: (
+      <NewsWidgetCard iconSquareTone={ICON_SQUARE.rose} editMode={editMode}
+        categories={newsCategories} onCategoriesChange={setNewsCategories} />
     ),
     hakedis_ozet: <HakedisWidgetCard iconSquareTone={ICON_SQUARE.emerald} />,
     hava_durumu: <WeatherWidgetCard iconSquareTone={ICON_SQUARE.blue} />,

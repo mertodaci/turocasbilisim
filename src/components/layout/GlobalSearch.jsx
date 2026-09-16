@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Search, Building2, ClipboardList } from "lucide-react";
-import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/LanguageContext";
-import { flowApi } from "@/api/flowApiClient";
-import { getAllLeafItems } from "./navItems";
+import { useGlobalSearch } from "@/lib/useGlobalSearch";
 import {
   CommandDialog,
   CommandInput,
@@ -16,36 +13,15 @@ import {
 } from "@/components/ui/command";
 
 // TopBar'daki arama kutusu. Menü sayfaları + favoriler (statik) yanında,
-// dialog açıldığında müşteri ve bilet/talep kayıtlarını da (mevcut
-// Customers.jsx/JobTrackingTickets.jsx'teki "sınırlı sayıda çek + client-side
-// filtrele" deseniyle) getirip arama sonucuna katar. cmdk'nin kendi fuzzy
-// filtresi her CommandItem'ın `value`'suna bakar, ayrı bir filtre motoru
-// yazmaya gerek yok.
+// dialog açıldığında müşteri ve bilet/talep kayıtlarını da getirip arama
+// sonucuna katar (veri/filtre mantığı useGlobalSearch hook'unda — dashboard'daki
+// gömülü Arama widget'ıyla paylaşılıyor). cmdk'nin kendi fuzzy filtresi her
+// CommandItem'ın `value`'suna bakar, ayrı bir filtre motoru yazmaya gerek yok.
 export default function GlobalSearch() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [favorites, setFavorites] = useState([]);
-
-  useEffect(() => {
-    if (!user) return;
-    flowApi.auth.getFavorites().then(setFavorites).catch(() => setFavorites([]));
-  }, [user]);
-
-  const { data: searchCustomers = [] } = useQuery({
-    queryKey: ["global-search-customers"],
-    queryFn: () => flowApi.entities.Customer.list("company_name", 2000),
-    enabled: open,
-    staleTime: 5 * 60 * 1000,
-  });
-  const { data: searchTickets = [] } = useQuery({
-    queryKey: ["global-search-tickets"],
-    queryFn: () => flowApi.entities.JTTicket.list("-created_date", 2000),
-    enabled: open,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { query, setQuery, leafItems, favoriteItems, matchedCustomers, matchedTickets } = useGlobalSearch(open);
 
   // ⌘K / Ctrl+K global kısayolu.
   useEffect(() => {
@@ -59,35 +35,11 @@ export default function GlobalSearch() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const userPerms = user?.permissions || [];
-  const userRole = user?.role || "kullanici";
-  const canViewModule = (moduleKey) => {
-    if (userRole === "admin") return true;
-    const perm = userPerms.find((p) => p.module === moduleKey);
-    return perm ? perm.can_view == 1 : false;
-  };
-
-  const leafItems = getAllLeafItems().filter((i) => canViewModule(i.labelKey));
-  const favoriteItems = favorites
-    .map((key) => leafItems.find((i) => i.labelKey === key))
-    .filter(Boolean);
-
   const go = (path) => {
     setOpen(false);
     setQuery("");
     navigate(path);
   };
-
-  // Müşteri/bilet listeleri 2000'e kadar kayıt taşıyabildiği için, sorgu
-  // en az 2 karakter olmadan hiç render edilmez ve eşleşenler ilk 8 ile
-  // sınırlanır — dialog binlerce CommandItem ile açılıp yavaşlamaz.
-  const q = query.trim().toLowerCase();
-  const matchedCustomers = q.length < 2 ? [] : searchCustomers
-    .filter((c) => `${c.company_name || ""} ${c.city || ""}`.toLowerCase().includes(q))
-    .slice(0, 8);
-  const matchedTickets = q.length < 2 ? [] : searchTickets
-    .filter((tk) => `${tk.title || ""} ${tk.ticket_number || ""} ${tk.customer_name || ""}`.toLowerCase().includes(q))
-    .slice(0, 8);
 
   return (
     <>

@@ -3448,6 +3448,78 @@ app.get('/api/system/health', authMiddleware, requireRoles('admin'), (req, res) 
   });
 });
 
+// ── Haber Bülteni widget'ı — turkiyeningazetesi.com'dan çekim ──────
+// Site RSS/JSON API sunmuyor ama kendi başına sunucu tarafında render
+// ediyor (Next.js App Router) — düz bir fetch + HTML'den regex ile çıkarım
+// yeterli, headless tarayıcı gerekmiyor. Yapı: her kategori bloğu
+// `<div id="kategori-...">...<h3>Etiket</h3>...<article>...</article>...</div>`,
+// her haber `<article>` içinde `<h4>başlık</h4><p>özet</p><p>tarih · Kaynak:
+// <a href=... target="_blank">kaynak adı</a></p>`. CSS modül sınıf adları
+// (hash'li, ör. NewsFeed_story__z3CMF) build değişince kırılabilir — bu
+// yüzden ayrıştırma etiket yapısına göre yapılıyor, class adlarına değil.
+let newsCache = { items: [], ts: 0 };
+async function fetchNews() {
+  try {
+    const res = await fetch('https://turkiyeningazetesi.com/', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TurkonixDashboard/1.0)' },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const items = [];
+    // Her kategori bloğunu (id'li div, kapanışa kadar en yakın eşleşme
+    // yerine bir sonraki aynı-seviye id'li div'e kadar) ayır.
+    const sectionRe = /<div[^>]*\bid="([a-z0-9_-]+)"[^>]*>[\s\S]*?<h3[^>]*>([^<]+)<\/h3>/g;
+    const sectionStarts = [];
+    let m;
+    while ((m = sectionRe.exec(html))) {
+      sectionStarts.push({ id: m[1], label: m[2].trim(), index: m.index });
+    }
+    for (let i = 0; i < sectionStarts.length; i++) {
+      const start = sectionStarts[i].index;
+      const end = i + 1 < sectionStarts.length ? sectionStarts[i + 1].index : html.length;
+      const block = html.slice(start, end);
+      const articleRe = /<article[^>]*>([\s\S]*?)<\/article>/g;
+      let am;
+      while ((am = articleRe.exec(block))) {
+        const art = am[1];
+        const titleM = /<h4[^>]*>([\s\S]*?)<\/h4>/.exec(art);
+        const summaryM = /<p[^>]*>([\s\S]*?)<\/p>/.exec(art);
+        const sourceM = /<a[^>]*href="([^"]+)"[^>]*target="_blank"[^>]*>([\s\S]*?)<\/a>/.exec(art);
+        const dateM = /<p[^>]*>([^<]*)<!--/.exec(art);
+        const stripTags = (s) => (s || '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/\s+/g, ' ').trim();
+        if (!titleM) continue;
+        items.push({
+          category_id: sectionStarts[i].id.replace(/^kategori-/, ''),
+          category_label: sectionStarts[i].label,
+          title: stripTags(titleM[1]),
+          summary: stripTags(summaryM?.[1]),
+          date_text: stripTags(dateM?.[1]),
+          source_name: stripTags(sourceM?.[2]),
+          source_url: sourceM?.[1] || null,
+        });
+      }
+    }
+    return items;
+  } catch (e) {
+    console.warn('Haber çekme hatası:', e.message);
+    return [];
+  }
+}
+async function refreshNewsCache() {
+  const items = await fetchNews();
+  if (items.length > 0) newsCache = { items, ts: Date.now() };
+}
+refreshNewsCache();
+setInterval(refreshNewsCache, 15 * 60 * 1000);
+
+app.get('/api/haberler', authMiddleware, (req, res) => {
+  res.json({ items: newsCache.items, updated_at: newsCache.ts ? new Date(newsCache.ts).toISOString() : null });
+});
+
 // ── Genel hata yakalayıcı ──────────────────────────────────────────
 // ── Devriye Yönetimi — özel uçlar ──────────────────────────────────────
 // Nokta'nın "olması gereken saat"ine göre okuma zamanının durumu:

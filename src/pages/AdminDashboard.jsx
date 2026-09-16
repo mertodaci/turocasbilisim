@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Square, Star } from "lucide-react";
+import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Square, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
@@ -84,7 +84,6 @@ export default function AdminDashboard() {
   const izinliList = hr.onLeaveTodayList || [];
   const sales = exec?.sales || {};
   const contracts = exec?.contracts || {};
-  const isTakibi = exec?.is_takibi || {};
   const su = stokUyari || {};
 
   const hour = new Date().getHours();
@@ -109,7 +108,6 @@ export default function AdminDashboard() {
     { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, tone: "slate", icon: Wallet, path: "/ik/bordro" },
     { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, tone: "rose", icon: Boxes, path: "/stok" },
     { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, tone: "teal", icon: ClipboardList, path: "/is-takibi/tickets" },
-    { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, tone: "purple", icon: Briefcase, path: "/is-takibi" },
   ];
 
   // ── Dikkat gerektiren uyarılar (modüller arası, yalnız > 0) — her biri
@@ -239,17 +237,20 @@ export default function AdminDashboard() {
       {(activeAnnouncements.length > 0 || gorevler.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {activeAnnouncements.length > 0 && (
-            <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40">
+            <div className={cn(
+              "rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40",
+              !(activeAnnouncements.length > 0 && gorevler.length > 0) && "lg:col-span-2"
+            )}>
               <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-200/50 dark:border-violet-900/40">
                 <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.violet)}><Megaphone className="w-4 h-4" /></span>
                 <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Duyuru</h3>
               </div>
-              <div className="overflow-hidden py-3.5 px-4">
+              <div className="overflow-hidden py-2.5 px-4">
                 <div className="animate-marquee whitespace-nowrap">
                   {activeAnnouncements.map((a) => (
                     <span key={a.id} className="inline-flex items-center gap-2 mr-14">
-                      {a.title && <span className="font-bold text-foreground">{a.title}:</span>}
-                      <span className="text-muted-foreground text-sm">{a.content}</span>
+                      {a.title && <span className="font-semibold text-foreground text-xs">{a.title}:</span>}
+                      <span className="text-muted-foreground text-xs">{a.content}</span>
                     </span>
                   ))}
                 </div>
@@ -259,15 +260,18 @@ export default function AdminDashboard() {
 
           {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
           {gorevler.length > 0 && (
-            <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.indigo)}><ListChecks className="w-4 h-4" /></span>
+            <div className={cn(
+              "rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40",
+              !(activeAnnouncements.length > 0 && gorevler.length > 0) && "lg:col-span-2"
+            )}>
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
+                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
                 <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
-                <span className="ml-auto text-xs font-bold bg-muted px-2.5 py-1 rounded-full text-muted-foreground">{gorevler.length} görev</span>
+                <span className="ml-auto text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full">{gorevler.length} görev</span>
               </div>
               <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
                 {gorevler.map((g) => (
-                  <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/50 transition-colors">
+                  <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
                     <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
                     <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
                     {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}

@@ -49,6 +49,12 @@ export const MODULES = [
   { key: "ebys_evraklar",       label: "EBYS — Gelen/Giden Evrak", path: "/ebys/evraklar" },
   { key: "ebys_tanimlar",       label: "EBYS — Evrak Tanımları",  path: "/ebys/tanimlar" },
   { key: "ebys_ayarlari",       label: "EBYS — Ayarlar",         path: "/ebys/ayarlar" },
+  { key: "arsiv_ozet",          label: "Arşiv — Özet",           path: "/arsiv" },
+  { key: "arsiv_sozlesme",      label: "Arşiv — Sözleşmeler",    path: "/arsiv/sozlesmeler" },
+  { key: "arsiv_musteri",       label: "Arşiv — Müşteri Evrakları", path: "/arsiv/musteri-evraklari" },
+  { key: "arsiv_ik",            label: "Arşiv — İnsan Kaynakları", path: "/arsiv/ik" },
+  { key: "arsiv_is_takibi",     label: "Arşiv — İş Takibi",      path: "/arsiv/is-takibi" },
+  { key: "arsiv_bordro",        label: "Arşiv — Bordro",         path: "/arsiv/bordro" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
   { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
   { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },

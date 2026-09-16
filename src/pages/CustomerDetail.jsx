@@ -15,6 +15,7 @@ import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import CustomerFormDialog from "@/components/customers/CustomerFormDialog";
 import ContactFormDialog from "@/components/customers/ContactFormDialog";
 import ModuleFormDialog from "@/components/customers/ModuleFormDialog";
+import { MusteriEvraklari } from "@/components/customers/MusteriEvraklari";
 import { toast } from "sonner";
 import { MONTHS, num, tl, kisa, rowTahsilEdilen, rowAdet, buildHakedisPayloads } from "@/lib/hakedisUtils";
 
@@ -143,7 +144,7 @@ function ContactFormDialogInline({ open, onClose, onSubmit, isLoading, contact }
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const BASE_TABS = ["Kişiler", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi"];
+const BASE_TABS = ["Kişiler", "Sözleşmeler", "Hakediş", "Modüller", "İş Takibi", "Evraklar"];
 
 export default function CustomerDetail() {
   const customerId = window.location.pathname.split("/").pop();
@@ -749,6 +750,11 @@ export default function CustomerDetail() {
               onGenerate={generateHakedis}
               onOpenModule={() => (window.location.href = "/hakedisler")}
             />
+          )}
+
+          {/* Evraklar */}
+          {activeTab === "Evraklar" && (
+            <MusteriEvraklari customerId={customerId} customerName={customer?.company_name} readOnly={!canEdit} />
           )}
 
           {/* Düzenle */}

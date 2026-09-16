@@ -53,6 +53,12 @@ const SozlesmeTurleri = lazy(() => import('./pages/SozlesmeTurleri'));
 const EbysEvraklar = lazy(() => import('./pages/ebys/EbysEvraklar'));
 const EbysTanimlar = lazy(() => import('./pages/ebys/EbysTanimlar'));
 const EbysAyarlar = lazy(() => import('./pages/ebys/EbysAyarlar'));
+const ArsivOzet = lazy(() => import('./pages/arsiv/ArsivOzet'));
+const ArsivSozlesmeler = lazy(() => import('./pages/arsiv/ArsivSozlesmeler'));
+const ArsivMusteriEvraklari = lazy(() => import('./pages/arsiv/ArsivMusteriEvraklari'));
+const ArsivIk = lazy(() => import('./pages/arsiv/ArsivIk'));
+const ArsivIsTakibi = lazy(() => import('./pages/arsiv/ArsivIsTakibi'));
+const ArsivBordro = lazy(() => import('./pages/arsiv/ArsivBordro'));
 const MusteriTanimlari = lazy(() => import('./pages/MusteriTanimlari'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
@@ -323,6 +329,12 @@ const AuthenticatedApp = () => {
         <Route path="/ebys/evraklar" element={guard("ebys_evraklar", <EbysEvraklar />)} />
         <Route path="/ebys/tanimlar" element={guard("ebys_tanimlar", <EbysTanimlar />)} />
         <Route path="/ebys/ayarlar" element={guard("ebys_ayarlari", <EbysAyarlar />)} />
+        <Route path="/arsiv" element={guard("arsiv_ozet", <ArsivOzet />)} />
+        <Route path="/arsiv/sozlesmeler" element={guard("arsiv_sozlesme", <ArsivSozlesmeler />)} />
+        <Route path="/arsiv/musteri-evraklari" element={guard("arsiv_musteri", <ArsivMusteriEvraklari />)} />
+        <Route path="/arsiv/ik" element={guard("arsiv_ik", <ArsivIk />)} />
+        <Route path="/arsiv/is-takibi" element={guard("arsiv_is_takibi", <ArsivIsTakibi />)} />
+        <Route path="/arsiv/bordro" element={guard("arsiv_bordro", <ArsivBordro />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

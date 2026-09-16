@@ -398,12 +398,21 @@ export const devriye = {
   async saatRaporu(p = {}) { const qs = new URLSearchParams(p).toString(); return handleResponse(await fetch(`${BASE_URL}/api/devriye/saat-raporu?${qs}`, { credentials: 'include' })); },
 };
 
+const arsiv = {
+  async sozlesmeler() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/sozlesmeler`, { credentials: 'include' })); },
+  async musteriEvraklari() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/musteri-evraklari`, { credentials: 'include' })); },
+  async ik() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/ik`, { credentials: 'include' })); },
+  async isTakibi() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/is-takibi`, { credentials: 'include' })); },
+  async bordro() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/bordro`, { credentials: 'include' })); },
+};
+
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde
 export const flowApi = {
   auth,
   stok,
   ik,
   devriye,
+  arsiv,
   health: () => fetch(`${BASE_URL}/api/health`).then(r => { if (!r.ok) throw new Error('unhealthy'); return r.json(); }),
   entities: new Proxy({}, {
     get(_, entityName) {

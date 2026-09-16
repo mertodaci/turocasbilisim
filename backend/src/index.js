@@ -309,6 +309,8 @@ const TRASH_TABLES = {
   job_projects:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'name', group: 'Genel' },
   employees:            { col: 'is_deleted', deleted: 1, active: 0, nameField: 'full_name', group: 'Genel' },
   job_kanban_boards:    { col: 'is_active',  deleted: 0, active: 1, nameField: 'name', group: 'Genel' },
+  correspondences:      { col: 'is_deleted', deleted: 1, active: 0, nameField: 'subject', group: 'Genel' },
+  musteri_evraklari:    { col: 'is_deleted', deleted: 1, active: 0, nameField: 'dosya_adi', group: 'Genel' },
   stok_urunler:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
   stok_depolar:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
   stok_raflar:          { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
@@ -363,6 +365,48 @@ app.post('/api/trash/:table/:id/restore', authMiddleware, adminOnly, (req, res) 
         .run(randomUUID(), req.user?.email || 'bilinmiyor', `${req.params.table}_geri_alindi`, `${req.params.table}:${req.params.id}`, null, null);
     } catch (e) {}
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== ARŞİV: modül bazlı salt-okunur kapalı/geçmiş kayıt listeleri =====
+app.get('/api/arsiv/sozlesmeler', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const rows = _adb.prepare(
+      "SELECT cc.*, c.company_name FROM customer_contracts cc LEFT JOIN customers c ON c.id = cc.customer_id WHERE cc.status IN ('suresi_doldu','iptal') ORDER BY cc.end_date DESC"
+    ).all();
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/arsiv/musteri-evraklari', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const rows = _adb.prepare("SELECT * FROM musteri_evraklari WHERE is_deleted = 0 ORDER BY tarih DESC").all();
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/arsiv/ik', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const pasifPersonel = _adb.prepare("SELECT * FROM employees WHERE status = 'pasif' ORDER BY updated_date DESC").all();
+    const evraklar = _adb.prepare(
+      "SELECT e.*, 'ozluk_evrak' as kaynak FROM ik_ozluk_evraklari e WHERE e.is_deleted = 0 AND e.personel_id IN (SELECT id FROM employees WHERE status='pasif') ORDER BY e.created_date DESC"
+    ).all();
+    const tutanaklar = _adb.prepare(
+      "SELECT t.*, 'tutanak' as kaynak FROM ik_tutanaklar t WHERE t.is_deleted = 0 AND t.personel_id IN (SELECT id FROM employees WHERE status='pasif') ORDER BY t.created_date DESC"
+    ).all();
+    res.json({ pasif_personel: pasifPersonel, evraklar, tutanaklar });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/arsiv/is-takibi', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const rows = _adb.prepare(
+      "SELECT * FROM job_tickets WHERE status = 'arsivlendi' OR resolved_at IS NOT NULL ORDER BY resolved_at DESC, updated_date DESC LIMIT 500"
+    ).all();
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/arsiv/bordro', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const rows = _adb.prepare("SELECT * FROM ik_bordro_donemleri WHERE durum = 'kapali' ORDER BY yil DESC, ay DESC").all();
+    res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

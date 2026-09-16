@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity, FileSignature } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity, FileSignature, Archive } from "lucide-react";
 
 // Tek doğruluk kaynağı: uygulamanın tüm navigasyon ağacı. BottomNav.jsx
 // (alt bar + uçan alt-menüler) ve GlobalSearch.jsx (⌘K hızlı atlama) buradan
@@ -160,6 +160,17 @@ export const allNavItems = [
     { labelKey: "ebys_evraklar", path: "/ebys/evraklar", icon: FileText, roles: ["admin", "yonetici", "ik"] },
     { labelKey: "ebys_tanimlar", path: "/ebys/tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
     { labelKey: "ebys_ayarlari", path: "/ebys/ayarlar", icon: Lock, roles: ["admin"] },
+  ]
+},
+{
+  labelKey: "arsiv_yonetimi", path: null, icon: Archive, roles: ["admin", "yonetici"],
+  children: [
+    { labelKey: "arsiv_ozet", path: "/arsiv", icon: Archive, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_sozlesme", path: "/arsiv/sozlesmeler", icon: ScrollText, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_musteri", path: "/arsiv/musteri-evraklari", icon: FileText, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_ik", path: "/arsiv/ik", icon: Users, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_is_takibi", path: "/arsiv/is-takibi", icon: ClipboardList, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_bordro", path: "/arsiv/bordro", icon: Wallet, roles: ["admin", "yonetici"] },
   ]
 },
 {

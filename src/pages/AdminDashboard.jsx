@@ -234,8 +234,8 @@ export default function AdminDashboard() {
 
       {/* DUYURU — ince tek şerit bant, Görevlerim'den bağımsız */}
       {activeAnnouncements.length > 0 && (
-        <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40 flex items-stretch">
-          <div className="shrink-0 px-4 py-2 flex items-center gap-2 bg-violet-100/60 dark:bg-violet-900/30">
+        <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/95 border border-violet-200/50 dark:border-violet-900/40 flex items-stretch">
+          <div className="shrink-0 px-4 py-2 flex items-center gap-2 bg-violet-100/60 dark:bg-violet-900/90">
             <Megaphone className="w-4 h-4 text-violet-600 dark:text-violet-400" />
             <span className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Duyuru</span>
           </div>
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
 
       {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
       {gorevler.length > 0 && (
-        <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40">
+        <div className="rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200/50 dark:border-amber-900/40">
             <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><ListChecks className="w-4 h-4" /></span>
             <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>

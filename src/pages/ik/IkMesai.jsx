@@ -52,7 +52,17 @@ export default function IkMesai() {
   });
   const topluOnay = useMutation({
     mutationFn: (islem) => flowApi.ik.mesaiTopluOnay({ ids: [...sel], islem }),
-    onSuccess: (r) => { invalidate(); setSel(new Set()); toast.success(`${r.guncellenen} kayıt → ${r.durum}`); },
+    onSuccess: (r) => {
+      invalidate();
+      setSel(new Set());
+      if (r.atlanan > 0 && r.guncellenen === 0) {
+        toast.error(`${r.atlanan} kayıt güncellenemedi — bordro dönemi kapalı. Önce Maaş Bordro Yönetimi › Ay Kapanışı'ndan dönemi açın.`);
+      } else if (r.atlanan > 0) {
+        toast.warning(`${r.guncellenen} kayıt ${r.durum === "onayli" ? "onaylandı" : r.durum === "red" ? "reddedildi" : "taslağa alındı"}, ${r.atlanan} kayıt bordro dönemi kapalı olduğu için atlandı.`);
+      } else {
+        toast.success(`${r.guncellenen} kayıt → ${r.durum}`);
+      }
+    },
     onError: (e) => toast.error(String(e?.message || "hata")),
   });
 

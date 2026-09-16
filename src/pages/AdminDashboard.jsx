@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Star } from "lucide-react";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
@@ -14,7 +14,6 @@ import { useActiveAnnouncements } from "@/lib/useActiveAnnouncements";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useLanguage } from "@/lib/LanguageContext";
 import { kisa } from "@/lib/hakedisUtils";
-import { getAllLeafItems } from "@/components/layout/navItems";
 
 const QUICK_ACTIONS = [
   { label: "Yeni Müşteri", to: "/musteriler", icon: UserPlus },
@@ -63,8 +62,6 @@ export default function AdminDashboard() {
   const { data: ikData } = useQuery({ queryKey: ["ik-dashboard-admin"], queryFn: () => flowApi.ik.dashboard(), staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false });
   const { activeAnnouncements } = useActiveAnnouncements();
   const { data: recentCustomers = [] } = useQuery({ queryKey: ["recent-customers"], queryFn: () => flowApi.entities.Customer.list("-created_date", 3) });
-  const { data: favorites = [] } = useQuery({ queryKey: ["favorites"], queryFn: () => flowApi.auth.getFavorites() });
-  const favoriteItems = getAllLeafItems().filter((it) => favorites.includes(it.labelKey));
   const { data: recentContracts = [] } = useQuery({ queryKey: ["recent-contracts"], queryFn: () => flowApi.entities.CustomerContract.list("-created_date", 3) });
 
   const ik = ikData?.kpi || {};
@@ -138,29 +135,8 @@ export default function AdminDashboard() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
 
-      {/* SOL KOLON — Favoriler + Hızlı İşlemler + Son Kullanılanlar */}
+      {/* SOL KOLON — Hızlı İşlemler + Son Kullanılanlar */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-2 xl:order-1">
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white">
-            <Star className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Favoriler</h3>
-          </div>
-          <div className="p-4 pt-3">
-            {favoriteItems.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Henüz favori eklenmedi — sol menüdeki bir öğenin üzerine gelip yıldıza tıklayarak ekleyebilirsiniz.</p>
-            ) : (
-              <div className="space-y-1">
-                {favoriteItems.map((it) => (
-                  <Link key={it.labelKey} to={it.path} className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-muted/60 transition-colors text-sm truncate">
-                    <it.icon className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="truncate">{t(it.labelKey)}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
             <Boxes className="w-4 h-4" />

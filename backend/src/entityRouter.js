@@ -15,6 +15,21 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'ik_ozluk_evraklari','ik_tutanaklar','ik_izin_evraklari',
   'ik_bordro_satirlari'];
 
+// Denetim Kaydı: generic create/update/delete için bu tablolarda loglama
+// atlanır — kullanıcının doğrudan yönettiği bir "ekran" değil, otomatik
+// üretilen yüksek hacimli iç kayıtlar (audit_log'un kendisi hariç, sonsuz
+// döngüye girmesin diye zaten bu router'ın dışında).
+const AUDIT_EXCLUDE_TABLES = ['stok_hareketler', 'card_logs', 'devriye_okumalar', 'sessions'];
+function logAudit(req, tableName, action, targetId, oldValue, newValue) {
+  if (AUDIT_EXCLUDE_TABLES.includes(tableName)) return;
+  try {
+    db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+      .run(uuidv4(), req.user?.email || 'bilinmiyor', action, `${tableName}:${targetId}`,
+        oldValue == null ? null : JSON.stringify(oldValue),
+        newValue == null ? null : JSON.stringify(newValue));
+  } catch (e) { /* denetim kaydı asıl işlemi asla düşürmez */ }
+}
+
 // JSON kolonları olan tablolar (array/object tipindeki alanlar)
 const JSON_COLUMNS = {
   employees: ['education_documents', 'education_history', 'certificates', 'emergency_contacts'],
@@ -873,6 +888,8 @@ function createEntityRouter(tableName) {
         } catch (e) { console.error('[stok] personel kod:', e.message); }
       }
 
+      logAudit(req, tableName, `${tableName}_olusturuldu`, created.id, null, created);
+
       res.status(201).json({ ...parseJsonColumns(tableName, created), ...(tableName === 'employees' ? { _login_created: loginCreated.created, _generated_password: loginCreated.password || undefined } : {}) });
     } catch (err) {
       console.error(err);
@@ -1093,6 +1110,15 @@ function createEntityRouter(tableName) {
         } else if (tableName === 'users' && existing.role !== updated.role) {
           db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
             .run(uuidv4(), req.user?.email || 'bilinmiyor', 'rol_degisikligi', updated.email || existing.email, existing.role, updated.role);
+        } else {
+          // Generic degisiklik günlüğü — yalnizca gercekten degisen alanlarin
+          // kucuk bir diff'i (tum satiri her duzenlemede dokmemek icin).
+          const diffOld = {}, diffNew = {};
+          for (const k of Object.keys(updates)) {
+            if (k === 'updated_date') continue;
+            if (JSON.stringify(existing[k]) !== JSON.stringify(updated[k])) { diffOld[k] = existing[k]; diffNew[k] = updated[k]; }
+          }
+          if (Object.keys(diffNew).length > 0) logAudit(req, tableName, `${tableName}_guncellendi`, req.params.id, diffOld, diffNew);
         }
       } catch(e) {}
 
@@ -1190,6 +1216,7 @@ function createEntityRouter(tableName) {
       } else {
         db.prepare(`DELETE FROM ${tableName} WHERE id = ?`).run(req.params.id);
       }
+      logAudit(req, tableName, `${tableName}_silindi`, req.params.id, existing, null);
       res.json({ success: true, id: req.params.id });
     } catch (err) {
       res.status(500).json({ error: err.message });

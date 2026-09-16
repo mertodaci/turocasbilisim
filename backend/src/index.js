@@ -278,30 +278,76 @@ function requireRoles(...roles) {
   return (req, res, next) =>
     roles.includes(req.user?.role) ? next() : res.status(403).json({ error: 'Bu sayfa için yetkiniz yok' });
 }
-// Audit log listesi
+// Audit log listesi — kullanıcı/tablo/aksiyon-tipi filtresi destekler.
+// action_type: created | updated | deleted | restored | ozel (role/bordro
+// gibi sonek taşımayan eski özel aksiyonlar).
 app.get('/api/audit-log', authMiddleware, adminOnly, (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
-    const rows = _adb.prepare('SELECT * FROM audit_log ORDER BY created_date DESC LIMIT ?').all(limit);
+    const where = [];
+    const params = [];
+    if (req.query.actor) { where.push('actor_email = ?'); params.push(req.query.actor); }
+    if (req.query.table) { where.push('target LIKE ?'); params.push(`${req.query.table}:%`); }
+    const actionSuffix = { created: '_olusturuldu', updated: '_guncellendi', deleted: '_silindi', restored: '_geri_alindi' }[req.query.action_type];
+    if (actionSuffix) { where.push('action LIKE ?'); params.push(`%${actionSuffix}`); }
+    const sql = `SELECT * FROM audit_log ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY created_date DESC LIMIT ?`;
+    const rows = _adb.prepare(sql).all(...params, limit);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 // Cop kutusu: silinmis kayitlar + geri getirme.
 // Cogu tablo is_deleted=1 ile "silinir"; panolar ise is_active=0 ile.
 // Kolon/degerler sabit haritadan gelir (kullanici girdisi degil) -> injection yok.
+// nameField: satırı temsil eden okunur alan (Denetim Kaydı'ndaki
+// SOFT_DELETE_TABLES ile hizalı — entityRouter.js'teki generic silme/geri
+// alma bu tabloların hepsinde çalışıyor, çöp kutusu artık hepsini gösterir).
 const TRASH_TABLES = {
-  customers:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'company_name' },
-  job_tickets:       { col: 'is_deleted', deleted: 1, active: 0, nameField: 'title' },
-  job_projects:      { col: 'is_deleted', deleted: 1, active: 0, nameField: 'name' },
-  employees:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'full_name' },
-  job_kanban_boards: { col: 'is_active',  deleted: 0, active: 1, nameField: 'name' },
+  customers:            { col: 'is_deleted', deleted: 1, active: 0, nameField: 'company_name', group: 'Genel' },
+  job_tickets:          { col: 'is_deleted', deleted: 1, active: 0, nameField: 'title', group: 'Genel' },
+  job_projects:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'name', group: 'Genel' },
+  employees:            { col: 'is_deleted', deleted: 1, active: 0, nameField: 'full_name', group: 'Genel' },
+  job_kanban_boards:    { col: 'is_active',  deleted: 0, active: 1, nameField: 'name', group: 'Genel' },
+  stok_urunler:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
+  stok_depolar:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
+  stok_raflar:          { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
+  stok_sahalar:         { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'Stok' },
+  stok_fisler:          { col: 'is_deleted', deleted: 1, active: 0, nameField: 'fis_no', group: 'Stok' },
+  stok_sayimlar:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'sayim_no', group: 'Stok' },
+  stok_personeller:     { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad_soyad', group: 'Stok' },
+  stok_demirbaslar:     { col: 'is_deleted', deleted: 1, active: 0, nameField: 'urun_adi', group: 'Stok' },
+  stok_rezervasyonlar:  { col: 'is_deleted', deleted: 1, active: 0, nameField: 'urun_adi', group: 'Stok' },
+  ik_subeler:           { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'İnsan Kaynakları' },
+  ik_bolumler:          { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'İnsan Kaynakları' },
+  ik_vardiyalar:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'İnsan Kaynakları' },
+  ik_vardiya_planlari:  { col: 'is_deleted', deleted: 1, active: 0, nameField: 'ad', group: 'İnsan Kaynakları' },
+  ik_mesai_kayitlari:   { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_kesinti_planlari:  { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_kesintiler:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_ic_borclar:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_personel_masraf:   { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_ozluk_evraklari:   { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_tutanaklar:        { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_izin_evraklari:    { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
+  ik_bordro_satirlari:  { col: 'is_deleted', deleted: 1, active: 0, nameField: 'personel_adi', group: 'İnsan Kaynakları' },
 };
+app.get('/api/trash-tables', authMiddleware, adminOnly, (req, res) => {
+  res.json(Object.entries(TRASH_TABLES).map(([key, cfg]) => ({ key, group: cfg.group, nameField: cfg.nameField })));
+});
 app.get('/api/trash/:table', authMiddleware, adminOnly, (req, res) => {
   try {
     const cfg = TRASH_TABLES[req.params.table];
     if (!cfg) return res.status(400).json({ error: 'Gecersiz tablo' });
     const rows = _adb.prepare(`SELECT * FROM ${req.params.table} WHERE ${cfg.col} = ${cfg.deleted} ORDER BY updated_date DESC`).all();
-    res.json(rows);
+    // "Kim sildi" — ayrı bir deleted_by kolonu yok, en son "<tablo>_silindi"
+    // denetim kaydından okunuyor (target = "<tablo>:<id>").
+    const findDeleter = _adb.prepare(
+      "SELECT actor_email, created_date FROM audit_log WHERE target = ? AND action = ? ORDER BY created_date DESC LIMIT 1"
+    );
+    const withActor = rows.map((r) => {
+      const log = findDeleter.get(`${req.params.table}:${r.id}`, `${req.params.table}_silindi`);
+      return { ...r, deleted_by: log?.actor_email || null, deleted_at: log?.created_date || r.updated_date };
+    });
+    res.json(withActor);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/trash/:table/:id/restore', authMiddleware, adminOnly, (req, res) => {
@@ -309,6 +355,11 @@ app.post('/api/trash/:table/:id/restore', authMiddleware, adminOnly, (req, res) 
     const cfg = TRASH_TABLES[req.params.table];
     if (!cfg) return res.status(400).json({ error: 'Gecersiz tablo' });
     _adb.prepare(`UPDATE ${req.params.table} SET ${cfg.col} = ${cfg.active}, updated_date = ? WHERE id = ?`).run(new Date().toISOString(), req.params.id);
+    try {
+      const { randomUUID } = require('crypto');
+      _adb.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
+        .run(randomUUID(), req.user?.email || 'bilinmiyor', `${req.params.table}_geri_alindi`, `${req.params.table}:${req.params.id}`, null, null);
+    } catch (e) {}
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

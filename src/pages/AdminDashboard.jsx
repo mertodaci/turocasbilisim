@@ -20,6 +20,7 @@ import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useLanguage } from "@/lib/LanguageContext";
 import { getAllLeafItems } from "@/components/layout/navItems";
 import { WIDGET_DEFS, DEFAULT_LAYOUT, reconcileLayout, widgetLabel, isTopLevelWidget } from "@/lib/dashboardWidgets";
+import { NotificationBell } from "@/components/layout/TopBar";
 
 const QUICK_ACTIONS = [
   { label: "Yeni Müşteri", to: "/musteriler", icon: UserPlus },
@@ -90,6 +91,16 @@ export default function AdminDashboard() {
     enabled: !!user?.email,
     select: (data) => data[0],
   });
+  const { data: departmentDefs = [] } = useQuery({
+    queryKey: ["definitions", "departman"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "departman" }),
+  });
+  const { data: positionDefs = [] } = useQuery({
+    queryKey: ["definitions", "pozisyon"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "pozisyon" }),
+  });
+  const getDeptLabel = (val) => departmentDefs.find((d) => d.value === val)?.label || val;
+  const getPosLabel = (val) => positionDefs.find((p) => p.value === val)?.label || val;
 
   // Widget düzeni (sürükle-bırak + aç/kapa), kullanıcı bazlı kayıtlı
   const { data: savedLayout } = useQuery({ queryKey: ["dashboard-layout"], queryFn: () => flowApi.auth.getDashboardLayout() });
@@ -241,6 +252,7 @@ export default function AdminDashboard() {
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2 mt-3">
+            <NotificationBell />
             <a href={`mailto:${user?.email || ""}`} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors" title="E-posta gönder">
               <Mail className="w-4 h-4 text-muted-foreground" />
             </a>
@@ -256,7 +268,7 @@ export default function AdminDashboard() {
               {myEmployee?.department && (
                 <div className="flex items-center gap-2">
                   <Briefcase className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-foreground truncate">{myEmployee.department}{myEmployee.position ? ` · ${myEmployee.position}` : ""}</span>
+                  <span className="text-xs text-foreground truncate">{getDeptLabel(myEmployee.department)}{myEmployee.position ? ` - ${getPosLabel(myEmployee.position)}` : ""}</span>
                 </div>
               )}
               {myEmployee?.phone && (
@@ -368,7 +380,7 @@ export default function AdminDashboard() {
       const visibleGorevler = showAllGorevler ? gorevler : gorevler.slice(0, 5);
 
       const gorevlerimCard = gorevler.length > 0 ? (
-        <div className="relative rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40">
+        <div className="relative rounded-2xl overflow-hidden bg-amber-50 dark:bg-amber-950/95 border border-amber-200/50 dark:border-amber-900/40 h-full flex flex-col">
           {editMode && (
             <button type="button" onClick={() => removeWidget("gorevlerim")} className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
               <X className="w-3 h-3" />
@@ -388,7 +400,7 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
-          <div className={cn("p-2 space-y-0.5", showAllGorevler && "max-h-72 overflow-y-auto")}>
+          <div className={cn("p-2 space-y-0.5 flex-1", showAllGorevler && "max-h-72 overflow-y-auto")}>
             {visibleGorevler.map((g) => (
               <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors">
                 <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
@@ -411,7 +423,7 @@ export default function AdminDashboard() {
       );
 
       const benimIslerimCard = (
-        <div className="relative bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+        <div className="relative bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden h-full flex flex-col">
           {editMode && (
             <button type="button" onClick={() => removeWidget("benim_islerim")} className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-destructive hover:bg-destructive/10" title="Gizle">
               <X className="w-3 h-3" />
@@ -421,7 +433,7 @@ export default function AdminDashboard() {
             <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
             <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
           </div>
-          <div className="p-3 space-y-2">
+          <div className="p-3 space-y-2 flex-1">
             {benimIslerim.map((it, i) => (
               <Link key={i} to={it.to} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-sm", TONES[it.tone])}>
                 <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-card/70">
@@ -439,7 +451,7 @@ export default function AdminDashboard() {
 
       if (showGorevlerim && showBenimIslerim) {
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
             <div className="lg:col-span-2">{gorevlerimCard}</div>
             <div>{benimIslerimCard}</div>
           </div>

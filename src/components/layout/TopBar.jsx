@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
-import { Sun, Moon, Monitor, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
+import { Sun, Moon, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, CloudSun, CloudRain, CloudSnow, Cloud, CloudLightning, CloudFog, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
@@ -15,44 +15,15 @@ import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from "@/lib/NotificationContext";
 import { useQuery } from "@tanstack/react-query";
 
-const topbarToolbarBtn = "h-8 w-8 shrink-0 bg-card border border-border shadow-sm text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors";
-
-function DashboardToolbar() {
-  const navigate = useNavigate();
-  return (
-    <div className="flex items-center gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm shrink-0">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Takvim">
-            <CalendarDays className="w-4 h-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-auto p-0">
-          <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
-          <div className="border-t p-2">
-            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </PopoverContent>
-      </Popover>
-      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Atlas Görünümü" asChild>
-        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
-      </Button>
-      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Widget'ları Düzenle" onClick={() => navigate("/?edit=widgets")}>
-        <Settings2 className="w-4 h-4" />
-      </Button>
-    </div>
-  );
-}
+const topbarToolbarBtn = "h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors";
 
 const themes = [
   { value: "light", icon: Sun, label: "Açık" },
   { value: "dark", icon: Moon, label: "Koyu" },
-  { value: "system", icon: Monitor, label: "Sistem" },
+  { value: "atlas", icon: Compass, label: "Atlas" },
 ];
 
-function NotificationBell() {
+export function NotificationBell() {
   const { unreadMessageCount } = useMessages();
   const { unreadTodoCount } = useTodos();
   const { pendingLeaveCount } = useLeave();
@@ -99,9 +70,10 @@ function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-xl hover:bg-muted transition-colors"
+        title="Bildirimler"
+        className="relative h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
       >
-        <Bell className={cn("w-5 h-5 text-muted-foreground", justUpdated && "animate-bounce text-indigo-600")} />
+        <Bell className={cn("w-4 h-4", justUpdated && "animate-bounce text-indigo-600")} />
         {justUpdated && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-400 animate-ping" />
         )}
@@ -153,17 +125,18 @@ function NotificationBell() {
 // (NotificationBell/ProfileMenu ile aynı açılır-panel deseni).
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const current = themes.find((t) => t.value === theme) || themes[2];
+  const current = themes.find((t) => t.value === theme) || themes[0];
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
         title="Görünüm"
       >
-        <current.icon className="w-5 h-5" />
+        <current.icon className="w-4 h-4" />
       </button>
 
       {open && (
@@ -173,7 +146,7 @@ function ThemeToggle() {
             {themes.map(({ value, icon: Icon, label }) => (
               <button
                 key={value}
-                onClick={() => { setTheme(value); setOpen(false); }}
+                onClick={() => { if (value === "atlas") { navigate("/atlas"); } else { setTheme(value); } setOpen(false); }}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
                   theme === value ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:bg-muted"
@@ -186,6 +159,39 @@ function ThemeToggle() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Sağ üstteki tüm hızlı-erişim ikonlarını tek, tutarlı boyutlu bir toolbar
+// içinde toplar — Takvim, Tema, Yardım, Bildirim, Widget Ayarları.
+function DashboardToolbar() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex items-center gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm shrink-0">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Takvim">
+            <CalendarDays className="w-4 h-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-auto p-0">
+          <Calendar mode="single" selected={new Date()} className="pointer-events-none" />
+          <div className="border-t p-2">
+            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </PopoverContent>
+      </Popover>
+      <ThemeToggle />
+      <Link to="/yardim" className={cn(topbarToolbarBtn, "flex items-center justify-center")} title="Yardım">
+        <HelpCircle className="w-4 h-4" />
+      </Link>
+      <NotificationBell />
+      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Widget'ları Düzenle" onClick={() => navigate("/?edit=widgets")}>
+        <Settings2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 }
@@ -311,11 +317,6 @@ export default function TopBar() {
         <GlobalSearch />
         <WeatherWidget />
         <DashboardToolbar />
-        <ThemeToggle />
-        <Link to="/yardim" className="p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Yardım">
-          <HelpCircle className="w-5 h-5" />
-        </Link>
-        <NotificationBell />
         <ProfileMenu />
       </div>
     </div>

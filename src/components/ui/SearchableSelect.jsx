@@ -55,7 +55,7 @@ export function SearchableSelect({
           disabled={disabled}
           className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground", className)}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="truncate min-w-0">{selected ? selected.label : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -79,7 +79,7 @@ export function SearchableSelect({
                   }}
                 >
                   <Check className={cn("mr-2 h-4 w-4", value === opt.value ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{opt.label}</span>
+                  <span className="truncate min-w-0">{opt.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

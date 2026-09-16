@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import MiniCalendarWidget from "@/components/dashboard/MiniCalendarWidget";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
@@ -392,21 +393,8 @@ export default function AdminDashboard() {
       </div>
       </div>
 
-      {/* SAĞ KOLON — Takvim + Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
+      {/* SAĞ KOLON — Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim + Takvim */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
-        {/* TAKVİM — mini ay görünümü, Kişisel Takvim'e kısayol */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
-            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.blue)}><CalendarDays className="w-4 h-4" /></span>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Takvim</h3>
-          </div>
-          <Calendar mode="single" selected={new Date()} className="pointer-events-none p-2" />
-          <div className="border-t border-border/50 px-4 py-2.5">
-            <Link to="/kisisel-takvim" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              Takvimi Aç <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
 
         {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
@@ -496,6 +484,8 @@ export default function AdminDashboard() {
           )}
           </div>
         </div>
+
+        <MiniCalendarWidget />
       </aside>
     </div>
   );

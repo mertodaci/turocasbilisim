@@ -12,6 +12,7 @@
 
 export const WIDGET_DEFS = [
   // Sol sütun
+  { id: "profil_karti", label: "Profil Kartı", column: "sol", topLevel: true },
   { id: "favoriler", label: "Favoriler", column: "sol", topLevel: true },
   { id: "hizli_islemler", label: "Hızlı İşlemler", column: "sol", topLevel: true },
   { id: "son_kullanilanlar", label: "Son Kullanılanlar", column: "sol", topLevel: true },
@@ -44,7 +45,7 @@ export const WIDGET_DEFS = [
 export const DEFAULT_LAYOUT = {
   hidden: [],
   columns: {
-    sol: ["favoriler", "hizli_islemler", "son_kullanilanlar"],
+    sol: ["profil_karti", "favoriler", "hizli_islemler", "son_kullanilanlar"],
     orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler"],
     sag: ["takvim", "yaklasan_takvim", "ekip_bugun", "son_islemler"],
   },

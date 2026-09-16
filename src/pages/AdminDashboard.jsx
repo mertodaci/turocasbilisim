@@ -8,7 +8,7 @@ import { tr } from "date-fns/locale";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, Compass, Settings2, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, CalendarDays, ListChecks, Bell, Square, Star, Compass, Settings2, GripVertical, X, Plus, Save, Undo2, ChevronDown, ChevronUp, Mail, Phone, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -86,6 +86,12 @@ export default function AdminDashboard() {
   const { data: recentContracts = [] } = useQuery({ queryKey: ["recent-contracts"], queryFn: () => flowApi.entities.CustomerContract.list("-created_date", 3) });
   const { data: favorites = [] } = useQuery({ queryKey: ["favorites"], queryFn: () => flowApi.auth.getFavorites() });
   const favoriteItems = getAllLeafItems().filter((it) => favorites.includes(it.labelKey));
+  const { data: myEmployee } = useQuery({
+    queryKey: ["topbar-employee", user?.email],
+    queryFn: () => flowApi.entities.Employee.filter({ email: user.email }),
+    enabled: !!user?.email,
+    select: (data) => data[0],
+  });
 
   // Widget düzeni (sürükle-bırak + aç/kapa), kullanıcı bazlı kayıtlı
   const { data: savedLayout } = useQuery({ queryKey: ["dashboard-layout"], queryFn: () => flowApi.auth.getDashboardLayout() });
@@ -212,7 +218,61 @@ export default function AdminDashboard() {
 
   // ── Widget içerikleri — her biri kendi id'siyle haritada; sıra/sütun/
   // görünürlük artık sabit JSX sırası değil, `draftLayout`'tan okunuyor.
+  const roleLabels = { admin: "Sistem Yöneticisi", yonetici: "Yönetici", kullanici: "Kullanıcı", ik: "İK", stajer: "Stajyer", musteri: "Müşteri", guvenlik: "Güvenlik" };
+
   const widgetNodes = {
+    profil_karti: (
+      <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+        <div className="h-14 bg-gradient-to-br from-violet-600 to-fuchsia-600" />
+        <div className="px-4 pb-4 -mt-8">
+          <div className="w-16 h-16 rounded-2xl border-4 border-card bg-primary/15 flex items-center justify-center overflow-hidden text-lg font-bold text-primary shrink-0">
+            {(user?.avatar_url || myEmployee?.avatar_url) ? (
+              <img src={user?.avatar_url || myEmployee?.avatar_url} alt={user?.full_name} className="w-full h-full object-cover" />
+            ) : initialsOf(user?.full_name)}
+          </div>
+          <div className="mt-2">
+            <p className="text-sm font-bold text-foreground truncate">{user?.full_name || "Kullanıcı"}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <a href={`mailto:${user?.email || ""}`} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors" title="E-posta gönder">
+              <Mail className="w-4 h-4 text-muted-foreground" />
+            </a>
+            <Link to="/profil" className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors" title="Profili Aç">
+              <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+            </Link>
+            <span className={cn("ml-auto text-[11px] font-bold px-2.5 py-1 rounded-full border", TONES.violet)}>
+              {roleLabels[user?.role] || user?.role}
+            </span>
+          </div>
+          {(myEmployee?.department || myEmployee?.phone || myEmployee?.hire_date) && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+              {myEmployee?.department && (
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-foreground truncate">{myEmployee.department}{myEmployee.position ? ` · ${myEmployee.position}` : ""}</span>
+                </div>
+              )}
+              {myEmployee?.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-foreground truncate">{myEmployee.phone}</span>
+                </div>
+              )}
+              {myEmployee?.hire_date && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-foreground truncate">İşe giriş: {format(new Date(myEmployee.hire_date), "d MMMM yyyy", { locale: tr })}</span>
+                </div>
+              )}
+            </div>
+          )}
+          <Link to="/profil" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-3">
+            Profili Aç <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+      </div>
+    ),
     favoriler: (
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">

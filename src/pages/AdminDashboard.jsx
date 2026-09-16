@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Star } from "lucide-react";
+import { Users, Briefcase, ClipboardList, CheckSquare, ArrowUpRight, AlertTriangle, TrendingUp, Umbrella, DollarSign, Wallet, Building2, ScrollText, Boxes, PackageX, FileClock, UserX, Clock, Megaphone, Cake, UserPlus, FileSignature, PackagePlus, ClipboardPlus, FileBarChart, History, CalendarClock, ListChecks, Bell, Star, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
@@ -40,10 +40,20 @@ const ICON_TONES = {
   blue: "text-blue-600", violet: "text-violet-600", slate: "text-slate-600",
 };
 
-const CHIP_TONES = {
-  red: "bg-red-100 text-red-800", rose: "bg-rose-100 text-rose-800", amber: "bg-amber-100 text-amber-800",
-  orange: "bg-orange-100 text-orange-800", blue: "bg-blue-100 text-blue-800", violet: "bg-violet-100 text-violet-800",
-  slate: "bg-slate-200 text-slate-800",
+const ICON_SQUARE = {
+  blue: "bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400",
+  emerald: "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
+  sky: "bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400",
+  indigo: "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400",
+  slate: "bg-slate-200 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300",
+  rose: "bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400",
+  teal: "bg-teal-100 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400",
+  purple: "bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400",
+  amber: "bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400",
+  pink: "bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400",
+  violet: "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400",
+  orange: "bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400",
+  red: "bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400",
 };
 
 const DONEM_DURUM = { taslak: "Taslak", onayli: "Onaylı", kapali: "Kapalı", yok: "Oluşmadı" };
@@ -92,14 +102,14 @@ export default function AdminDashboard() {
 
   // ── KPI kartları — İş Takibi bilinçli olarak son 2 kartta ──
   const kpis = [
-    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, color: "from-blue-500 to-blue-700", icon: ScrollText, path: "/sozlesmeler" },
-    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", color: "from-emerald-500 to-emerald-700", icon: DollarSign, path: "/sozlesmeler" },
-    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, color: "from-sky-500 to-sky-700", icon: Building2, path: "/musteriler" },
-    { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, color: "from-indigo-500 to-indigo-700", icon: Users, path: "/calisanlar" },
-    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, color: "from-slate-500 to-slate-700", icon: Wallet, path: "/ik/bordro" },
-    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, color: "from-rose-500 to-rose-700", icon: Boxes, path: "/stok" },
-    { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, color: "from-teal-500 to-teal-700", icon: ClipboardList, path: "/is-takibi/tickets" },
-    { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, color: "from-purple-500 to-purple-700", icon: Briefcase, path: "/is-takibi" },
+    { label: "Aktif Sözleşme", value: aktifSozlesme, sub: `${expiring.length} yaklaşan bitiş`, tone: "blue", icon: ScrollText, path: "/sozlesmeler" },
+    { label: "Sözleşme Değeri", value: `${kisa(contracts.valueActive || 0)} ₺`, sub: "aktif sözleşme toplamı", tone: "emerald", icon: DollarSign, path: "/sozlesmeler" },
+    { label: "Toplam Müşteri", value: sales.totalCustomers || 0, sub: `${sales.potentialCustomers || 0} aday müşteri`, tone: "sky", icon: Building2, path: "/musteriler" },
+    { label: "Aktif Personel", value: ik.aktif_personel ?? hr.totalEmployees ?? 0, sub: `${ik.bugun_izinli || 0} bugün izinli`, tone: "indigo", icon: Users, path: "/calisanlar" },
+    { label: "Bordro Dönemi", value: donem.ay ? `${String(donem.ay).padStart(2, "0")}/${donem.yil}` : "—", sub: `${donemDurum} · ${ik.bekleyen_mesai || 0} bekleyen mesai`, tone: "slate", icon: Wallet, path: "/ik/bordro" },
+    { label: "Kritik Stok", value: (su.kritik?.length) || 0, sub: `${su.bekleyen_fis || 0} bekleyen fiş`, tone: "rose", icon: Boxes, path: "/stok" },
+    { label: "Açık Bilet", value: summary.openCount || 0, sub: `${summary.overdueTickets || 0} geciken`, tone: "teal", icon: ClipboardList, path: "/is-takibi/tickets" },
+    { label: "Aktif Proje", value: isTakibi.activeProjects ?? summary.projectCount ?? 0, sub: `${summary.thisMonthOpened || 0} bu ay açılan bilet`, tone: "purple", icon: Briefcase, path: "/is-takibi" },
   ];
 
   // ── Dikkat gerektiren uyarılar (modüller arası, yalnız > 0) — her biri
@@ -135,15 +145,23 @@ export default function AdminDashboard() {
     ...recentContracts.map((c) => ({ key: `s-${c.id}`, ts: c.created_date, text: `${c.title || "Sözleşme"} oluşturuldu`, to: "/sozlesmeler", icon: ScrollText })),
   ].sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 5);
 
+  // ── Görevlerim — sözleşme bitişleri + modüller arası uyarılar tek listede.
+  // Gerçek bir tamamlama durumu tutmuyor, yalnızca görsel/navigasyonel bir liste.
+  const gorevler = [
+    ...sozlesmeSonaEren.map((c) => ({ key: `exp-${c.id}`, text: `${sozlesmeFirmaAdi(c.customer_id)} sözleşmesi sona erdi`, date: c.end_date, to: `/musteri/${c.customer_id}`, tone: "rose" })),
+    ...sozlesmeYaklasan.map((c) => ({ key: `up-${c.id}`, text: `${sozlesmeFirmaAdi(c.customer_id)} sözleşmesi 30 gün içinde doluyor`, date: c.end_date, to: `/musteri/${c.customer_id}`, tone: "amber" })),
+    ...alerts.map((a, i) => ({ key: `a-${i}`, text: a.desc(a.n), date: null, to: a.to, tone: a.tone })),
+  ];
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start">
 
       {/* SOL KOLON — Favoriler + Hızlı İşlemler + Son Kullanılanlar */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-2 xl:order-1">
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-white">
-            <Star className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Favoriler</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Star className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Favoriler</h3>
           </div>
           <div className="p-4 pt-3">
             {favoriteItems.length === 0 ? (
@@ -162,9 +180,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-            <Boxes className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Hızlı İşlemler</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.indigo)}><Boxes className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Hızlı İşlemler</h3>
           </div>
           <div className="space-y-1 p-4 pt-3">
             {QUICK_ACTIONS.map((a, i) => (
@@ -178,9 +196,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-500 to-slate-600 text-white">
-            <History className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Son Kullanılanlar</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.slate)}><History className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Son Kullanılanlar</h3>
           </div>
           <div className="p-4 pt-3">
             {recentlyVisited.length === 0 ? (
@@ -217,73 +235,48 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* DUYURU */}
-      {activeAnnouncements.length > 0 && (
-        <div className="rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/25">
-          <div className="flex items-stretch">
-            <div className="flex-shrink-0 px-5 py-3.5 bg-white/15 flex items-center gap-2">
-              <Megaphone className="w-5 h-5" />
-              <span className="text-sm font-extrabold uppercase tracking-widest">Duyuru</span>
-            </div>
-            <div className="overflow-hidden flex-1 py-3.5 px-5">
-              <div className="animate-marquee whitespace-nowrap">
-                {activeAnnouncements.map((a) => (
-                  <span key={a.id} className="inline-flex items-center gap-2 mr-14">
-                    {a.title && <span className="font-bold text-white">{a.title}:</span>}
-                    <span className="text-white/90 text-sm">{a.content}</span>
-                  </span>
-                ))}
+      {/* DUYURU + GÖREVLERİM — yan yana, yumuşak zeminli */}
+      {(activeAnnouncements.length > 0 || gorevler.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {activeAnnouncements.length > 0 && (
+            <div className="rounded-2xl overflow-hidden bg-violet-50 dark:bg-violet-950/20 border border-violet-200/50 dark:border-violet-900/40">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-200/50 dark:border-violet-900/40">
+                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.violet)}><Megaphone className="w-4 h-4" /></span>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Duyuru</h3>
+              </div>
+              <div className="overflow-hidden py-3.5 px-4">
+                <div className="animate-marquee whitespace-nowrap">
+                  {activeAnnouncements.map((a) => (
+                    <span key={a.id} className="inline-flex items-center gap-2 mr-14">
+                      {a.title && <span className="font-bold text-foreground">{a.title}:</span>}
+                      <span className="text-muted-foreground text-sm">{a.content}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* DİKKAT GEREKTİRENLER — sözleşme + stok + bilet + İK tek panelde */}
-      {(sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0 || alerts.length > 0) && (
-        <div className="rounded-2xl overflow-hidden border-2 border-red-200 dark:border-red-900 shadow-md">
-          <div className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white">
-            <AlertTriangle className="w-5 h-5" />
-            <span className="text-sm font-extrabold uppercase tracking-wide">Dikkat Gerektirenler</span>
-            <span className="ml-auto text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full">
-              {sozlesmeSonaEren.length + sozlesmeYaklasan.length + alerts.length} konu
-            </span>
-          </div>
-          <div className="bg-red-50/60 dark:bg-red-950/10 p-4 space-y-2.5">
-            {sozlesmeSonaEren.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                <p className="text-sm font-semibold text-red-900 dark:text-red-400 shrink-0">{sozlesmeSonaEren.length} kurumun sözleşmesi sona erdi:</p>
-                {sozlesmeSonaEren.map((c) => (
-                  <Link key={c.id} to={`/musteri/${c.customer_id}`} className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 hover:underline">
-                    {sozlesmeFirmaAdi(c.customer_id)}{c.end_date ? ` (${new Date(c.end_date).toLocaleDateString("tr-TR")})` : ""}
-                  </Link>
+          {/* GÖREVLERİM — sözleşme bitişleri + modüller arası uyarılar tek listede */}
+          {gorevler.length > 0 && (
+            <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+                <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.indigo)}><ListChecks className="w-4 h-4" /></span>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Görevlerim</h3>
+                <span className="ml-auto text-xs font-bold bg-muted px-2.5 py-1 rounded-full text-muted-foreground">{gorevler.length} görev</span>
+              </div>
+              <div className="p-2 max-h-72 overflow-y-auto space-y-0.5">
+                {gorevler.map((g) => (
+                  <div key={g.key} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/50 transition-colors">
+                    <Square className={cn("w-4 h-4 shrink-0", ICON_TONES[g.tone])} />
+                    <span className="flex-1 min-w-0 text-sm truncate">{g.text}</span>
+                    {g.date && <span className="text-[11px] text-muted-foreground shrink-0">{new Date(g.date).toLocaleDateString("tr-TR")}</span>}
+                    <Link to={g.to} className="text-xs font-medium text-primary hover:underline shrink-0">Görüntüle</Link>
+                  </div>
                 ))}
               </div>
-            )}
-            {sozlesmeYaklasan.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-400 shrink-0">{sozlesmeYaklasan.length} kurumun sözleşmesi 30 gün içinde dolacak:</p>
-                {sozlesmeYaklasan.map((c) => (
-                  <Link key={c.id} to={`/musteri/${c.customer_id}`} className="inline-block px-2 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 hover:underline">
-                    {sozlesmeFirmaAdi(c.customer_id)}{c.end_date ? ` (${new Date(c.end_date).toLocaleDateString("tr-TR")})` : ""}
-                  </Link>
-                ))}
-              </div>
-            )}
-            {alerts.map((a, i) => (
-              <div key={i} className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", (i > 0 || sozlesmeSonaEren.length > 0 || sozlesmeYaklasan.length > 0) && "pt-1 border-t border-red-200/60 dark:border-red-900/40 mt-1")}>
-                <a.icon className={cn("w-4 h-4 shrink-0", ICON_TONES[a.tone])} />
-                <Link to={a.to} className="text-sm font-semibold text-foreground hover:underline shrink-0">{a.desc(a.n)}</Link>
-                {a.items?.slice(0, 10).map((it, j) => (
-                  <Link key={j} to={a.to} className={cn("inline-block px-2 py-0.5 rounded-md text-xs font-medium hover:underline", CHIP_TONES[a.tone])}>
-                    {a.itemLabel(it)}
-                  </Link>
-                ))}
-              </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -292,7 +285,7 @@ export default function AdminDashboard() {
         {/* Bugün İzinli */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Umbrella className="w-4 h-4 text-amber-500" />
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.amber)}><Umbrella className="w-3.5 h-3.5" /></span>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün İzinli</h3>
             <span className="ml-auto text-lg font-black text-amber-600">{izinliList.length}</span>
           </div>
@@ -312,7 +305,7 @@ export default function AdminDashboard() {
         {/* Bugün Doğum Günü */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Cake className="w-4 h-4 text-pink-500" />
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.pink)}><Cake className="w-3.5 h-3.5" /></span>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bugün Doğum Günü</h3>
             <span className="ml-auto text-lg font-black text-pink-600">{dogumGunu.length}</span>
           </div>
@@ -332,7 +325,7 @@ export default function AdminDashboard() {
         {/* Bekleyen Onaylar */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
-            <CheckSquare className="w-4 h-4 text-indigo-500" />
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><CheckSquare className="w-3.5 h-3.5" /></span>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bekleyen Onaylar</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -350,18 +343,16 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {kpis.map((item, i) => (
           <Link key={i} to={item.path}
-            className="rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">
-            <div className={`bg-gradient-to-br ${item.color} p-5 text-white`}>
-              <div className="flex items-center justify-between mb-3">
-                <item.icon size={22} className="opacity-80" />
-                <ArrowUpRight size={16} className="opacity-50" />
-              </div>
-              <div className="text-3xl font-black truncate">{item.value}</div>
-              <div className="text-white/80 text-sm mt-1">{item.label}</div>
+            className="bg-card rounded-2xl border border-border/50 shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150">
+            <div className="flex items-center justify-between mb-3">
+              <span className={cn("w-10 h-10 rounded-xl flex items-center justify-center", ICON_SQUARE[item.tone])}>
+                <item.icon size={20} />
+              </span>
+              <ArrowUpRight size={16} className="text-muted-foreground/40" />
             </div>
-            <div className="bg-card px-4 py-2">
-              <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
-            </div>
+            <div className="text-2xl font-bold text-foreground truncate">{item.value}</div>
+            <div className="text-sm text-muted-foreground mt-0.5">{item.label}</div>
+            <p className="text-xs text-muted-foreground/80 mt-1 truncate">{item.sub}</p>
           </Link>
         ))}
       </div>
@@ -371,7 +362,7 @@ export default function AdminDashboard() {
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
-              <ScrollText className="w-4 h-4 text-blue-500" /> Yaklaşan Sözleşme Bitişleri
+              <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.blue)}><ScrollText className="w-3.5 h-3.5" /></span> Yaklaşan Sözleşme Bitişleri
             </h3>
             <Link to="/sozlesmeler" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
           </div>
@@ -394,7 +385,7 @@ export default function AdminDashboard() {
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-500" /> Son 7 Gün · Bilet Hareketi
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.indigo)}><TrendingUp className="w-3.5 h-3.5" /></span> Son 7 Gün · Bilet Hareketi
           </h3>
           {(summary.dailyTrend || []).length === 0 ? (
             <div className="flex items-center justify-center h-28 text-muted-foreground text-sm">Veri yok</div>
@@ -417,7 +408,7 @@ export default function AdminDashboard() {
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-teal-500" /> Son Açık Biletler
+            <span className={cn("w-6 h-6 rounded-md flex items-center justify-center", ICON_SQUARE.teal)}><ClipboardList className="w-3.5 h-3.5" /></span> Son Açık Biletler
           </h3>
           <Link to="/is-takibi/tickets" className="text-xs text-indigo-500 hover:text-indigo-600 flex items-center gap-1">Tümü <ArrowUpRight className="w-3 h-3" /></Link>
         </div>
@@ -450,9 +441,9 @@ export default function AdminDashboard() {
       {/* SAĞ KOLON — Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
-            <Bell className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Benim İşlerim</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.amber)}><Bell className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Benim İşlerim</h3>
           </div>
           <div className="space-y-1.5 p-4 pt-3">
             {benimIslerim.map((it, i) => (
@@ -468,9 +459,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white">
-            <TrendingUp className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Son İşlemler</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.teal)}><TrendingUp className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Son İşlemler</h3>
           </div>
           <div className="p-4 pt-3">
             {sonIslemler.length === 0 ? (
@@ -489,9 +480,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <CalendarClock className="w-4 h-4" />
-            <h3 className="text-xs font-semibold uppercase tracking-wide">Yaklaşan Takvim</h3>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+            <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", ICON_SQUARE.blue)}><CalendarClock className="w-4 h-4" /></span>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">Yaklaşan Takvim</h3>
           </div>
           <div className="p-4 pt-3">
           {sozlesmeYaklasan.length === 0 ? (

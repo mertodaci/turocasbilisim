@@ -1,19 +1,38 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { flowApi } from "@/api/flowApiClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/LanguageContext";
 import { useStokAlerts } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
+import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 import { useSetBreadcrumbLabel } from "@/lib/BreadcrumbContext";
 import { computeAtlasData, computeAtlasDecisions, suggestionFor } from "@/lib/atlasScore";
 import { cn } from "@/lib/utils";
 import {
   Users, Boxes, ScrollText, Building2, Wallet, ClipboardList,
-  ArrowLeft, ArrowUpRight, Sparkles, History,
+  ArrowLeft, ArrowUpRight, Sparkles, History, Activity, CheckCircle2,
 } from "lucide-react";
 
 const ICONS = { ik: Users, stok: Boxes, sozlesme: ScrollText, musteri: Building2, bordro: Wallet, is_takibi: ClipboardList };
+
+const HEALTH_SHORT = { "İyi durumda": "İyi", "Normal akış": "Normal", "Takip gerekli": "İncele", "Kritik": "Kritik" };
+
+const SCORE_PILL = {
+  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  blue: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  red: "bg-red-50 text-red-700 border-red-200",
+};
+const SCORE_ICON_BG = {
+  emerald: "bg-emerald-100 text-emerald-600", blue: "bg-blue-100 text-blue-600",
+  amber: "bg-amber-100 text-amber-600", red: "bg-red-100 text-red-600",
+};
+const SCORE_BORDER = { emerald: "", blue: "", amber: "border-amber-200", red: "border-red-200" };
+const SCORE_STATUS_TEXT = (overall) => (overall >= 90 ? "Operasyon çok iyi" : overall >= 75 ? "Operasyon sağlıklı" : overall >= 50 ? "Takip gerekli" : "Kritik");
 
 const NODES = [
   { key: "ik", pos: { top: "6%", left: "50%" }, popoverPos: { top: "16%", left: "50%" } },
@@ -29,12 +48,14 @@ const SCORE_BG = { emerald: "bg-emerald-500", blue: "bg-blue-500", amber: "bg-am
 
 export default function Atlas() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [selected, setSelected] = useState(null);
 
   useSetBreadcrumbLabel("Atlas");
 
   const { stokUyari } = useStokAlerts();
   const contractAlerts = useContractAlerts();
+  const recentlyVisited = useRecentlyVisited();
 
   const { data: summary } = useQuery({
     queryKey: ["admin-summary"],
@@ -75,11 +96,34 @@ export default function Atlas() {
   const selectedModule = selected ? modules[selected] : null;
   const selectedSuggestion = selected ? suggestionFor(selected, { stokUyari, contractAlerts, ikData, summary }) : null;
 
+  const overallLevel = dataReady ? SCORE_LEVEL(overall) : "emerald";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+  const firstName = user?.full_name?.split(" ")[0] || "";
+  const dayName = format(new Date(), "EEEE", { locale: tr });
+  const dateStr = format(new Date(), "d MMMM yyyy", { locale: tr });
+  const lastVisited = recentlyVisited.find((it) => it.path !== "/atlas");
+  const upcomingContract = contractAlerts?.upcoming?.[0] || null;
+
   return (
     <div className="space-y-1">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Operasyon Atlası</h1>
-        <p className="text-sm text-muted-foreground mt-1">Bir modül seçerek bugünkü sinyallerini incele.</p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">{greeting}, {firstName}. Sistem seni bekliyor.</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {dataReady
+              ? `${overall >= 75 ? "Operasyon genel olarak iyi ilerliyor" : "Operasyon genel olarak takip gerektiriyor"}${decisions.length > 0 ? `; ${decisions.length} karar bugün aksiyon gerektiriyor.` : "."}`
+              : "Bir modül seçerek bugünkü sinyallerini incele."}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          {dataReady && (
+            <div className={cn("inline-flex items-center gap-1.5 text-xs font-semibold border rounded-full px-3 py-1", SCORE_PILL[overallLevel])}>
+              <CheckCircle2 className="w-3.5 h-3.5" /> {SCORE_STATUS_TEXT(overall)}
+            </div>
+          )}
+          <p className="text-sm font-medium text-foreground capitalize mt-1.5">{dayName}, {dateStr}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_320px] gap-5 items-start mt-4">
@@ -131,6 +175,7 @@ export default function Atlas() {
               const m = modules[n.key];
               const Icon = ICONS[n.key];
               const isSelected = selected === n.key;
+              const level = m ? SCORE_LEVEL(m.score) : "emerald";
               return (
                 <button
                   key={n.key}
@@ -139,11 +184,13 @@ export default function Atlas() {
                   style={{ top: n.pos.top, left: n.pos.left }}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl px-3 py-2 shadow-sm hover:shadow-md transition-all text-left min-w-[128px] z-20",
-                    isSelected ? "border-primary ring-2 ring-primary/30" : "border-border/60"
+                    isSelected ? "border-primary ring-2 ring-primary/30" : (SCORE_BORDER[level] || "border-border/60")
                   )}
                 >
                   <div className="flex items-center gap-1.5">
-                    <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0", SCORE_ICON_BG[level])}>
+                      <Icon className="w-3 h-3" />
+                    </span>
                     <span className="text-xs font-semibold truncate">{m?.label || "—"}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{m?.orbitSubtitle || "..."}</p>
@@ -174,23 +221,30 @@ export default function Atlas() {
           {!selected || !selectedModule ? (
             <>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nabız</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5" /> Operasyon Nabzı
+                </h3>
                 <span className="text-sm font-bold text-foreground">{overall ?? "—"} / 100</span>
               </div>
               <div className="space-y-1.5">
                 {NODES.map((n) => {
                   const m = modules[n.key];
+                  const Icon = ICONS[n.key];
+                  const level = m ? SCORE_LEVEL(m.score) : "emerald";
                   return (
                     <button
                       key={n.key}
                       onClick={() => setSelected(n.key)}
                       className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-muted/60 transition-colors text-left"
                     >
-                      <span className={cn("w-2 h-2 rounded-full shrink-0", SCORE_BG[SCORE_LEVEL(m?.score ?? 0)])} />
+                      <span className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0", SCORE_ICON_BG[level])}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm truncate">{m?.label}</span>
                         <span className="block text-[11px] text-muted-foreground truncate">{m?.orbitSubtitle}</span>
                       </span>
+                      <span className="text-[11px] font-medium text-muted-foreground shrink-0">{HEALTH_SHORT[m?.healthLabel] || m?.healthLabel}</span>
                     </button>
                   );
                 })}
@@ -275,6 +329,53 @@ export default function Atlas() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" /> Bugünün Önerisi
+          </h3>
+          {decisions.length > 0 ? (
+            <>
+              <p className="text-sm font-medium text-foreground mt-2">{decisions[0].title}</p>
+              <Link to={decisions[0].to} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mt-2">
+                Başla <ArrowUpRight className="w-3 h-3" />
+              </Link>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-2">Bugün için öne çıkan bir konu yok.</p>
+          )}
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <History className="w-3.5 h-3.5" /> Son Kaldığın Yer
+          </h3>
+          {lastVisited ? (
+            <Link to={lastVisited.path} className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-primary mt-2">
+              {t(lastVisited.labelKey)}
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-2">Henüz bir sayfa gezilmedi.</p>
+          )}
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            <ScrollText className="w-3.5 h-3.5" /> Yaklaşan Tarih
+          </h3>
+          {upcomingContract ? (
+            <Link to="/sozlesmeler" className="block mt-2">
+              <p className="text-sm font-medium text-foreground">{contractAlerts.nameOf(upcomingContract.customer_id)}</p>
+              {upcomingContract.end_date && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">{new Date(upcomingContract.end_date).toLocaleDateString("tr-TR")}</p>
+              )}
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-2">Yaklaşan bir sözleşme bitişi yok.</p>
           )}
         </div>
       </div>

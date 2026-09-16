@@ -10,6 +10,7 @@ export const MODULES = [
   { key: "role_permissions",    label: "Yetkilendirme",          path: "/yetkilendirme" },
   { key: "cop_kutusu",          label: "Çöp Kutusu",             path: "/cop-kutusu" },
   { key: "denetim_kaydi",       label: "Denetim Kaydı",          path: "/denetim-kaydi" },
+  { key: "sistem_sagligi",      label: "Sunucu Bilgileri",       path: "/sistem-sagligi" },
   { key: "oturum_yonetimi",     label: "Oturum Yönetimi",        path: "/oturum-yonetimi" },
   { key: "messages",            label: "Mesajlar",               path: "/mesajlar" },
   { key: "todos",               label: "Yapılacaklar",           path: "/yapilacaklar" },

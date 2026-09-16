@@ -25,7 +25,7 @@ const CATEGORIES = [
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "quick_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map", "musteri_tanimlari"] },
   { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler", "sozlesme_tanimlar", "sozlesme_turleri", "sozlesme_urunler", "sozlesme_moduller"] },
-  { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi"] },
+  { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi", "sistem_sagligi"] },
   { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_demirbas_sorgula", "stok_excel"] },
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler", "stok_zimmet_yerleri", "stok_tanimlar"] },
   { label: "Stok — İşlemler", keys: ["stok_giris", "stok_cikis", "stok_transfer", "stok_iade", "stok_fisler", "stok_sayim", "stok_parti_takibi"] },

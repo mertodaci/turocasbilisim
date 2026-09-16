@@ -3413,6 +3413,41 @@ app.get('/api/ik/dashboard', authMiddleware, (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
+// Sunucu Bilgileri / Sistem Sağlığı — yalnız admin. VPS'te çıplak Node
+// süreci olduğu için os/process API'leri kullanılıyor (yönetilen bir bulut
+// platformu değil, hazır uptime/CPU/RAM göstergesi yok).
+app.get('/api/system/health', authMiddleware, requireRoles('admin'), (req, res) => {
+  const os = require('os');
+  let dbSizeBytes = null;
+  try {
+    const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'database.sqlite');
+    dbSizeBytes = fs.statSync(dbPath).size;
+  } catch {}
+  let disk = null;
+  try {
+    // Yalnız Linux/VPS'te çalışır — Windows geliştirme ortamında sessizce atlanır.
+    const { execSync } = require('child_process');
+    const out = execSync('df -kP .').toString().trim().split('\n');
+    const cols = out[out.length - 1].split(/\s+/);
+    disk = { totalKb: Number(cols[1]), usedKb: Number(cols[2]), availKb: Number(cols[3]), usePercent: cols[4] };
+  } catch {}
+  res.json({
+    time: new Date().toISOString(),
+    node_version: process.version,
+    process_uptime_sec: process.uptime(),
+    os_uptime_sec: os.uptime(),
+    load_avg: os.loadavg(),
+    cpu_count: os.cpus().length,
+    mem_total_bytes: os.totalmem(),
+    mem_free_bytes: os.freemem(),
+    process_memory: process.memoryUsage(),
+    platform: os.platform(),
+    hostname: os.hostname(),
+    db_size_bytes: dbSizeBytes,
+    disk,
+  });
+});
+
 // ── Genel hata yakalayıcı ──────────────────────────────────────────
 // ── Devriye Yönetimi — özel uçlar ──────────────────────────────────────
 // Nokta'nın "olması gereken saat"ine göre okuma zamanının durumu:

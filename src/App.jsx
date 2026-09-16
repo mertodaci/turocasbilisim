@@ -37,6 +37,7 @@ const RolePermissions = lazy(() => import('./pages/RolePermissions'));
 const Definitions = lazy(() => import('./pages/Definitions'));
 const TrashBin = lazy(() => import('./pages/TrashBin'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
+const SistemSagligi = lazy(() => import('./pages/SistemSagligi'));
 const SessionManagement = lazy(() => import('./pages/SessionManagement'));
 const CustomerUsers = lazy(() => import('./pages/CustomerUsers'));
 const Announcements = lazy(() => import('./pages/Announcements'));
@@ -236,6 +237,7 @@ const AuthenticatedApp = () => {
         <Route path="/ik-tanimlar" element={guard("ik_tanimlar", <Definitions />)} />
         <Route path="/cop-kutusu" element={guard("cop_kutusu", <TrashBin />)} />
         <Route path="/denetim-kaydi" element={guard("denetim_kaydi", <AuditLog />)} />
+        <Route path="/sistem-sagligi" element={guard("sistem_sagligi", <SistemSagligi />)} />
         <Route path="/oturum-yonetimi" element={guard("oturum_yonetimi", <SessionManagement />)} />
         <Route path="/musteri-kullanicilari" element={guard("musteri_kullanicilari", <CustomerUsers />)} />
         <Route path="/duyurular" element={guard("announcements", <Announcements />)} />

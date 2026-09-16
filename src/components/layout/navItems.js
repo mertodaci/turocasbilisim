@@ -248,19 +248,6 @@ export function getAllLeafItems() {
 // Ata-zinciri: verilen path'e eşleşen yaprağa kadar geçilen tüm düğümlerin
 // labelKey'lerini (ata grupları + yaprağın kendisi) sıralı dizi olarak döner.
 // AppLayout'taki breadcrumb bunu kullanır. Eşleşme yoksa [] döner.
-// Bir üst-seviye grubun flyout başlığındaki "Tüm modülü aç" linkinin
-// gittiği, o grubu en iyi temsil eden sayfa — yeni bir "tüm modül" ekranı
-// icat edilmiyor, mevcut merkezi/gösterge niteliğindeki sayfaya gidilir.
-export const PRIMARY_PATH = {
-  insan_kaynaklari: "/calisanlar",
-  stok_yonetimi: "/stok",
-  maas_bordro: "/ik/bordro",
-  devriye_yonetimi: "/devriye/atama",
-  pdks_vardiya: "/kart-yonetimi",
-  is_takibi: "/is-takibi/dashboard",
-  sozlesme_yonetimi: "/sozlesmeler",
-};
-
 export function getBreadcrumbTrail(pathname) {
   function walk(list, trail) {
     for (const item of list) {

@@ -393,8 +393,10 @@ export default function AdminDashboard() {
       </div>
       </div>
 
-      {/* SAĞ KOLON — Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim + Takvim */}
+      {/* SAĞ KOLON — Takvim + Ekip Bugün + Benim İşlerim + Son İşlemler + Yaklaşan Takvim */}
       <aside className="space-y-4 xl:sticky xl:top-24 order-3">
+
+        <MiniCalendarWidget />
 
         {/* EKİP BUGÜN — izinli + doğum günü tek kartta, baş-harf rozetli */}
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-4">
@@ -463,8 +465,6 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
-
-        <MiniCalendarWidget />
 
         <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">

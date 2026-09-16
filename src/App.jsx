@@ -49,6 +49,7 @@ const LeaveTypes = lazy(() => import('./pages/LeaveTypes'));
 const Hakedisler = lazy(() => import('./pages/Hakedisler'));
 const Sozlesmeler = lazy(() => import('./pages/Sozlesmeler'));
 const SozlesmeTurleri = lazy(() => import('./pages/SozlesmeTurleri'));
+const MusteriTanimlari = lazy(() => import('./pages/MusteriTanimlari'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
 const SozlesmeGenelTanimlar = lazy(() => import('./pages/SozlesmeGenelTanimlar'));
@@ -219,6 +220,7 @@ const AuthenticatedApp = () => {
         <Route path="/hakedisler" element={guard("hakedisler", <Hakedisler />)} />
         <Route path="/sozlesmeler" element={guard("sozlesmeler", <Sozlesmeler />)} />
         <Route path="/sozlesme-turleri" element={guard("sozlesme_turleri", <SozlesmeTurleri />)} />
+        <Route path="/musteri-tanimlari" element={guard("musteri_tanimlari", <MusteriTanimlari />)} />
         <Route path="/sozlesme-urunler" element={guard("sozlesme_urunler", <SozlesmeUrunler />)} />
         <Route path="/sozlesme-moduller" element={guard("sozlesme_moduller", <SozlesmeModuller />)} />
         <Route path="/sozlesme-tanimlar" element={guard("sozlesme_tanimlar", <SozlesmeGenelTanimlar />)} />

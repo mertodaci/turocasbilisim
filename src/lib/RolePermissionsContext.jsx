@@ -6,6 +6,7 @@ export const MODULES = [
   { key: "employees",           label: "Çalışanlar",             path: "/calisanlar" },
   { key: "customers",           label: "Müşteriler",             path: "/musteriler" },
   { key: "musteri_kullanicilari", label: "Müşteri Kullanıcıları",  path: "/musteri-kullanicilari" },
+  { key: "musteri_tanimlari",   label: "Genel Tanımlar",         path: "/musteri-tanimlari" },
   { key: "role_permissions",    label: "Yetkilendirme",          path: "/yetkilendirme" },
   { key: "cop_kutusu",          label: "Çöp Kutusu",             path: "/cop-kutusu" },
   { key: "denetim_kaydi",       label: "Denetim Kaydı",          path: "/denetim-kaydi" },

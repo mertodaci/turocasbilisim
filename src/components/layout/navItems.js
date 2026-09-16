@@ -186,8 +186,19 @@ export const allNavItems = [
 {
   labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
   children: [
-    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
-    { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
+    {
+      labelKey: "musteri_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "musteri_tanimlari", path: "/musteri-tanimlari", icon: Wrench, roles: ["admin", "yonetici"] },
+      ]
+    },
+    {
+      labelKey: "musteri_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici"],
+      children: [
+        { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
+        { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
+      ]
+    },
   ]
 },
 {

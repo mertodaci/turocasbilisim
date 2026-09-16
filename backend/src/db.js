@@ -132,6 +132,7 @@ function migrateLegacyJobTrackingRename() {
     migrateUnion(['devriye_lokasyon', 'devriye_vardiya_tanim'], 'devriye_tanimlar');
     migrateUnion(['ikb_tatil_sihirbazi', 'ikb_hakedis_ayar', 'ikb_bordro_yemek', 'ikb_sirket'], 'bordro_tanimlar');
     migrateUnion(['stok_urunler', 'stok_gruplar', 'stok_depolar', 'stok_raflar', 'stok_urun_raf', 'stok_sahalar', 'stok_zimmet_yerleri', 'stok_tedarikciler'], 'stok_tanimlar');
+    migrateUnion(['ik_tanimlar'], 'musteri_tanimlari');
   } catch (e) { console.warn('[migrate] modül Tanım konsolidasyonu kopyası:', e.message); }
   try {
     db.prepare(`DELETE FROM role_permissions WHERE module IN
@@ -713,6 +714,7 @@ function initDb() {
       'devriye_qr_saha','devriye_okuma_rapor','devriye_saat_rapor','devriye_qr_yazdir',
       // ── Modül "Tanım" konsolidasyonu (Genel Tanımlar deseni) ──────
       'is_takibi_tanimlar_v2','pdks_tanimlar','devriye_tanimlar','bordro_tanimlar','stok_tanimlar',
+      'musteri_tanimlari',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();

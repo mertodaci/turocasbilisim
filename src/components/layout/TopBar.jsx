@@ -206,12 +206,14 @@ function SystemAtlasSwitch() {
 }
 
 // Sağ üstteki tüm hızlı-erişim ikonlarını tek, tutarlı boyutlu bir toolbar
-// içinde toplar — Takvim, Sistem/Atlas anahtarı, Tema, Yardım, Bildirim,
+// içinde toplar — Sistem/Atlas anahtarı, Tema, Takvim, Yardım, Bildirim,
 // Widget Ayarları.
 function DashboardToolbar() {
   const navigate = useNavigate();
   return (
     <div className="flex items-center gap-1 bg-card border border-border/50 rounded-xl p-1 shadow-sm shrink-0">
+      <SystemAtlasSwitch />
+      <ThemeToggle />
       <Popover>
         <PopoverTrigger asChild>
           <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Takvim">
@@ -227,8 +229,6 @@ function DashboardToolbar() {
           </div>
         </PopoverContent>
       </Popover>
-      <SystemAtlasSwitch />
-      <ThemeToggle />
       <Link to="/yardim" className={cn(topbarToolbarBtn, "flex items-center justify-center")} title="Yardım">
         <HelpCircle className="w-4 h-4" />
       </Link>

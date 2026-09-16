@@ -35,7 +35,7 @@ const COLOR_BADGE = {
 };
 
 const DEFAULT_STATUSES = [
-  { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0, group_key: "talep" },
+  { name: "Musteri Talep", key: "musteri_talep", color: "slate", sort_order: 1, is_active: 1, is_final: 0, group_key: "talep", is_default: 1 },
   { name: "Cevap Bekleniyor", key: "cevap_bekleniyor", color: "yellow", sort_order: 2, is_active: 1, is_final: 0, group_key: "talep" },
   { name: "Analiz Gelistiriliyor", key: "analiz_gelistiriliyor", color: "blue", sort_order: 3, is_active: 1, is_final: 0, group_key: "analiz" },
   { name: "Analiz Onaylandi", key: "analiz_onaylandi", color: "teal", sort_order: 4, is_active: 1, is_final: 0, group_key: "analiz" },
@@ -250,6 +250,17 @@ export default function JobTrackingTicketStatuses() {
     else bulkUpdateMutation.mutate({ ids, data });
   };
 
+  // Yalnızca BİR durum "müşteri talebi açılınca başlangıç durumu" olabilir —
+  // yeni işaretlenen dışındaki tüm durumları söndürüp seçileni (ve aynı key'e
+  // sahip diğer pano satırlarını) işaretler.
+  const setDefaultRequest = async (status) => {
+    const otherIds = statuses.filter((s) => s.is_default == 1 && s.key !== status.key).map((s) => s.id);
+    for (const id of otherIds) await flowApi.entities.JTTicketStatus.update(id, { is_default: 0 });
+    for (const id of statusIdsForAction(status)) await flowApi.entities.JTTicketStatus.update(id, { is_default: 1 });
+    refreshStatuses();
+    toast.success("Talep başlangıç durumu güncellendi");
+  };
+
   const handleSeedDefaults = async () => {
     for (const s of DEFAULT_STATUSES) {
       await flowApi.entities.JTTicketStatus.create(s);
@@ -383,6 +394,18 @@ export default function JobTrackingTicketStatuses() {
                     {status.is_final == 1 && (
                       <Badge variant="outline" className="text-xs shrink-0">Son Durum</Badge>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setDefaultRequest(status)}
+                      title="Müşteri yeni bir talep/bilet oluşturduğunda sistem bu durumu başlangıç olarak kullanır"
+                      className={`text-xs shrink-0 px-2 py-1 rounded-full border transition-colors ${
+                        status.is_default == 1
+                          ? "bg-indigo-100 text-indigo-700 border-indigo-300 font-semibold"
+                          : "bg-card text-muted-foreground border-border/50 hover:bg-muted"
+                      }`}
+                    >
+                      {status.is_default == 1 ? "✓ Talep Başlangıcı" : "Talep Başlangıcı Yap"}
+                    </button>
                     <div className="flex items-center gap-2 ml-auto">
                       <Switch
                         checked={!!status.is_active}

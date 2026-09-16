@@ -445,6 +445,16 @@ function initDb() {
     "ALTER TABLE job_ticket_statuses ADD COLUMN board_id TEXT",
     "ALTER TABLE job_ticket_statuses ADD COLUMN board_ids TEXT DEFAULT '[]'",
     "ALTER TABLE job_ticket_statuses ADD COLUMN group_key TEXT DEFAULT 'diger'",
+    "ALTER TABLE job_ticket_statuses ADD COLUMN is_default INTEGER DEFAULT 0",
+    // Yeni bir müşteri talebi/bilet oluşturulduğunda hangi durumda başlayacağı
+    // artık bu bayrakla yapılandırılabiliyor (JTTicketFormDialog.jsx okuyor).
+    // Geriye dönük uyumluluk: hiçbir durum henüz işaretlenmemişse (yeni kolon,
+    // eski kurulumlar) bugüne kadarki sabit-metin davranışını koruyacak şekilde
+    // 'musteri_talep' otomatik işaretlenir — idempotent (bir durum işaretlendikten
+    // sonra NOT EXISTS koşulu bir daha eşleşmez).
+    `UPDATE job_ticket_statuses SET is_default = 1
+     WHERE key = 'musteri_talep'
+       AND NOT EXISTS (SELECT 1 FROM job_ticket_statuses WHERE is_default = 1)`,
     // Kök neden düzeltmesi: "Varsayılanları Yükle" DEFAULT_STATUSES'ta group_key
     // hiç belirtmiyordu, bu yüzden DB varsayılanı 'diger' devreye girip TÜM
     // varsayılan durumlar (Analiz/Geliştirme/Test-Onay/Tamamlanan dahil) "Diğer"

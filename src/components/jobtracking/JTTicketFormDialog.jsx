@@ -224,9 +224,11 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
     // bagimsiz GLOBAL bir listenin ilk elemaniydi -- sort_order'i dusuk olan
     // baska bir panonun durumu (or. "ar_ge") yanlislikla secilebiliyordu,
     // bilet kendi panosuna ait olmayan bir durumda kalip "bos" gorunuyordu.
-    // Yeni bir biletin her zaman dogru baslangic noktasi Musteri Talebi'dir.
+    // Yeni bir biletin baslangic durumu artik "Bilet Durumlari" tanim ekranindan
+    // isaretlenebiliyor (is_default) -- hic isaretli durum yoksa (eski kurulum/
+    // henuz secilmemis) eskisi gibi Musteri Talebi'ne duser.
     if (!ticket && !dataToSave.status) {
-      dataToSave.status = "musteri_talep";
+      dataToSave.status = statuses.find((s) => s.is_default == 1)?.key || "musteri_talep";
     }
     if (isMusteri && !dataToSave.customer_name && dataToSave.customer_id) {
       dataToSave.customer_name = customers.find(c => c.id === dataToSave.customer_id)?.company_name || dataToSave.customer_name;

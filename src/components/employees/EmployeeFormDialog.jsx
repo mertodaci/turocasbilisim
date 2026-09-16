@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { flowApi } from "@/api/flowApiClient";
+import isEqual from "lodash/isEqual";
 import { Camera, Loader2, Paperclip, X, Upload } from "lucide-react";
 import { useLeaveBalance } from "@/hooks/useLeaveBalance";
 import { useAuth } from "@/lib/AuthContext";
@@ -45,6 +46,7 @@ const emptyForm = {
 
 export default function EmployeeFormDialog({ open, onOpenChange, onClose, employee, onSubmit, isLoading, embedded = false }) {
   const [form, setForm] = useState(emptyForm);
+  const [formBaseline, setFormBaseline] = useState(emptyForm);
   const [activeTab, setActiveTab] = useState("kisisel");
 
   const { user } = useAuth();
@@ -91,7 +93,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
   useEffect(() => {
     if (employee) {
-      setForm({
+      const next = {
         full_name: employee.full_name || "",
         tc: employee.tc || "",
         card_uid: employee.card_uid || "",
@@ -133,9 +135,12 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
         sahsi_hesap_banka: employee.sahsi_hesap_banka || "",
         sahsi_hesap_iban: employee.sahsi_hesap_iban || "",
         sahsi_hesap_aciklama: employee.sahsi_hesap_aciklama || "",
-      });
+      };
+      setForm(next);
+      setFormBaseline(next);
     } else {
       setForm(emptyForm);
+      setFormBaseline(emptyForm);
     }
   }, [employee, open]);
 
@@ -246,6 +251,8 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
     if (onOpenChange) onOpenChange(false);
     if (onClose) onClose();
   };
+
+  const isDirty = !isEqual(form, formBaseline);
 
   const formBody = (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
@@ -806,8 +813,8 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
           <div className="flex justify-end gap-3 pt-3 border-t shrink-0">
             {!embedded && <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>}
-            <Button type="submit" disabled={isLoading || uploadingDoc}>
-              {isLoading ? "Kaydediliyor..." : employee ? "Guncelle" : "Kaydet"}
+            <Button type="submit" disabled={isLoading || uploadingDoc || !isDirty}>
+              {isLoading ? "Kaydediliyor..." : "Kaydet"}
             </Button>
           </div>
         </form>

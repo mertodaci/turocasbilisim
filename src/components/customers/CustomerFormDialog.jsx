@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
+import isEqual from "lodash/isEqual";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,20 +17,25 @@ const empty = {
 
 export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading, customer, embedded = false }) {
   const [form, setForm] = useState(empty);
+  const [formBaseline, setFormBaseline] = useState(empty);
 
   const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
   const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }) });
 
   useEffect(() => {
     if (customer) {
-      setForm({ ...empty, ...customer, use_job_tracking: customer.use_job_tracking === 1 || customer.use_job_tracking === true });
+      const next = { ...empty, ...customer, use_job_tracking: customer.use_job_tracking === 1 || customer.use_job_tracking === true };
+      setForm(next);
+      setFormBaseline(next);
     } else {
       setForm(empty);
+      setFormBaseline(empty);
     }
   }, [customer, open]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const handleSubmit = (e) => { e.preventDefault(); onSubmit(form); };
+  const isDirty = !isEqual(form, formBaseline);
 
   const formBody = (
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
@@ -92,7 +98,7 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
 
           <div className="flex justify-end gap-2 pt-1">
             {!embedded && <Button type="button" variant="outline" onClick={onClose}>İptal</Button>}
-            <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Kaydet"}</Button>
+            <Button type="submit" disabled={isLoading || !isDirty}>{isLoading ? "Kaydediliyor..." : "Kaydet"}</Button>
           </div>
         </form>
   );

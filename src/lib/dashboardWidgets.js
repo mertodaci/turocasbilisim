@@ -22,6 +22,10 @@ export const WIDGET_DEFS = [
   { id: "kpi_banner", label: "KPI Kartları", column: "orta", topLevel: true },
   { id: "sozlesme_bilet_pair", label: "Yaklaşan Sözleşme + Bilet Hareketi", column: "orta", topLevel: true },
   { id: "son_acik_biletler", label: "Son Açık Biletler", column: "orta", topLevel: true },
+  { id: "son_musteriler", label: "Son Eklenen Müşteriler", column: "orta", topLevel: true },
+  { id: "son_sozlesmeler_widget", label: "Son Sözleşmeler", column: "orta", topLevel: true },
+  { id: "son_stok_fisleri", label: "Son Stok Fişleri", column: "orta", topLevel: true },
+  { id: "son_calisanlar", label: "Son İşe Alınan Çalışanlar", column: "orta", topLevel: true },
   // "gorevlerim_pair" alt-öğeleri
   { id: "gorevlerim", label: "Görevlerim", parent: "gorevlerim_pair" },
   { id: "benim_islerim", label: "Benim İşlerim", parent: "gorevlerim_pair" },
@@ -48,7 +52,7 @@ export const DEFAULT_LAYOUT = {
   hidden: [],
   columns: {
     sol: ["profil_karti", "favoriler", "hizli_islemler", "son_kullanilanlar"],
-    orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler"],
+    orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler", "son_musteriler", "son_sozlesmeler_widget", "son_stok_fisleri", "son_calisanlar"],
     sag: ["hakedis_ozet", "hava_durumu", "takvim", "yaklasan_takvim", "ekip_bugun", "son_islemler"],
   },
 };

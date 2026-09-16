@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import MiniCalendarWidget from "@/components/dashboard/MiniCalendarWidget";
 import WeatherWidgetCard from "@/components/dashboard/WeatherWidgetCard";
 import HakedisWidgetCard from "@/components/dashboard/HakedisWidgetCard";
+import RecentEntityWidgetCard from "@/components/dashboard/RecentEntityWidgetCard";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
@@ -586,6 +587,26 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+    ),
+    son_musteriler: (
+      <RecentEntityWidgetCard title="Son Eklenen Müşteriler" icon={Building2} iconSquareTone={ICON_SQUARE.sky}
+        entity="Customer" sort="-created_date" limit={5} linkTo="/musteriler"
+        mapItem={(c) => ({ label: c.company_name, sub: c.city, to: `/musteri/${c.id}` })} />
+    ),
+    son_sozlesmeler_widget: (
+      <RecentEntityWidgetCard title="Son Sözleşmeler" icon={ScrollText} iconSquareTone={ICON_SQUARE.blue}
+        entity="CustomerContract" sort="-created_date" limit={5} linkTo="/sozlesmeler"
+        mapItem={(c) => ({ label: c.title || "—", sub: c.status, to: `/sozlesmeler/${c.id}` })} />
+    ),
+    son_stok_fisleri: (
+      <RecentEntityWidgetCard title="Son Stok Fişleri" icon={Boxes} iconSquareTone={ICON_SQUARE.rose}
+        entity="StokFis" sort="-created_date" limit={5} linkTo="/stok/fisler"
+        mapItem={(f) => ({ label: `${f.fis_no || "—"} · ${f.tip}`, sub: f.cari_adi, to: "/stok/fisler" })} />
+    ),
+    son_calisanlar: (
+      <RecentEntityWidgetCard title="Son İşe Alınan Çalışanlar" icon={Users} iconSquareTone={ICON_SQUARE.indigo}
+        entity="Employee" sort="-hire_date" limit={5} linkTo="/calisanlar"
+        mapItem={(e) => ({ label: e.full_name, sub: e.hire_date, to: `/calisan/${e.id}` })} />
     ),
     hakedis_ozet: <HakedisWidgetCard iconSquareTone={ICON_SQUARE.emerald} />,
     hava_durumu: <WeatherWidgetCard iconSquareTone={ICON_SQUARE.blue} />,

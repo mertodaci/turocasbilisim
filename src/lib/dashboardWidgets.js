@@ -36,6 +36,7 @@ export const WIDGET_DEFS = [
   { id: "yaklasan_sozlesme_bitisleri", label: "Yaklaşan Sözleşme Bitişleri", parent: "sozlesme_bilet_pair" },
   { id: "bilet_hareketi", label: "Son 7 Gün · Bilet Hareketi", parent: "sozlesme_bilet_pair" },
   // Sağ sütun
+  { id: "hakedis_ozet", label: "Hakediş Özeti", column: "sag", topLevel: true },
   { id: "hava_durumu", label: "Hava Durumu", column: "sag", topLevel: true },
   { id: "takvim", label: "Takvim", column: "sag", topLevel: true },
   { id: "yaklasan_takvim", label: "Yaklaşan Takvim", column: "sag", topLevel: true },
@@ -48,7 +49,7 @@ export const DEFAULT_LAYOUT = {
   columns: {
     sol: ["profil_karti", "favoriler", "hizli_islemler", "son_kullanilanlar"],
     orta: ["duyuru", "gorevlerim_pair", "kpi_banner", "sozlesme_bilet_pair", "son_acik_biletler"],
-    sag: ["hava_durumu", "takvim", "yaklasan_takvim", "ekip_bugun", "son_islemler"],
+    sag: ["hakedis_ozet", "hava_durumu", "takvim", "yaklasan_takvim", "ekip_bugun", "son_islemler"],
   },
 };
 

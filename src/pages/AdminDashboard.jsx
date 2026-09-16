@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import MiniCalendarWidget from "@/components/dashboard/MiniCalendarWidget";
 import WeatherWidgetCard from "@/components/dashboard/WeatherWidgetCard";
+import HakedisWidgetCard from "@/components/dashboard/HakedisWidgetCard";
 import { useTicketStatuses } from "@/lib/jobTrackingLabels";
 import { useStokAlerts, useTodos, useJTNotifications } from "@/lib/NotificationContext";
 import { useContractAlerts } from "@/lib/useContractAlerts";
@@ -586,6 +587,7 @@ export default function AdminDashboard() {
         )}
       </div>
     ),
+    hakedis_ozet: <HakedisWidgetCard iconSquareTone={ICON_SQUARE.emerald} />,
     hava_durumu: <WeatherWidgetCard iconSquareTone={ICON_SQUARE.blue} />,
     takvim: <MiniCalendarWidget />,
     yaklasan_takvim: (

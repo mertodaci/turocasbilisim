@@ -136,7 +136,7 @@ function LeaveTypeForm({ onSave, onCancel, initial }) {
         </div>
       </div>
       <div className="flex items-end justify-end gap-2 pt-2">
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        <Button type="button" size="sm" variant="destructive" onClick={onCancel}>
           <X className="w-3.5 h-3.5 mr-1" /> İptal
         </Button>
         <Button type="submit" size="sm">

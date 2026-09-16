@@ -42,52 +42,22 @@ export const allNavItems = [
 {
   labelKey: "pdks_vardiya", path: null, icon: CreditCard, roles: ["admin", "yonetici", "ik"],
   children: [
-    {
-      labelKey: "pdks_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "pdks_tanimlar", path: "/ik/pdks-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
-    {
-      labelKey: "pdks_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "pdks_kart_yonetimi", path: "/kart-yonetimi", icon: CreditCard, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "ikb_vardiya_atama", path: "/ik/vardiya-transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
-    {
-      labelKey: "pdks_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "personel_hareketleri", path: "/personel-hareketleri", icon: Clock, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
+    { labelKey: "pdks_tanimlar", path: "/ik/pdks-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "pdks_kart_yonetimi", path: "/kart-yonetimi", icon: CreditCard, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "ikb_vardiya_atama", path: "/ik/vardiya-transfer", icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "personel_hareketleri", path: "/personel-hareketleri", icon: Clock, roles: ["admin", "yonetici", "ik"] },
   ]
 },
 {
   labelKey: "devriye_yonetimi", path: null, icon: Radar, roles: ["admin", "yonetici", "guvenlik"],
   children: [
-    {
-      labelKey: "devriye_grp_tanim_personel", path: null, icon: Wrench, roles: ["admin", "yonetici"],
-      children: [
-        { labelKey: "devriye_tanimlar", path: "/devriye/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
-        { labelKey: "devriye_personel", path: "/devriye/personel", icon: Users, roles: ["admin", "yonetici"] },
-      ]
-    },
-    {
-      labelKey: "devriye_grp_saha", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "guvenlik"],
-      children: [
-        { labelKey: "devriye_atama", path: "/devriye/atama", icon: CalendarDays, roles: ["admin", "yonetici"] },
-        { labelKey: "devriye_qr_saha", path: "/devriye/qr-saha", icon: QrCode, roles: ["admin", "yonetici", "guvenlik"] },
-      ]
-    },
-    {
-      labelKey: "devriye_grp_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici"],
-      children: [
-        { labelKey: "devriye_okuma_rapor", path: "/devriye/raporlar", icon: FileSpreadsheet, roles: ["admin", "yonetici"] },
-        { labelKey: "devriye_saat_rapor", path: "/devriye/saat-raporu", icon: BarChart3, roles: ["admin", "yonetici"] },
-        { labelKey: "devriye_qr_yazdir", path: "/devriye/qr-yazdir", icon: Camera, roles: ["admin"] },
-      ]
-    },
+    { labelKey: "devriye_tanimlar", path: "/devriye/tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+    { labelKey: "devriye_personel", path: "/devriye/personel", icon: Users, roles: ["admin", "yonetici"] },
+    { labelKey: "devriye_atama", path: "/devriye/atama", icon: CalendarDays, roles: ["admin", "yonetici"] },
+    { labelKey: "devriye_qr_saha", path: "/devriye/qr-saha", icon: QrCode, roles: ["admin", "yonetici", "guvenlik"] },
+    { labelKey: "devriye_okuma_rapor", path: "/devriye/raporlar", icon: FileSpreadsheet, roles: ["admin", "yonetici"] },
+    { labelKey: "devriye_saat_rapor", path: "/devriye/saat-raporu", icon: BarChart3, roles: ["admin", "yonetici"] },
+    { labelKey: "devriye_qr_yazdir", path: "/devriye/qr-yazdir", icon: Camera, roles: ["admin"] },
   ]
 },
 {
@@ -161,62 +131,27 @@ export const allNavItems = [
 {
   labelKey: "is_takibi", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
   children: [
-    {
-      labelKey: "is_takibi_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
-      children: [
-        { labelKey: "is_takibi_tanimlar_v2", path: "/is-takibi/genel-tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
-      ]
-    },
-    {
-      labelKey: "is_takibi_islem", path: null, icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"],
-      children: [
-        { labelKey: "is_takibi_projeler", path: "/is-takibi", icon: Building2, roles: ["admin", "yonetici", "kullanici"] },
-        { labelKey: "is_takibi_biletler", path: "/is-takibi/tickets", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"] },
-        { labelKey: "is_takibi_kanban", path: "/is-takibi/kanban", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
-      ]
-    },
-    {
-      labelKey: "is_takibi_rapor", path: null, icon: BarChart3, roles: ["admin", "yonetici", "kullanici"],
-      children: [
-        { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
-      ]
-    },
+    { labelKey: "is_takibi_tanimlar_v2", path: "/is-takibi/genel-tanimlar", icon: Wrench, roles: ["admin", "yonetici"] },
+    { labelKey: "is_takibi_projeler", path: "/is-takibi", icon: Building2, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "is_takibi_biletler", path: "/is-takibi/tickets", icon: ClipboardList, roles: ["admin", "yonetici", "kullanici", "musteri"] },
+    { labelKey: "is_takibi_kanban", path: "/is-takibi/kanban", icon: CheckSquare, roles: ["admin", "yonetici", "kullanici"] },
+    { labelKey: "is_takibi_dashboard", path: "/is-takibi/dashboard", icon: BarChart3, roles: ["admin", "yonetici", "kullanici"] },
   ]
 },
 {
   labelKey: "musteriler_menu", path: null, icon: Building2, roles: ["admin", "yonetici"],
   children: [
-    {
-      labelKey: "musteri_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici"],
-      children: [
-        { labelKey: "musteri_tanimlari", path: "/musteri-tanimlari", icon: Wrench, roles: ["admin", "yonetici"] },
-      ]
-    },
-    {
-      labelKey: "musteri_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici"],
-      children: [
-        { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
-        { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
-      ]
-    },
+    { labelKey: "musteri_tanimlari", path: "/musteri-tanimlari", icon: Wrench, roles: ["admin", "yonetici"] },
+    { labelKey: "customers", path: "/musteriler", icon: Building2, roles: ["admin", "yonetici"] },
+    { labelKey: "musteri_kullanicilari", path: "/musteri-kullanicilari", icon: Users, roles: ["admin", "yonetici"] },
   ]
 },
 {
   labelKey: "sozlesme_yonetimi", path: null, icon: ScrollText, roles: ["admin", "yonetici", "ik"],
   children: [
-    {
-      labelKey: "sozlesme_tanim", path: null, icon: Wrench, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "sozlesme_tanimlar", path: "/sozlesme-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
-    {
-      labelKey: "sozlesme_islem", path: null, icon: ArrowLeftRight, roles: ["admin", "yonetici", "ik"],
-      children: [
-        { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
-        { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
-      ]
-    },
+    { labelKey: "sozlesme_tanimlar", path: "/sozlesme-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "sozlesmeler", path: "/sozlesmeler", icon: FileText, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "hakedisler", path: "/hakedisler", icon: Wallet, roles: ["admin", "yonetici", "ik"] },
   ]
 },
 {

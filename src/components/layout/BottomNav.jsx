@@ -175,12 +175,12 @@ export default function BottomNav() {
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const hasChildren = item.children && item.children.length > 0;
-          const supportTotal = unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount;
-          const showSupportBadge = item.labelKey === "support_center" && supportTotal > 0;
-          const showHrBadge = item.labelKey === "insan_kaynaklari" && (pendingLeaveCount > 0 || pendingExpenseIKCount > 0);
-          const showJTBadge = item.labelKey === "is_takibi" && assignedTicketCount > 0;
-          const showStokBadge = item.labelKey === "stok_yonetimi" && stokUyariCount > 0;
-          const anyBadge = showSupportBadge || showHrBadge || showJTBadge || showStokBadge;
+          const badgeCount = {
+            support_center: unreadMessageCount + unreadTodoCount + pendingLeaveCount + pendingExpenseCount,
+            insan_kaynaklari: pendingLeaveCount + pendingExpenseIKCount,
+            is_takibi: assignedTicketCount,
+            stok_yonetimi: stokUyariCount,
+          }[item.labelKey] || 0;
           const isFlyoutOpen = flyout?.key === item.labelKey;
 
           const itemClasses = cn(
@@ -195,7 +195,11 @@ export default function BottomNav() {
               <Link key={item.labelKey} to={item.path} className={itemClasses}>
                 <item.icon className="w-5 h-5 shrink-0" />
                 <span className="whitespace-nowrap">{t(item.labelKey)}</span>
-                {anyBadge && <span className="absolute top-1.5 right-3 w-2 h-2 bg-orange-500 rounded-full" />}
+                {badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-orange-500 text-white text-[9px] font-bold rounded-full border-2 border-card">
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
               </Link>
             );
           }
@@ -209,7 +213,11 @@ export default function BottomNav() {
               className={itemClasses}>
               <item.icon className="w-5 h-5 shrink-0" />
               <span className="whitespace-nowrap">{t(item.labelKey)}</span>
-              {anyBadge && <span className="absolute top-1.5 right-3 w-2 h-2 bg-orange-500 rounded-full" />}
+              {badgeCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-orange-500 text-white text-[9px] font-bold rounded-full border-2 border-card">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
             </button>
           );
         })}

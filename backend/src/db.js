@@ -1640,35 +1640,42 @@ function initDb() {
     console.error('Rol seed hatası:', e.message);
   }
 
-  // Seed: varsayilan izin turleri ve kurallari (yalnizca hic izin turu
-  // tanimlanmamissa calisir -- kullanicinin kendi eklediklerine dokunmaz).
+  // Izin turlerini referans kural setiyle esitle -- isim bazli upsert,
+  // kurulumun mevcut durumundan bagimsiz her baslangicta calisir (idempotent).
+  // Var olan bir isimse kurallari (min/max/tip) referansa esitler, yoksa
+  // olusturur; referansta olmayan "Evlilik Izni"/"Dogum Gunu Izni" silinir.
   try {
-    const ltCount = db.prepare("SELECT count(*) as cnt FROM leave_types").get();
-    if (ltCount.cnt === 0) {
-      const { v4: uuidv4 } = require('uuid');
-      const now = new Date().toISOString();
-      const insLT = db.prepare(`INSERT INTO leave_types
-        (id, name, is_paid, entitlement_type, min_days, max_days, annual_limit, is_default, description, is_active, sort_order, created_date, updated_date)
-        VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?)`);
-      const defaultLeaveTypes = [
-        { name: "Yıllık İzin", is_paid: 1, entitlement_type: "yillik", min_days: 1, max_days: null, annual_limit: null, is_default: 1, description: "Yıllık ücretli izin hakkı" },
-        { name: "Hastalık İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Rapor gerektiren hastalık durumu" },
-        { name: "Mazeret İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 5, annual_limit: 10, is_default: 0, description: "Ölümlük, düğün, doğum gibi özel durumlar" },
-        { name: "Doğum İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 56, max_days: 56, annual_limit: null, is_default: 0, description: "Doğum öncesi ve sonrası yasal izin" },
-        { name: "Babalık İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 10, max_days: 10, annual_limit: null, is_default: 0, description: "Babalık izni hakkı" },
-        { name: "Eğitim İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 10, annual_limit: 30, is_default: 0, description: "Sınav ve eğitim amaçlı izin" },
-        { name: "Düğün İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Evlenme nedeniyle izin" },
-        { name: "Ölüm İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 5, annual_limit: 10, is_default: 0, description: "Yakın kaybı nedeniyle izin" },
-        { name: "Ücretsiz İzin", is_paid: 0, entitlement_type: "her_talep_icin", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Ücretsiz mazeret izni" },
-      ];
-      defaultLeaveTypes.forEach((lt, i) => {
-        insLT.run(
-          uuidv4(), lt.name, lt.is_paid, lt.entitlement_type, lt.min_days, lt.max_days, lt.annual_limit,
-          lt.is_default, lt.description, defaultLeaveTypes.length - i, now, now
-        );
-      });
-      console.log('✅ Varsayılan izin türleri eklendi');
-    }
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const defaultLeaveTypes = [
+      { name: "Yıllık İzin", is_paid: 1, entitlement_type: "yillik", min_days: 1, max_days: null, annual_limit: null, is_default: 1, description: "Yıllık ücretli izin hakkı" },
+      { name: "Hastalık İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Rapor gerektiren hastalık durumu" },
+      { name: "Mazeret İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 5, annual_limit: 10, is_default: 0, description: "Ölümlük, düğün, doğum gibi özel durumlar" },
+      { name: "Doğum İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 56, max_days: 56, annual_limit: null, is_default: 0, description: "Doğum öncesi ve sonrası yasal izin" },
+      { name: "Babalık İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 10, max_days: 10, annual_limit: null, is_default: 0, description: "Babalık izni hakkı" },
+      { name: "Eğitim İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 10, annual_limit: 30, is_default: 0, description: "Sınav ve eğitim amaçlı izin" },
+      { name: "Düğün İzni", is_paid: 1, entitlement_type: "hak_bazi", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Evlenme nedeniyle izin" },
+      { name: "Ölüm İzni", is_paid: 1, entitlement_type: "her_talep_icin", min_days: 1, max_days: 5, annual_limit: 10, is_default: 0, description: "Yakın kaybı nedeniyle izin" },
+      { name: "Ücretsiz İzin", is_paid: 0, entitlement_type: "her_talep_icin", min_days: 1, max_days: null, annual_limit: null, is_default: 0, description: "Ücretsiz mazeret izni" },
+    ];
+    const findByName = db.prepare("SELECT id FROM leave_types WHERE name=?");
+    const insLT = db.prepare(`INSERT INTO leave_types
+      (id, name, is_paid, entitlement_type, min_days, max_days, annual_limit, is_default, description, is_active, sort_order, created_date, updated_date)
+      VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?)`);
+    const updLT = db.prepare(`UPDATE leave_types SET
+      is_paid=?, entitlement_type=?, min_days=?, max_days=?, annual_limit=?, is_default=?, description=?, sort_order=?, updated_date=?
+      WHERE id=?`);
+    defaultLeaveTypes.forEach((lt, i) => {
+      const sortOrder = defaultLeaveTypes.length - i;
+      const existing = findByName.get(lt.name);
+      if (existing) {
+        updLT.run(lt.is_paid, lt.entitlement_type, lt.min_days, lt.max_days, lt.annual_limit, lt.is_default, lt.description, sortOrder, now, existing.id);
+      } else {
+        insLT.run(uuidv4(), lt.name, lt.is_paid, lt.entitlement_type, lt.min_days, lt.max_days, lt.annual_limit, lt.is_default, lt.description, sortOrder, now, now);
+      }
+    });
+    db.prepare("DELETE FROM leave_types WHERE name IN ('Evlilik İzni', 'Doğum Günü İzni')").run();
+    console.log('✅ İzin türleri referans ile eşitlendi');
   } catch(e) {
     console.error('İzin türü seed hatası:', e.message);
   }

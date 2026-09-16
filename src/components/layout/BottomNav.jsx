@@ -1,12 +1,13 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Star, ChevronRight, ArrowUpRight } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Star, ChevronRight } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications, useStokAlerts } from "@/lib/NotificationContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { flowApi } from "@/api/flowApiClient";
-import { allNavItems, PRIMARY_PATH } from "./navItems";
+import { allNavItems } from "./navItems";
 import { useRecentlyVisited } from "@/lib/useRecentlyVisited";
 
 // Bir düğümün altındaki tüm tıklanabilir yaprak sayısını özyinelemeli sayar.
@@ -28,8 +29,8 @@ function collectLeafKeys(node) {
 // — yalnız yönü sağa değil yukarı).
 export default function BottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const recentlyVisited = useRecentlyVisited();
   const { unreadMessageCount } = useMessages();
   const { unreadTodoCount } = useTodos();
@@ -83,6 +84,7 @@ export default function BottomNav() {
       : [...favorites, labelKey];
     setFavorites(newFavorites);
     await flowApi.auth.updateFavorites(newFavorites).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ["favorites"] });
   };
 
   function filterNavTree(items) {
@@ -162,7 +164,6 @@ export default function BottomNav() {
   const flyoutItem = flyout ? navItems.find((i) => i.labelKey === flyout.key) : null;
   const flyoutHasSubgroups = flyoutItem ? flyoutItem.children.some((c) => c.children && c.children.length > 0) : false;
   const flyoutLeafCount = flyoutItem ? countLeaves(flyoutItem) : 0;
-  const flyoutPrimaryPath = flyoutItem ? PRIMARY_PATH[flyoutItem.labelKey] : null;
   const flyoutLeafKeys = flyoutItem ? collectLeafKeys(flyoutItem) : [];
   const flyoutRecent = flyoutItem
     ? recentlyVisited.filter((v) => flyoutLeafKeys.includes(v.labelKey)).slice(0, 3)
@@ -225,20 +226,11 @@ export default function BottomNav() {
               flyoutHasSubgroups ? "w-[min(92vw,820px)]" : "w-64"
             )}
             style={{ left: flyout.left, bottom: flyout.bottom }}>
-            <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1">
+            <div className="px-4 pt-3 pb-1">
               <p className="text-sm font-bold text-foreground">
                 {t(flyoutItem.labelKey)}
                 <span className="ml-1.5 font-normal text-muted-foreground">· {flyoutLeafCount} işlem</span>
               </p>
-              {flyoutPrimaryPath && (
-                <button
-                  type="button"
-                  onClick={() => { setFlyout(null); navigate(flyoutPrimaryPath); }}
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
-                >
-                  Tüm modülü aç <ArrowUpRight className="w-3 h-3" />
-                </button>
-              )}
             </div>
             <div
               className={cn("px-3 pb-3 pt-1 max-h-[70vh] overflow-y-auto scrollbar-thin", flyoutHasSubgroups && "grid gap-x-4 gap-y-1")}
@@ -246,7 +238,7 @@ export default function BottomNav() {
               {flyoutItem.children.map(renderFlyoutColumn)}
             </div>
             {flyoutRecent.length > 0 && (
-              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 px-4 py-2 border-t border-border text-xs text-muted-foreground bg-muted/30">
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 px-4 py-2 border-t border-border text-xs text-muted-foreground bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-950/20 dark:to-fuchsia-950/20">
                 <span className="shrink-0">Son kullanılan:</span>
                 {flyoutRecent.map((v, i) => (
                   <span key={v.path} className="flex items-center gap-1.5">

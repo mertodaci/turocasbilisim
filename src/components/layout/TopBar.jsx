@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
-import { Sun, Moon, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight } from "lucide-react";
+import { Sun, Moon, Bell, CheckSquare, MessageCircle, Umbrella, ClipboardList, HelpCircle, UserCircle2, LogOut, ChevronDown, CalendarDays, Compass, Settings2, ArrowUpRight, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { flowApi } from "@/api/flowApiClient";
 import GlobalSearch from "./GlobalSearch";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { useMessages, useTodos, useLeave, useExpense, useJTNotifications } from "@/lib/NotificationContext";
 import { useQuery } from "@tanstack/react-query";
@@ -174,8 +174,40 @@ function ThemeToggle() {
   );
 }
 
+// Yönetim Merkezi ("Sistem") ile Atlas Görünümü arasında geçiş yapan iki
+// sekmeli anahtar — aktif sayfaya göre vurgulanır.
+function SystemAtlasSwitch() {
+  const location = useLocation();
+  const isAtlas = location.pathname === "/atlas";
+  return (
+    <div className="flex items-center bg-muted/60 rounded-full p-0.5 h-8 shrink-0">
+      <Link
+        to="/"
+        title="Sistem Görünümü"
+        className={cn(
+          "px-2.5 h-7 rounded-full flex items-center gap-1 text-xs font-medium transition-colors",
+          !isAtlas ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <LayoutDashboard className="w-3.5 h-3.5" /> Sistem
+      </Link>
+      <Link
+        to="/atlas"
+        title="Atlas Görünümü"
+        className={cn(
+          "px-2.5 h-7 rounded-full flex items-center gap-1 text-xs font-medium transition-colors",
+          isAtlas ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Compass className="w-3.5 h-3.5" /> Atlas
+      </Link>
+    </div>
+  );
+}
+
 // Sağ üstteki tüm hızlı-erişim ikonlarını tek, tutarlı boyutlu bir toolbar
-// içinde toplar — Takvim, Tema, Yardım, Bildirim, Widget Ayarları.
+// içinde toplar — Takvim, Sistem/Atlas anahtarı, Tema, Yardım, Bildirim,
+// Widget Ayarları.
 function DashboardToolbar() {
   const navigate = useNavigate();
   return (
@@ -195,9 +227,7 @@ function DashboardToolbar() {
           </div>
         </PopoverContent>
       </Popover>
-      <Button size="icon" variant="ghost" className={topbarToolbarBtn} title="Atlas Görünümü" asChild>
-        <Link to="/atlas"><Compass className="w-4 h-4" /></Link>
-      </Button>
+      <SystemAtlasSwitch />
       <ThemeToggle />
       <Link to="/yardim" className={cn(topbarToolbarBtn, "flex items-center justify-center")} title="Yardım">
         <HelpCircle className="w-4 h-4" />

@@ -50,7 +50,7 @@ export function NotificationBell() {
 
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
-  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0 });
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => setOpen(false), 5000);
@@ -74,7 +74,11 @@ export function NotificationBell() {
         onClick={() => {
           if (!open && triggerRef.current) {
             const r = triggerRef.current.getBoundingClientRect();
-            setPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+            const panelWidth = 256; // w-64
+            let left = r.right - panelWidth;
+            if (left < 8) left = 8;
+            if (left + panelWidth > window.innerWidth - 8) left = window.innerWidth - panelWidth - 8;
+            setPos({ top: r.bottom + 8, left });
           }
           setOpen((v) => !v);
         }}
@@ -95,7 +99,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div style={{ position: "fixed", top: pos.top, right: pos.right }} className="w-64 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
+          <div style={{ position: "fixed", top: pos.top, left: pos.left }} className="w-64 bg-card border rounded-xl shadow-xl z-50 overflow-hidden">
             <div className="px-4 py-3 border-b">
               <p className="text-sm font-semibold">Bildirimler</p>
             </div>

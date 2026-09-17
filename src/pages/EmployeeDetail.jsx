@@ -271,14 +271,12 @@ export default function EmployeeDetail() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn("grid w-full", {
-          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
-          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
-          "grid-cols-7": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
-          "grid-cols-8": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
+          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
+          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
+          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
+          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
         })}>
-          <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
-          <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
-          <TabsTrigger value="is">İş</TabsTrigger>
+          <TabsTrigger value="kisisel">Kişisel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
           {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
@@ -359,104 +357,100 @@ export default function EmployeeDetail() {
             </div>
           )}
         </div>
-      </div>
-        </TabsContent>
 
-        <TabsContent value="iletisim" className="space-y-6 mt-4">
-      <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
-        <h3 className="text-sm font-semibold text-foreground mb-4">İletişim Bilgileri</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {employee.email && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <Mail className="w-4 h-4 text-blue-500" />
+        <div className="mt-6 pt-5 border-t border-border/50">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">İletişim Bilgileri</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {employee.email && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">E-posta</p>
+                  <p className="text-sm font-medium break-all">{employee.email}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">E-posta</p>
-                <p className="text-sm font-medium break-all">{employee.email}</p>
+            )}
+            {employee.phone && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Telefon</p>
+                  <p className="text-sm font-medium">{employee.phone}</p>
+                </div>
               </div>
-            </div>
-          )}
-          {employee.phone && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                <Phone className="w-4 h-4 text-emerald-500" />
+            )}
+            {employee.personel_adresi && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-cyan-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Adres</p>
+                  <p className="text-sm font-medium">{employee.personel_adresi}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">Telefon</p>
-                <p className="text-sm font-medium">{employee.phone}</p>
-              </div>
-            </div>
-          )}
-          {employee.personel_adresi && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
-                <MapPin className="w-4 h-4 text-cyan-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">Adres</p>
-                <p className="text-sm font-medium">{employee.personel_adresi}</p>
+            )}
+          </div>
+
+          {employee.emergency_contacts?.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-border/50">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                <ContactRound className="w-3.5 h-3.5" /> Acil Durum Kişileri
+              </h4>
+              <div className="space-y-2">
+                {employee.emergency_contacts.map((kisi, idx) => (
+                  <div key={idx} className="text-sm text-foreground flex flex-wrap items-center gap-x-2">
+                    <span className="font-medium">{kisi.full_name}</span>
+                    {kisi.relation && <span className="text-muted-foreground">· {kisi.relation}</span>}
+                    {kisi.phone && <span className="text-muted-foreground">· {kisi.phone}</span>}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {employee.emergency_contacts?.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-border/50">
-            <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-              <ContactRound className="w-3.5 h-3.5" /> Acil Durum Kişileri
-            </h4>
-            <div className="space-y-2">
-              {employee.emergency_contacts.map((kisi, idx) => (
-                <div key={idx} className="text-sm text-foreground flex flex-wrap items-center gap-x-2">
-                  <span className="font-medium">{kisi.full_name}</span>
-                  {kisi.relation && <span className="text-muted-foreground">· {kisi.relation}</span>}
-                  {kisi.phone && <span className="text-muted-foreground">· {kisi.phone}</span>}
+        <div className="mt-6 pt-5 border-t border-border/50">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">İş Bilgileri</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {employee.position && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-4 h-4 text-orange-500" />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Pozisyon</p>
+                  <p className="text-sm font-medium">{getPosLabel(employee.position)}</p>
+                </div>
+              </div>
+            )}
+            {employee.manager_name && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Bağlı Olduğu Yönetici</p>
+                  <p className="text-sm font-medium">{employee.manager_name}</p>
+                </div>
+              </div>
+            )}
+            {employee.hire_date && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-4 h-4 text-teal-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground">İşe Giriş Tarihi</p>
+                  <p className="text-sm font-medium">{format(new Date(employee.hire_date), "d MMMM yyyy", { locale: tr })}</p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-        </TabsContent>
-
-        <TabsContent value="is" className="space-y-6 mt-4">
-      <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
-        <h3 className="text-sm font-semibold text-foreground mb-4">İş Bilgileri</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {employee.position && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                <Briefcase className="w-4 h-4 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">Pozisyon</p>
-                <p className="text-sm font-medium">{getPosLabel(employee.position)}</p>
-              </div>
-            </div>
-          )}
-          {employee.manager_name && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                <Users className="w-4 h-4 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">Bağlı Olduğu Yönetici</p>
-                <p className="text-sm font-medium">{employee.manager_name}</p>
-              </div>
-            </div>
-          )}
-          {employee.hire_date && (
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
-                <CalendarDays className="w-4 h-4 text-teal-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground">İşe Giriş Tarihi</p>
-                <p className="text-sm font-medium">{format(new Date(employee.hire_date), "d MMMM yyyy", { locale: tr })}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
         </TabsContent>
@@ -570,7 +564,7 @@ export default function EmployeeDetail() {
               : (employee.university ? [{ university: employee.university, department: employee.education_department, graduation_date: employee.graduation_date }] : []);
             const certificates = employee.certificates || [];
             const documents = employee.education_documents || [];
-            const egitimDurumuVar = employee.education_level || employee.highest_education;
+            const egitimDurumuVar = employee.education_level;
 
             if (!history.length && !certificates.length && !documents.length && !egitimDurumuVar) {
               return <p className="text-sm text-muted-foreground">Eğitim bilgisi girilmemiş.</p>;
@@ -581,15 +575,9 @@ export default function EmployeeDetail() {
                 {/* Egitim Durumu -- universite girilmese bile ayri gosterilir, tab
                     tamamen bos gorunmesin diye (bkz. #1037) */}
                 {egitimDurumuVar && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl mb-5">
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Eğitim Durumu</p>
-                      <p className="text-sm font-medium">{employee.education_level || "Seçilmemiştir"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">En Yüksek Eğitim</p>
-                      <p className="text-sm font-medium">{employee.highest_education || "Seçilmemiştir"}</p>
-                    </div>
+                  <div className="p-3 bg-muted/30 rounded-xl mb-5">
+                    <p className="text-[11px] text-muted-foreground">Eğitim Durumu</p>
+                    <p className="text-sm font-medium">{employee.education_level || "Seçilmemiştir"}</p>
                   </div>
                 )}
 

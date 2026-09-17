@@ -266,7 +266,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
 
   const isDirty = !isEqual(form, formBaseline);
 
-  const kisiselContent = (
+  const kisiselCoreContent = (
     <div className="space-y-3">
       <div>
         <Label className="mb-1.5 block">Ad Soyad *</Label>
@@ -492,31 +492,32 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
     </div>
   );
 
+  const kisiselContent = (
+    <div className="space-y-3">
+      {kisiselCoreContent}
+      <div className="pt-4 border-t">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">İletişim Bilgileri</h4>
+        {iletisimContent}
+      </div>
+      <div className="pt-4 border-t">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">İş Bilgileri</h4>
+        {isContent}
+      </div>
+    </div>
+  );
+
   const egitimContent = (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label className="mb-1.5 block">Egitim Durumu</Label>
-          <Select value={form.education_level} onValueChange={(v) => setForm({ ...form, education_level: v })}>
-            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-            <SelectContent>
-              {educationLevelOptions.map((o) => (
-                <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="mb-1.5 block">En Yuksek Egitim</Label>
-          <Select value={form.highest_education} onValueChange={(v) => setForm({ ...form, highest_education: v })}>
-            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-            <SelectContent>
-              {educationLevelOptions.map((o) => (
-                <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <Label className="mb-1.5 block">Egitim Durumu</Label>
+        <Select value={form.education_level} onValueChange={(v) => setForm({ ...form, education_level: v })}>
+          <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+          <SelectContent>
+            {educationLevelOptions.map((o) => (
+              <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -815,16 +816,8 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
           {embedded ? (
             <div className="flex-1 min-h-0 mt-4 space-y-6">
               <div>
-                <h3 className="text-sm font-semibold mb-3">Kişisel</h3>
+                <h3 className="text-sm font-semibold mb-3">Kişisel Bilgiler</h3>
                 {kisiselContent}
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-3">İletişim Bilgileri</h3>
-                {iletisimContent}
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-3">İş</h3>
-                {isContent}
               </div>
               <div>
                 <h3 className="text-sm font-semibold mb-3">Eğitim</h3>
@@ -837,18 +830,14 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1 mt-4">
-              <TabsList className="w-full grid grid-cols-5 shrink-0">
-                <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
-                <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
-                <TabsTrigger value="is">İş</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-3 shrink-0">
+                <TabsTrigger value="kisisel">Kişisel Bilgiler</TabsTrigger>
                 <TabsTrigger value="egitim">Eğitim</TabsTrigger>
                 <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1">
                 <TabsContent value="kisisel" className="mt-0">{kisiselContent}</TabsContent>
-                <TabsContent value="iletisim" className="mt-0">{iletisimContent}</TabsContent>
-                <TabsContent value="is" className="mt-0">{isContent}</TabsContent>
                 <TabsContent value="egitim" className="mt-0">{egitimContent}</TabsContent>
                 <TabsContent value="ozluk" className="mt-0">{ozlukContent}</TabsContent>
               </div>

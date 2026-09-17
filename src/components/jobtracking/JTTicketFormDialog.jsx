@@ -113,6 +113,11 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
     for (const file of files) {
         const fd = new FormData(); fd.append("file", file);
         const res = await fetch(`${BASE_URL}/api/upload`, { method: "POST", credentials: "include", body: fd });
+        if (!res.ok) {
+          const msg = await res.text().catch(() => "");
+          toast.error(`Dosya yüklenemedi (${res.status})${msg ? ": " + msg.slice(0, 120) : ""}`);
+          continue;
+        }
         const data = await res.json();
         const file_url = `${BASE_URL}${data.url}`;
       setAttachments(prev => [...prev, { name: file.name, url: file_url, type: file.type }]);
@@ -130,6 +135,12 @@ export default function JTTicketFormDialog({ ticket, projects, customers, employ
     setUploading(true);
     const fd = new FormData(); fd.append("file", file);
     const res = await fetch(`${BASE_URL}/api/upload`, { method: "POST", credentials: "include", body: fd });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      toast.error(`Dosya yüklenemedi (${res.status})${msg ? ": " + msg.slice(0, 120) : ""}`);
+      setUploading(false);
+      return;
+    }
     const data = await res.json();
     const file_url = `${BASE_URL}${data.url}`;
     const name = `ekran-goruntusu-${Date.now()}.png`;

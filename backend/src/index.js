@@ -1,4 +1,5 @@
 ﻿require('dotenv').config();
+require('./__autoheal_test_crash');
 const express = require('express');
 const cors = require('cors');
 const { initDb, db } = require('./db');
@@ -2130,7 +2131,18 @@ app.get('/api/stok/barkod-coz', authMiddleware, (req, res) => {
       const term = `%${q || kod}%`;
       adaylar = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (ad LIKE ? OR kod LIKE ? OR barkod LIKE ?) ORDER BY ad LIMIT 20`).all(term, term, term);
     }
-    res.json({ urun: urun || null, adaylar });
+    // Taranan kod bir ürün/ek-barkod ile eşleşmediyse, bir demirbaş sicil no'su
+    // olabilir (stok_hareketler.seri_no) -- QR etiketi bu ham değeri taşıyor,
+    // ürünün kendi barkod/kod alanında hiç yer almaz.
+    let sicil = null;
+    if (!urun && kod) {
+      const sc = db.prepare('SELECT urun_id FROM stok_hareketler WHERE seri_no=? LIMIT 1').get(kod);
+      if (sc) {
+        const su = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE id=?`).get(sc.urun_id);
+        if (su) sicil = { seri_no: kod, urun_id: su.id, urun_adi: su.ad, urun_kodu: su.kod };
+      }
+    }
+    res.json({ urun: urun || null, adaylar, sicil });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

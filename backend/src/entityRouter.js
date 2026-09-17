@@ -427,7 +427,7 @@ const ALLOWED_COLUMNS = {
   stok_qnb_loglar: ['tarih','islem','durum','belge_id','mesaj'],
   stok_qnb_cari_sorgu: ['cari_id','cari_adi','vkn','tip','durum','alici_etiketi','aktif','tarih'],
   // ── İK / Özlük / Bordro ──
-  ik_subeler: ['ad','adres','ip_araligi','gps_enlem','gps_boylam','sapma_metre','telefon','yetkili','sira','aktif','is_deleted'],
+  ik_subeler: ['ad','adres','ip_araligi','gps_enlem','gps_boylam','sapma_metre','telefon','yetkili','sira','aktif','is_deleted','qr_token'],
   ik_bolumler: ['ad','sube_id','sube_adi','hedef_personel_sayisi','aciklama','aktif','is_deleted'],
   ik_ucret_gecmisi: ['personel_id','personel_adi','alan','eski_tutar','yeni_tutar','gecerlilik','aciklama','kaynak'],
   ik_vardiyalar: ['ad','kisa_kod','renk','baslama_saati','bitis_saati','gec_tolerans_dk','erken_tolerans_dk','fazla_mesai_katsayisi','gece_mi','ertesi_gune_tasar','rt_mesaisi_hesapla','planlamada_kullan','haftalik_izin_sayacina_ekle','varsayilan','aktif','is_deleted'],
@@ -827,6 +827,9 @@ function createEntityRouter(tableName) {
       // calisir, duz HTTP'de tarayicida tanimsiz kalip kayit backend'e hic
       // ulasmadan hataya dusuyordu. Diger tum id/token'lar gibi burada uretilir.
       if (tableName === 'devriye_noktalar' && !data.qr_token) {
+        data.qr_token = uuidv4();
+      }
+      if (tableName === 'ik_subeler' && !data.qr_token) {
         data.qr_token = uuidv4();
       }
 

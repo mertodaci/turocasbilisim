@@ -668,6 +668,13 @@ function initDb() {
     // hareket nedeni (Satın Alma, Sarf/Kullanım, Hurdaya Ayırma, Kayıp, ...).
     // Transfer'e bilinçli olarak eklenmiyor (kendi başına atomik bir fiş tipi zaten).
     "ALTER TABLE stok_fisler ADD COLUMN sebep_kodu TEXT",
+    // Şube QR kodu — her şube için tekil bir tanımlayıcı token. Yeni
+    // şubeler entityRouter'da otomatik üretiyor; burada mevcut şubeler
+    // için bir kerelik geriye dönük doldurma yapılır (WHERE qr_token IS
+    // NULL koşulu idempotent, ikinci çalıştırmada hiçbir satır tekrar
+    // güncellenmez).
+    "ALTER TABLE ik_subeler ADD COLUMN qr_token TEXT",
+    "UPDATE ik_subeler SET qr_token = lower(hex(randomblob(16))) WHERE qr_token IS NULL",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

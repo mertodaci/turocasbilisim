@@ -1,14 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import QRCode from "qrcode";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, MapPin, Check, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2, MapPin, Check, X, QrCode, Download } from "lucide-react";
 import { formatTrPhone } from "@/lib/utils";
 import { toast } from "sonner";
+import MapPickerDialog from "@/components/map/MapPickerDialog";
+
+function QrImage({ value, size = 220 }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let alive = true;
+    QRCode.toDataURL(value, { margin: 0, width: size }).then((d) => alive && setSrc(d)).catch(() => {});
+    return () => { alive = false; };
+  }, [value, size]);
+  if (!src) return <div className="bg-muted rounded" style={{ width: size, height: size }} />;
+  return <img src={src} alt="QR" width={size} height={size} />;
+}
 
 const empty = {
   ad: "", adres: "", ip_araligi: "", gps_enlem: "", gps_boylam: "", sapma_metre: 0,
@@ -24,6 +38,8 @@ export default function IkSubeler() {
   const [form, setForm] = useState(empty);
   const [initialForm, setInitialForm] = useState(empty);
   const [q, setQ] = useState("");
+  const [mapOpen, setMapOpen] = useState(false);
+  const [qrItem, setQrItem] = useState(null);
 
   const { data: subeler = [], isLoading } = useQuery({
     queryKey: ["ik_subeler"],
@@ -119,6 +135,12 @@ export default function IkSubeler() {
             <Label className="mb-1.5 block">IP Aralığı (QR geofence)</Label>
             <Input value={form.ip_araligi} onChange={(e) => setForm({ ...form, ip_araligi: e.target.value })} placeholder="örn: 88.240.10.0/24" />
           </div>
+          <div className="flex items-center justify-between">
+            <Label className="block">Konum</Label>
+            <Button type="button" size="sm" variant="outline" onClick={() => setMapOpen(true)}>
+              <MapPin className="w-3.5 h-3.5 mr-1.5" /> Haritadan Seç
+            </Button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label className="mb-1.5 block">GPS Enlem</Label>
@@ -184,6 +206,7 @@ export default function IkSubeler() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="QR Kod" onClick={() => setQrItem(s)}><QrCode className="w-3.5 h-3.5" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil className="w-3.5 h-3.5" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={() => { if (confirm("Şube silinsin mi? (bağlı personel varsa önce taşıyın)")) deleteMutation.mutate(s.id); }}>
@@ -198,6 +221,40 @@ export default function IkSubeler() {
         )}
       </div>
 
+      <MapPickerDialog
+        open={mapOpen}
+        onOpenChange={setMapOpen}
+        initialLat={form.gps_enlem}
+        initialLng={form.gps_boylam}
+        onPick={(lat, lng) => setForm({ ...form, gps_enlem: lat, gps_boylam: lng })}
+      />
+
+      <Dialog open={!!qrItem} onOpenChange={(v) => !v && setQrItem(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>{qrItem?.ad}</DialogTitle></DialogHeader>
+          {qrItem?.qr_token ? (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <QrImage value={qrItem.qr_token} />
+              <a
+                href={undefined}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  const dataUrl = await QRCode.toDataURL(qrItem.qr_token, { margin: 0, width: 512 });
+                  const a = document.createElement("a");
+                  a.href = dataUrl;
+                  a.download = `${qrItem.ad || "sube"}-qr.png`;
+                  a.click();
+                }}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" /> PNG İndir
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center">Bu şube için henüz QR kodu yok.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

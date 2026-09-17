@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { flowApi } from '@/api/flowApiClient';
 
 const cityCoordinates = {
@@ -60,15 +62,6 @@ function normalizeCity(str) {
     .trim();
 }
 
-function ensureLeaflet() {
-  return new Promise((resolve) => {
-    if (window.L) { resolve(window.L); return; }
-    const interval = setInterval(() => {
-      if (window.L) { clearInterval(interval); resolve(window.L); }
-    }, 50);
-  });
-}
-
 export default function TurkeyMap() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -85,42 +78,38 @@ export default function TurkeyMap() {
       mapInstanceRef.current = null;
     }
 
-    ensureLeaflet().then((L) => {
-      if (!mapRef.current) return;
+    const turkeyBounds = L.latLngBounds([35.8, 25.6], [42.1, 44.8]);
+    const map = L.map(mapRef.current, {
+      maxBounds: turkeyBounds,
+      maxBoundsViscosity: 1.0,
+      minZoom: 5,
+      maxZoom: 12,
+    }).setView([39.1, 35.5], 6);
+    mapInstanceRef.current = map;
 
-      const turkeyBounds = L.latLngBounds([35.8, 25.6], [42.1, 44.8]);
-      const map = L.map(mapRef.current, {
-        maxBounds: turkeyBounds,
-        maxBoundsViscosity: 1.0,
-        minZoom: 5,
-        maxZoom: 12,
-      }).setView([39.1, 35.5], 6);
-      mapInstanceRef.current = map;
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
+      maxZoom: 19,
+    }).addTo(map);
 
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> katkıda bulunanlar',
-        maxZoom: 19,
-      }).addTo(map);
+    const icon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32],
+    });
 
-      const icon = L.icon({
-        iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-      });
-
-      customers.forEach((customer) => {
-        const cityKey = normalizeCity(customer.city);
-        const coords = cityCoordinates[cityKey];
-        if (!coords) return;
-        L.marker(coords, { icon })
-          .addTo(map)
-          .bindPopup(`
-            <div style="font-weight:600;font-size:13px">${customer.company_name}</div>
-            <div style="font-size:12px;color:#666;margin-top:2px">${customer.city}</div>
-            ${customer.status ? `<div style="font-size:11px;margin-top:4px;color:#888">${{aktif:'Aktif',pasif:'Pasif',potansiyel:'Potansiyel'}[customer.status] || customer.status}</div>` : ''}
-          `);
-      });
+    customers.forEach((customer) => {
+      const cityKey = normalizeCity(customer.city);
+      const coords = cityCoordinates[cityKey];
+      if (!coords) return;
+      L.marker(coords, { icon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-weight:600;font-size:13px">${customer.company_name}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">${customer.city}</div>
+          ${customer.status ? `<div style="font-size:11px;margin-top:4px;color:#888">${{aktif:'Aktif',pasif:'Pasif',potansiyel:'Potansiyel'}[customer.status] || customer.status}</div>` : ''}
+        `);
     });
 
     return () => {

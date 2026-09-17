@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import QRCode from "qrcode";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import SicilNoScanSelect from "@/components/stok/SicilNoScanSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
-import { HardHat, Plus, Trash2, Undo2, Eye } from "lucide-react";
+import { HardHat, Plus, Trash2, Undo2, Eye, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
 const DURUM_BADGE = {
@@ -67,6 +69,42 @@ export default function StokZimmet() {
       .filter((s) => s.iade_miktar > 1e-9);
     if (!satirlar.length) { toast.error("Düşülecek miktar girin"); return; }
     iadeM.mutate({ id: detay.id, satirlar });
+  };
+
+  // Zimmetli fiziksel birimin üstüne yapıştırılacak QR -- bare sicil no değil,
+  // Demirbaş Sorgula sayfasına giden bir link taşır. Böylece herhangi bir
+  // telefonun standart kamera/QR uygulamasıyla okutulduğunda (bu projenin
+  // kendi tarama ekranına girmeye gerek kalmadan) doğrudan güncel zimmetli
+  // kişi/yer bilgisini gösteren sayfa açılır -- etikete basılan an değil,
+  // okutulduğu andaki gerçek durum (staleness riski yok).
+  const sicilQrYazdir = async (s) => {
+    if (!s.seri_no) { toast.error("Bu satırda sicil no yok"); return; }
+    const w = window.open("", "_blank", "width=480,height=640");
+    if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
+    const url = `${window.location.origin}/stok/demirbas-sorgula?seri_no=${encodeURIComponent(s.seri_no)}`;
+    let qrImg;
+    try { qrImg = await QRCode.toDataURL(url, { margin: 0, width: 220 }); }
+    catch { toast.error("QR kod üretilemedi"); w.close(); return; }
+    const kimeAit = [detay?.personel_adi, detay?.yer_adi].filter(Boolean).join(" · ") || "—";
+    w.document.write(`<html><head><title>Zimmet Etiketi</title><style>
+      *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
+      body{margin:0;padding:8px;display:flex;justify-content:center}
+      .lbl{width:160px;border:1px solid #000;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+      .qr-img{width:120px;height:120px;object-fit:contain}
+      .ad{font-size:11px;font-weight:600;line-height:1.15;overflow:hidden}
+      .sicil{font-size:9px;color:#333;word-break:break-all}
+      .kime{font-size:9px;color:#333}
+      @media print{.lbl{page-break-inside:avoid}}
+    </style></head><body>
+      <div class="lbl">
+        <img class="qr-img" src="${qrImg}" />
+        <div class="ad">${(s.urun_adi || "").replace(/</g, "&lt;")}</div>
+        <div class="sicil">SN ${s.seri_no}</div>
+        <div class="kime">${kimeAit.replace(/</g, "&lt;")}</div>
+      </div>
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 300);
   };
 
   return (
@@ -163,7 +201,7 @@ export default function StokZimmet() {
                 <thead className="bg-muted/40"><tr>
                   <th className="text-left px-2 py-1.5">Ürün</th><th className="text-right px-2 py-1.5">Zimmetli</th>
                   <th className="text-right px-2 py-1.5">İade Edilen</th><th className="text-left px-2 py-1.5">İade Tarihi</th>
-                  <th className="text-right px-2 py-1.5">Düşülecek Miktar</th>
+                  <th className="text-right px-2 py-1.5">Düşülecek Miktar</th><th className="px-2 py-1.5"></th>
                 </tr></thead>
                 <tbody>
                   {detay.satirlar.map((s) => {
@@ -179,6 +217,9 @@ export default function StokZimmet() {
                             <Input type="number" className="h-7 w-20 text-right inline-block" value={iadeMiktarlar[s.id] ?? ""} max={kalan}
                               onChange={(e) => setIadeMiktarlar({ ...iadeMiktarlar, [s.id]: e.target.value })} />
                           )}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {s.seri_no && <Button variant="ghost" size="icon" className="h-7 w-7" title="Zimmet QR Yazdır" onClick={() => sicilQrYazdir(s)}><QrCode className="w-3.5 h-3.5" /></Button>}
                         </td>
                       </tr>
                     );
@@ -309,7 +350,7 @@ function YeniZimmetDialog({ open, onOpenChange, onCreated, personeller, yerler }
                   </div>
                   <div className="col-span-4">
                     <Label className="mb-1 block text-[11px]">Sicil No</Label>
-                    <SearchableSelect value={s.seri_no} onChange={(v) => setSatir(i, { seri_no: v })}
+                    <SicilNoScanSelect value={s.seri_no} onChange={(v) => setSatir(i, { seri_no: v })}
                       options={musaitSicilListesi.map((sn) => ({ value: sn, label: sn }))}
                       placeholder={musaitSicilListesi.length ? "Sicil no seç" : "Bu depoda müsait yok"} />
                   </div>

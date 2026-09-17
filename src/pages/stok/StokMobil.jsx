@@ -27,6 +27,7 @@ export default function StokMobil() {
   const [mode, setMode] = useState(ilkTaslak?.mode || "giris"); // giris | cikis | sayim
   const [depoId, setDepoId] = useState(ilkTaslak?.depoId || "");
   const [sahaId, setSahaId] = useState(ilkTaslak?.sahaId || "");
+  const [rafBilgi, setRafBilgi] = useState(ilkTaslak?.rafBilgi || null); // { id, kod, ad, depo_id, depo_adi } -- Raf QR okutulunca dolar
   const [lines, setLines] = useState(ilkTaslak?.lines || []);
   const [scan, setScan] = useState("");
   const [saving, setSaving] = useState(false);
@@ -56,8 +57,8 @@ export default function StokMobil() {
   // Taslagi her degisiklikte guncelle -- kaydedilmis/onaylanmis veri yok,
   // sadece "kaldigi yerden devam" icin.
   useEffect(() => {
-    taslakKaydet({ mode, depoId, sahaId, lines, sebepKodu, sayimId, sayimSatirlari });
-  }, [mode, depoId, sahaId, lines, sebepKodu, sayimId, sayimSatirlari]);
+    taslakKaydet({ mode, depoId, sahaId, rafBilgi, lines, sebepKodu, sayimId, sayimSatirlari });
+  }, [mode, depoId, sahaId, rafBilgi, lines, sebepKodu, sayimId, sayimSatirlari]);
 
   // Mobil ekran tüm ürün/barkod kataloğunu indirmez — barkod sunucuda çözülür.
   const { data: depolar = [] } = useQuery({ queryKey: ["stok_depolar"], queryFn: () => flowApi.entities.StokDepo.list("ad", 2000) });
@@ -66,8 +67,23 @@ export default function StokMobil() {
   const { data: tumUrunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000), enabled: !!bilinmeyen });
 
   const modDegistir = (m) => {
-    setMode(m); setLines([]); setSayimId(null); setSayimSatirlari([]); setScan(""); setOneriler([]);
+    setMode(m); setLines([]); setSayimId(null); setSayimSatirlari([]); setScan(""); setOneriler([]); setRafBilgi(null);
     if (SEBEP_LISTESI[m]) setSebepKodu(SEBEP_LISTESI[m][0].value);
+  };
+
+  // Raf QR'ı ("RAF:{id}" prefiksi) okutulunca depo/raf context'i çözülür;
+  // rafın "varsayılan" (Ürün-Raf Atama'dan işaretli) malzemesi varsa o da
+  // otomatik eklenir -- tek okutmayla hem konum hem malzeme hazır olur.
+  const rafKoduIsle = async (rafId) => {
+    try {
+      const raf = await flowApi.entities.StokRaf.get(rafId);
+      if (!raf || raf.is_deleted === 1) { toast.error("Raf bulunamadı"); return; }
+      setDepoId(raf.depo_id);
+      setRafBilgi(raf);
+      toast.success(`Konum: ${raf.depo_adi || ""} · ${raf.kod || raf.ad || ""}`);
+      const u = await flowApi.stok.rafVarsayilanUrun(raf.id).catch(() => null);
+      if (u) ekle(u);
+    } catch (e) { toast.error(String(e?.message || "Raf okunamadı")); }
   };
 
   // İsimle arama: 2+ karakter yazılınca (barkod tabancasının hızlı yazıp Enter'a
@@ -115,6 +131,7 @@ export default function StokMobil() {
     const u = r.urun || (r.adaylar?.length === 1 ? r.adaylar[0] : null);
     if (u) return u;
     if (r.adaylar?.length > 1) { toast.error(`${r.adaylar.length} eşleşme — tam barkod / kod okutun`); return null; }
+    if (r.sicil) { toast.error(`Bu bir demirbaş sicil no'su (${r.sicil.urun_adi}) — Zimmet, Transfer veya Çıkış ekranından işlem yapın.`); return null; }
     setBilinmeyen({ kod });
     return null;
   };
@@ -122,6 +139,13 @@ export default function StokMobil() {
   const onScan = async (kodOverride) => {
     const s = (kodOverride ?? scan).trim();
     if (!s || scanning) return;
+    if (s.startsWith("RAF:")) {
+      setScan(""); setOneriler([]);
+      if (mode === "sayim") toast.error("Sayımda raf okutma kullanılmaz — depo sayım başlangıcında zaten seçildi");
+      else await rafKoduIsle(s.slice(4));
+      inputRef.current?.focus();
+      return;
+    }
     setScanning(true);
     try {
       const u = await barkodCoz(s);
@@ -197,12 +221,18 @@ export default function StokMobil() {
     // birim kendi satırına bölünür (masaüstü FisForm.jsx ile aynı mantık);
     // sicil no burada ÜRETİLMİYOR -- onaylama anında backend tarafından
     // atomik/sıralı olarak atanıyor.
+    // Raf QR okutulmuşsa (rafBilgi doluysa) satırlara raf bilgisi işlenir --
+    // masaüstü FisForm.jsx'in zaten desteklediği/backend'e ilettiği alanlarla
+    // aynı isimler (kaynak_raf_id/hedef_raf_id), yeni backend değişikliği gerekmez.
+    const rafAlanlari = rafBilgi
+      ? (mode === "giris" ? { hedef_raf_id: rafBilgi.id, hedef_raf_adi: rafBilgi.kod || rafBilgi.ad } : { kaynak_raf_id: rafBilgi.id, kaynak_raf_adi: rafBilgi.kod || rafBilgi.ad })
+      : {};
     const genisletilmis = satirlar.flatMap((l) => {
       if (mode === "giris" && l.seri_no_takip) {
         const adet = Math.max(1, Math.round(l.miktar));
-        return Array.from({ length: adet }, () => ({ ...l, miktar: 1, carpan: 1, seri_no: "" }));
+        return Array.from({ length: adet }, () => ({ ...l, miktar: 1, carpan: 1, seri_no: "", ...rafAlanlari }));
       }
-      return [{ ...l, carpan: 1 }];
+      return [{ ...l, carpan: 1, ...rafAlanlari }];
     });
     setSaving(true);
     try {
@@ -260,7 +290,13 @@ export default function StokMobil() {
       {mode !== "sayim" ? (
         <>
           <div className="space-y-2">
-            <SearchableSelect value={depoId} onChange={setDepoId} options={depoOptsGirisCikis} placeholder={mode === "giris" ? "Hedef depo" : "Kaynak depo"} className="h-11" />
+            <SearchableSelect value={depoId} onChange={(v) => { setDepoId(v); setRafBilgi(null); }} options={depoOptsGirisCikis} placeholder={mode === "giris" ? "Hedef depo" : "Kaynak depo"} className="h-11" />
+            {rafBilgi && (
+              <div className="flex items-center justify-between gap-2 bg-primary/5 border border-primary/20 rounded-lg px-3 py-1.5 text-xs">
+                <span>Raf: <b>{rafBilgi.kod || rafBilgi.ad}</b></span>
+                <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setRafBilgi(null)}>×</button>
+              </div>
+            )}
             {mode === "cikis" && <SearchableSelect value={sahaId} onChange={setSahaId} options={[{ value: "", label: "Hedef: aynı depo" }, ...sahalar.map((s) => ({ value: s.id, label: "Saha: " + s.ad }))]} placeholder="Hedef saha (ops.)" className="h-11" />}
             {SEBEP_LISTESI[mode] && (
               <Select value={sebepKodu} onValueChange={setSebepKodu}>
@@ -274,7 +310,7 @@ export default function StokMobil() {
 
           <div className="relative">
             <div className="flex gap-2">
-              <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Barkod okut / ürün adı" value={scan}
+              <Input ref={inputRef} autoFocus inputMode="text" className="h-12 text-base" placeholder="Ürün/Raf QR okut / ürün adı" value={scan}
                 onChange={(e) => setScan(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") onScan(); if (e.key === "Escape") setOneriler([]); }} />
               <Button variant="outline" className="h-12 px-3" onClick={() => setKameraAcik(true)} title="Kamera ile okut" disabled={!online}><Camera className="w-5 h-5" /></Button>

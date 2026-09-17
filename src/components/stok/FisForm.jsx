@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import SicilNoScanSelect from "@/components/stok/SicilNoScanSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
 import { SEBEP_LISTESI } from "@/lib/stokSebepleri";
 import { Plus, Trash2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, ListChecks, Undo2 } from "lucide-react";
@@ -394,10 +395,10 @@ export default function FisForm({ tip }) {
               ) : (
                 <div className="flex items-center gap-2">
                   <Label className="text-xs shrink-0 text-amber-600">Sicil No *</Label>
-                  <SearchableSelect value={l.seri_no} onChange={(v) => setLine(i, { seri_no: v })}
+                  <SicilNoScanSelect value={l.seri_no} onChange={(v) => setLine(i, { seri_no: v })}
                     options={(depoSicilListeleri[l.urun_id] || []).map((sn) => ({ value: sn, label: sn }))}
                     placeholder={header.kaynak_depo_id ? ((depoSicilListeleri[l.urun_id] || []).length ? "Sicil no seç" : "Bu depoda müsait yok") : "Önce kaynak depo seçin"}
-                    fixDialogWheelScroll />
+                    className="flex-1" />
                 </div>
               )
             )}

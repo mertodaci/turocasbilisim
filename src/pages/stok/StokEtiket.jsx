@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import JsBarcode from "jsbarcode";
 import QRCode from "qrcode";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
-import { Tags, Plus, Trash2, Printer, ListPlus, QrCode } from "lucide-react";
+import { Tags, Plus, Trash2, Printer, ListPlus, HardHat, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 const ETIKET_BOYUTLARI = {
@@ -16,13 +15,17 @@ const ETIKET_BOYUTLARI = {
   termal: { label: "Termal Etiket (40×30mm rulo)" },
 };
 
+const esc = (s) => (s || "").replace(/</g, "&lt;");
+
 export default function StokEtiket() {
   const qc = useQueryClient();
-  const [mod, setMod] = useState("urun"); // urun | demirbas
+  const [mod, setMod] = useState("tuketim"); // tuketim | demirbas | raf
+  const [boyut, setBoyut] = useState("standart");
+
+  // Tüketim Malzemesi QR modu
   const [sepet, setSepet] = useState([]);
   const [sel, setSel] = useState("");
   const [adet, setAdet] = useState(1);
-  const [boyut, setBoyut] = useState("standart");
 
   // Demirbaş QR modu
   const [demirbasSepet, setDemirbasSepet] = useState([]); // { urun_id, urun_adi, urun_kodu, seri_no }
@@ -30,13 +33,19 @@ export default function StokEtiket() {
   const [sicilListesi, setSicilListesi] = useState([]);
   const [sicilYukleniyor, setSicilYukleniyor] = useState(false);
 
+  // Raf / Lokasyon QR modu
+  const [rafSepet, setRafSepet] = useState([]); // { raf_id, raf_kod, raf_ad, depo_adi, varsayilan_urun_adi }
+  const [rafSel, setRafSel] = useState("");
+
   const { data: urunler = [] } = useQuery({ queryKey: ["stok_urunler-min"], queryFn: () => flowApi.entities.StokUrun.list("ad", 8000) });
   const ekBarkodMap = useUrunEkBarkodMap();
   const { data: fisler = [] } = useQuery({ queryKey: ["stok_etiket_fisleri"], queryFn: () => flowApi.entities.StokEtiketFis.list("-created_date", 500) });
+  const { data: raflar = [] } = useQuery({ queryKey: ["stok_raflar_min"], queryFn: () => flowApi.entities.StokRaf.list("depo_adi", 5000), enabled: mod === "raf" });
+  const tuketimUrunler = urunler.filter((u) => u.urun_tipi !== "demirbas");
   const demirbasUrunler = urunler.filter((u) => u.urun_tipi === "demirbas");
 
   const ekle = () => {
-    const u = urunler.find((x) => x.id === sel);
+    const u = tuketimUrunler.find((x) => x.id === sel);
     if (!u) return;
     setSepet((s) => {
       const i = s.findIndex((x) => x.urun_id === u.id);
@@ -47,7 +56,7 @@ export default function StokEtiket() {
   };
 
   const topluEkle = (filtreFn, uyariMetin) => {
-    const adaylar = urunler.filter((u) => u.is_deleted !== 1 && u.aktif !== 0 && filtreFn(u));
+    const adaylar = tuketimUrunler.filter((u) => u.is_deleted !== 1 && u.aktif !== 0 && filtreFn(u));
     if (!adaylar.length) { toast.error(uyariMetin); return; }
     setSepet((s) => {
       const mevcut = new Set(s.map((x) => x.urun_id));
@@ -84,6 +93,16 @@ export default function StokEtiket() {
     toast.success(`${sicilListesi.length} sicil no sepete eklendi`);
   };
 
+  const rafEkle = async () => {
+    const r = raflar.find((x) => x.id === rafSel);
+    if (!r) return;
+    if (rafSepet.some((x) => x.raf_id === r.id)) { toast.error("Bu raf zaten sepette"); return; }
+    let varsayilanAdi = "";
+    try { const u = await flowApi.stok.rafVarsayilanUrun(r.id); varsayilanAdi = u?.ad || ""; } catch { /* varsayılan yoksa sessiz geç */ }
+    setRafSepet((s) => [...s, { raf_id: r.id, raf_kod: r.kod, raf_ad: r.ad, depo_adi: r.depo_adi, varsayilan_urun_adi: varsayilanAdi }]);
+    setRafSel("");
+  };
+
   const kaydetM = useMutation({
     mutationFn: ({ satirlar, toplam, dizayn }) => {
       const yil = new Date().getFullYear();
@@ -95,42 +114,39 @@ export default function StokEtiket() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["stok_etiket_fisleri"] }); toast.success("Etiket listesi kaydedildi"); },
   });
 
-  const barkodResmi = (deger) => {
-    if (!deger) return null;
-    try {
-      const canvas = document.createElement("canvas");
-      JsBarcode(canvas, deger, { format: "CODE128", displayValue: false, margin: 0, width: 2, height: 60 });
-      return canvas.toDataURL("image/png");
-    } catch {
-      return null;
-    }
-  };
-
-  const yazdir = () => {
+  const yazdir = async () => {
     if (!sepet.length) return;
+    // window.open() ilk satırda olmalı -- await'ten sonra çağrılırsa popup
+    // engelleyici tıklama olayıyla bağlantıyı kaybedip pencereyi sessizce
+    // engeller (bu projede demirbaş QR basımında daha önce yaşanmış bir hata).
     const w = window.open("", "_blank", "width=720,height=900");
     if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
     const labels = sepet.flatMap((s) => Array.from({ length: s.adet }, () => s));
     const isTermal = boyut === "termal";
-    const labelsHtml = labels.map((l) => {
-      const deger = l.barkod || l.urun_kodu || "";
-      const img = barkodResmi(deger);
-      return `<div class="lbl"><div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="kod">${l.urun_kodu || ""}</div></div>
-      <div>${img ? `<img class="bar-img" src="${img}" />` : ""}<div class="barnum">${deger || "-"}</div></div></div>`;
-    }).join("");
+    let qrImgs;
+    try {
+      qrImgs = await Promise.all(labels.map((l) => QRCode.toDataURL(l.barkod || l.urun_kodu || "", { margin: 0, width: 200 })));
+    } catch {
+      toast.error("QR kod üretilemedi");
+      w.close();
+      return;
+    }
+    const labelsHtml = labels.map((l, i) => `<div class="lbl">
+      <img class="qr-img" src="${qrImgs[i]}" />
+      <div><div class="ad">${esc(l.urun_adi)}</div><div class="kod">${l.urun_kodu || ""}${l.barkod ? " · " + l.barkod : ""}</div></div>
+    </div>`).join("");
     w.document.write(`<html><head><title>Etiketler</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
       body{margin:0;padding:${isTermal ? 0 : "8px"};display:flex;flex-wrap:wrap;gap:${isTermal ? 0 : "6px"}}
-      .lbl{width:${isTermal ? "40mm" : "220px"};height:${isTermal ? "30mm" : "120px"};border:1px solid #000;padding:${isTermal ? "2mm" : "8px"};display:flex;flex-direction:column;justify-content:space-between}
-      .ad{font-size:${isTermal ? "9px" : "12px"};font-weight:600;line-height:1.2;overflow:hidden}
-      .kod{font-size:${isTermal ? "8px" : "11px"};color:#333}
-      .bar-img{display:block;width:100%;height:${isTermal ? "14mm" : "40px"};object-fit:contain}
-      .barnum{font-size:${isTermal ? "8px" : "11px"};text-align:center;letter-spacing:2px}
+      .lbl{width:${isTermal ? "40mm" : "160px"};height:${isTermal ? "30mm" : "190px"};border:1px solid #000;padding:${isTermal ? "1.5mm" : "8px"};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+      .qr-img{width:${isTermal ? "22mm" : "120px"};height:${isTermal ? "22mm" : "120px"};object-fit:contain}
+      .ad{font-size:${isTermal ? "7px" : "11px"};font-weight:600;line-height:1.15;overflow:hidden}
+      .kod{font-size:${isTermal ? "6px" : "9px"};color:#333;word-break:break-all}
       @media print{.lbl{page-break-inside:avoid}${isTermal ? "@page{size:40mm 30mm;margin:0;}" : ""}}
     </style></head><body>${labelsHtml}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); }, 300);
-    kaydetM.mutate({ satirlar: sepet, toplam: sepet.reduce((a, x) => a + x.adet, 0), dizayn: "standart" });
+    kaydetM.mutate({ satirlar: sepet, toplam: sepet.reduce((a, x) => a + x.adet, 0), dizayn: "tuketim_qr" });
   };
 
   const demirbasYazdir = async () => {
@@ -148,7 +164,7 @@ export default function StokEtiket() {
     }
     const labelsHtml = demirbasSepet.map((l, i) => `<div class="lbl">
       <img class="qr-img" src="${qrImgs[i]}" />
-      <div><div class="ad">${(l.urun_adi || "").replace(/</g, "&lt;")}</div><div class="sicil">${l.seri_no}</div></div>
+      <div><div class="ad">${esc(l.urun_adi)}</div><div class="sicil">${l.seri_no}</div></div>
     </div>`).join("");
     w.document.write(`<html><head><title>Demirbaş Sicil No Etiketleri</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
@@ -164,29 +180,62 @@ export default function StokEtiket() {
     kaydetM.mutate({ satirlar: demirbasSepet, toplam: demirbasSepet.length, dizayn: "demirbas_qr" });
   };
 
+  const rafYazdir = async () => {
+    if (!rafSepet.length) return;
+    const w = window.open("", "_blank", "width=720,height=900");
+    if (!w) { toast.error("Yazdırma penceresi açılamadı (popup engelli olabilir)"); return; }
+    const isTermal = boyut === "termal";
+    let qrImgs;
+    try {
+      qrImgs = await Promise.all(rafSepet.map((r) => QRCode.toDataURL(`RAF:${r.raf_id}`, { margin: 0, width: 200 })));
+    } catch {
+      toast.error("QR kod üretilemedi");
+      w.close();
+      return;
+    }
+    const labelsHtml = rafSepet.map((r, i) => `<div class="lbl">
+      <img class="qr-img" src="${qrImgs[i]}" />
+      <div><div class="ad">${esc(r.raf_kod || r.raf_ad)}</div><div class="alt">${esc(r.depo_adi)}</div>${r.varsayilan_urun_adi ? `<div class="urun">${esc(r.varsayilan_urun_adi)}</div>` : ""}</div>
+    </div>`).join("");
+    w.document.write(`<html><head><title>Raf/Lokasyon Etiketleri</title><style>
+      *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
+      body{margin:0;padding:${isTermal ? 0 : "8px"};display:flex;flex-wrap:wrap;gap:${isTermal ? 0 : "6px"}}
+      .lbl{width:${isTermal ? "40mm" : "160px"};height:${isTermal ? "30mm" : "190px"};border:1px solid #000;padding:${isTermal ? "1.5mm" : "8px"};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+      .qr-img{width:${isTermal ? "22mm" : "120px"};height:${isTermal ? "22mm" : "120px"};object-fit:contain}
+      .ad{font-size:${isTermal ? "8px" : "12px"};font-weight:700;line-height:1.15}
+      .alt{font-size:${isTermal ? "6px" : "9px"};color:#333}
+      .urun{font-size:${isTermal ? "6px" : "9px"};color:#555;font-style:italic}
+      @media print{.lbl{page-break-inside:avoid}${isTermal ? "@page{size:40mm 30mm;margin:0;}" : ""}}
+    </style></head><body>${labelsHtml}</body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 300);
+    kaydetM.mutate({ satirlar: rafSepet, toplam: rafSepet.length, dizayn: "raf_qr" });
+  };
+
   return (
     <div className="space-y-5 max-w-4xl mx-auto">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Tags className="w-6 h-6 text-primary" /> Toplu QR/Barkod Yazdırma</h1>
-        <p className="text-sm text-muted-foreground mt-1">Ürün seç → etiket sepetine ekle → yazdır. Basılan listeler kayıt altına alınır.</p></div>
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Tags className="w-6 h-6 text-primary" /> Toplu QR Yazdırma</h1>
+        <p className="text-sm text-muted-foreground mt-1">Malzeme / demirbaş / raf seç → etiket sepetine ekle → yazdır. Basılan listeler kayıt altına alınır.</p></div>
 
-      <div className="flex gap-2">
-        <Button variant={mod === "urun" ? "default" : "outline"} onClick={() => setMod("urun")}><Tags className="w-4 h-4 mr-1.5" /> Ürün Barkodu</Button>
-        <Button variant={mod === "demirbas" ? "default" : "outline"} onClick={() => setMod("demirbas")}><QrCode className="w-4 h-4 mr-1.5" /> Demirbaş Sicil No (QR)</Button>
+      <div className="flex gap-2 flex-wrap">
+        <Button variant={mod === "tuketim" ? "default" : "outline"} onClick={() => setMod("tuketim")}><Tags className="w-4 h-4 mr-1.5" /> Tüketim Malzemesi</Button>
+        <Button variant={mod === "demirbas" ? "default" : "outline"} onClick={() => setMod("demirbas")}><HardHat className="w-4 h-4 mr-1.5" /> Demirbaş</Button>
+        <Button variant={mod === "raf" ? "default" : "outline"} onClick={() => setMod("raf")}><MapPin className="w-4 h-4 mr-1.5" /> Raf / Lokasyon</Button>
       </div>
 
-      {mod === "urun" ? (
+      {mod === "tuketim" && (
         <div className="bg-card border rounded-2xl p-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={urunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))} placeholder="Ürün ara / okut" /></div>
+            <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={tuketimUrunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))} placeholder="Malzeme ara / okut" /></div>
             <Input type="number" className="w-24" value={adet} onChange={(e) => setAdet(parseInt(e.target.value) || 1)} />
             <Button onClick={ekle} disabled={!sel}><Plus className="w-4 h-4 mr-1.5" /> Sepete Ekle</Button>
           </div>
           <div className="flex flex-wrap gap-2 pt-1 border-t">
             <Button variant="outline" size="sm" onClick={() => topluEkle((u) => !u.barkod, "Barkodu olmayan ürün yok")}>
-              <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Barkodu Olmayan Tüm Ürünleri Ekle
+              <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Barkodu Olmayan Tüm Malzemeleri Ekle
             </Button>
             <Button variant="outline" size="sm" onClick={() => topluEkle(() => true, "Ürün yok")}>
-              <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Tüm Aktif Ürünleri Ekle
+              <ListPlus className="w-3.5 h-3.5 mr-1.5" /> Tüm Aktif Malzemeleri Ekle
             </Button>
             <Select value={boyut} onValueChange={setBoyut}>
               <SelectTrigger className="w-64 ml-auto"><SelectValue /></SelectTrigger>
@@ -195,7 +244,7 @@ export default function StokEtiket() {
           </div>
           {sepet.length > 0 && (
             <table className="w-full text-sm">
-              <thead className="bg-muted/40"><tr><th className="text-left px-3 py-2">Ürün</th><th className="text-left px-3 py-2">Kod / Barkod</th><th className="text-right px-3 py-2">Adet</th><th className="px-3 py-2"></th></tr></thead>
+              <thead className="bg-muted/40"><tr><th className="text-left px-3 py-2">Malzeme</th><th className="text-left px-3 py-2">Kod / Barkod</th><th className="text-right px-3 py-2">Adet</th><th className="px-3 py-2"></th></tr></thead>
               <tbody>
                 {sepet.map((s, i) => (
                   <tr key={s.urun_id} className="border-t">
@@ -219,7 +268,9 @@ export default function StokEtiket() {
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {mod === "demirbas" && (
         <div className="bg-card border rounded-2xl p-4 space-y-3">
           <p className="text-xs text-muted-foreground">Her demirbaş fiziksel birimi kendi sicil no'suyla ayrı bir QR etiket alır — barkod okuyucu gerekmez, herhangi bir telefonun kamerasıyla okunabilir.</p>
           <div className="flex flex-wrap gap-2 items-end">
@@ -270,10 +321,52 @@ export default function StokEtiket() {
         </div>
       )}
 
+      {mod === "raf" && (
+        <div className="bg-card border rounded-2xl p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">Rafın önüne/gözüne yapıştırılır. Rafa "Ürün-Raf Atama" ekranından varsayılan bir malzeme atanmışsa, bu QR okutulunca mobilde o malzeme de otomatik eklenir.</p>
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="flex-1 min-w-[240px]">
+              <SearchableSelect value={rafSel} onChange={setRafSel}
+                options={raflar.filter((r) => r.aktif !== 0 && r.is_deleted !== 1).map((r) => ({ value: r.id, label: `${r.depo_adi ? r.depo_adi + " · " : ""}${r.kod || r.ad}` }))}
+                placeholder="Raf ara" />
+            </div>
+            <Button onClick={rafEkle} disabled={!rafSel}><Plus className="w-4 h-4 mr-1.5" /> Sepete Ekle</Button>
+          </div>
+          <div className="flex justify-end pt-1 border-t">
+            <Select value={boyut} onValueChange={setBoyut}>
+              <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+              <SelectContent>{Object.entries(ETIKET_BOYUTLARI).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          {rafSepet.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40"><tr><th className="text-left px-3 py-2">Raf</th><th className="text-left px-3 py-2">Depo</th><th className="text-left px-3 py-2">Varsayılan Malzeme</th><th className="px-3 py-2"></th></tr></thead>
+              <tbody>
+                {rafSepet.map((r, i) => (
+                  <tr key={r.raf_id} className="border-t">
+                    <td className="px-3 py-1.5">{r.raf_kod || r.raf_ad}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{r.depo_adi}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{r.varsayilan_urun_adi || "—"}</td>
+                    <td className="px-3 py-1.5 text-right"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setRafSepet(rafSepet.filter((_, idx) => idx !== i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <div className="flex justify-between items-center pt-2 border-t">
+            <span className="text-sm text-muted-foreground">Toplam etiket: {rafSepet.length}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setRafSepet([])}>Sepeti Temizle</Button>
+              <Button disabled={!rafSepet.length} onClick={rafYazdir}><Printer className="w-4 h-4 mr-1.5" /> Yazdır ve Kaydet</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-card border rounded-2xl overflow-x-auto">
         <p className="px-4 py-3 text-sm font-semibold border-b">Basılan Etiket Listesi</p>
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 border-b"><tr><th className="text-left px-4 py-2 text-muted-foreground">Fiş No</th><th className="text-left px-4 py-2 text-muted-foreground">Tarih</th><th className="text-right px-4 py-2 text-muted-foreground">Ürün</th><th className="text-right px-4 py-2 text-muted-foreground">Toplam Etiket</th></tr></thead>
+          <thead className="bg-muted/40 border-b"><tr><th className="text-left px-4 py-2 text-muted-foreground">Fiş No</th><th className="text-left px-4 py-2 text-muted-foreground">Tarih</th><th className="text-right px-4 py-2 text-muted-foreground">Kalem</th><th className="text-right px-4 py-2 text-muted-foreground">Toplam Etiket</th></tr></thead>
           <tbody>
             {fisler.filter((f) => f.is_deleted !== 1).map((f) => (
               <tr key={f.id} className="border-b last:border-0"><td className="px-4 py-1.5">{f.fis_no}</td><td className="px-4 py-1.5 text-muted-foreground">{f.tarih}</td><td className="px-4 py-1.5 text-right text-muted-foreground">{(f.satirlar_json || []).length}</td><td className="px-4 py-1.5 text-right">{f.toplam_etiket}</td></tr>

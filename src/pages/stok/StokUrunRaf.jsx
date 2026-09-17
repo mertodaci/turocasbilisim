@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash2, PackageSearch } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { urun_id: "", depo_id: "", min_seviye: 0, max_seviye: 0, notlar: "" };
+const empty = { urun_id: "", depo_id: "", raf_id: "", varsayilan: 0, min_seviye: 0, max_seviye: 0, notlar: "" };
 
 export default function StokUrunRaf() {
   const queryClient = useQueryClient();
@@ -29,10 +30,16 @@ export default function StokUrunRaf() {
     queryKey: ["stok_depolar"],
     queryFn: () => flowApi.entities.StokDepo.list("ad", 2000),
   });
+  const { data: raflar = [] } = useQuery({
+    queryKey: ["stok_raflar"],
+    queryFn: () => flowApi.entities.StokRaf.list("depo_adi", 5000),
+  });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["stok_urun_raf"] });
   const urunAdi = (id) => urunler.find((u) => u.id === id)?.ad || "";
   const depoAdi = (id) => depolar.find((d) => d.id === id)?.ad || "";
+  const rafAdi = (id) => { const r = raflar.find((x) => x.id === id); return r ? (r.kod || r.ad) : ""; };
+  const rafOpts = (depoId) => raflar.filter((r) => !depoId || r.depo_id === depoId).map((r) => ({ value: r.id, label: r.kod ? `${r.kod}${r.ad ? " · " + r.ad : ""}` : r.ad }));
 
   const createMutation = useMutation({
     mutationFn: (data) => flowApi.entities.StokUrunRaf.create(data),
@@ -52,12 +59,12 @@ export default function StokUrunRaf() {
 
   const openCreate = () => { setForm(empty); setDialog({ open: true, item: null }); };
   const openEdit = (a) => {
-    setForm({ urun_id: a.urun_id || "", depo_id: a.depo_id || "", min_seviye: a.min_seviye || 0, max_seviye: a.max_seviye || 0, notlar: a.notlar || "" });
+    setForm({ urun_id: a.urun_id || "", depo_id: a.depo_id || "", raf_id: a.raf_id || "", varsayilan: a.varsayilan || 0, min_seviye: a.min_seviye || 0, max_seviye: a.max_seviye || 0, notlar: a.notlar || "" });
     setDialog({ open: true, item: a });
   };
   const handleSubmit = () => {
     if (!form.urun_id || !form.depo_id) { toast.error("Ürün ve depo zorunlu"); return; }
-    const data = { ...form, urun_adi: urunAdi(form.urun_id), depo_adi: depoAdi(form.depo_id) };
+    const data = { ...form, urun_adi: urunAdi(form.urun_id), depo_adi: depoAdi(form.depo_id), raf_adi: form.raf_id ? rafAdi(form.raf_id) : "" };
     if (dialog.item) updateMutation.mutate({ id: dialog.item.id, data });
     else createMutation.mutate(data);
   };
@@ -84,6 +91,8 @@ export default function StokUrunRaf() {
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Ürün</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Depo</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Raf</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Varsayılan</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Min</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Max</th>
                 <th className="px-4 py-3"></th>
@@ -94,6 +103,8 @@ export default function StokUrunRaf() {
                 <tr key={a.id} className={`border-b last:border-0 hover:bg-muted/20 ${i % 2 ? "bg-muted/10" : ""}`}>
                   <td className="px-4 py-3 font-medium">{a.urun_adi || urunAdi(a.urun_id)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.depo_adi || depoAdi(a.depo_id)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{a.raf_id ? (a.raf_adi || rafAdi(a.raf_id)) : "—"}</td>
+                  <td className="px-4 py-3">{a.varsayilan === 1 ? <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-xs font-medium">Varsayılan</span> : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.min_seviye || 0}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.max_seviye || 0}</td>
                   <td className="px-4 py-3">
@@ -124,9 +135,19 @@ export default function StokUrunRaf() {
             </div>
             <div>
               <Label className="mb-1.5 block">Depo *</Label>
-              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v })}
+              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v, raf_id: "" })}
                 options={depolar.map((d) => ({ value: d.id, label: d.ad }))}
                 placeholder="Depo seçin" fixDialogWheelScroll />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Raf</Label>
+              <SearchableSelect value={form.raf_id} onChange={(v) => setForm({ ...form, raf_id: v })}
+                options={rafOpts(form.depo_id)} disabled={!form.depo_id}
+                placeholder={form.depo_id ? "Raf seçin (ops.)" : "Önce depo seçin"} fixDialogWheelScroll />
+            </div>
+            <div className="flex items-center justify-between gap-3 py-1">
+              <Label className="font-normal text-muted-foreground">Bu rafın varsayılan (birincil) malzemesi</Label>
+              <Switch checked={form.varsayilan === 1} onCheckedChange={(v) => setForm({ ...form, varsayilan: v ? 1 : 0 })} disabled={!form.raf_id} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

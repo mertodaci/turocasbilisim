@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { flowApi } from "@/api/flowApiClient";
@@ -14,7 +15,8 @@ const tarihSaat = (v) => {
 };
 
 export default function StokDemirbasSorgula() {
-  const [seriNo, setSeriNo] = useState("");
+  const [searchParams] = useSearchParams();
+  const [seriNo, setSeriNo] = useState(searchParams.get("seri_no") || "");
   const [kameraAcik, setKameraAcik] = useState(false);
   const [sonuc, setSonuc] = useState(null);
 
@@ -30,6 +32,15 @@ export default function StokDemirbasSorgula() {
     setSeriNo(deger);
     ara.mutate(deger);
   };
+
+  // QR etiketten (?seri_no=...) doğrudan gelindiyse otomatik ara -- kullanıcı
+  // tekrar yazmak/okutmak zorunda kalmasın.
+  const otoArandi = useRef(false);
+  useEffect(() => {
+    const p = searchParams.get("seri_no");
+    if (p && !otoArandi.current) { otoArandi.current = true; gonder(p); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">

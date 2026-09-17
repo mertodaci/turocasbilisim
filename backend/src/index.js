@@ -2155,7 +2155,18 @@ app.get('/api/stok/barkod-coz', authMiddleware, (req, res) => {
       const term = `%${q || kod}%`;
       adaylar = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE (aktif=1 OR aktif IS NULL) AND (is_deleted=0 OR is_deleted IS NULL) AND (ad LIKE ? OR kod LIKE ? OR barkod LIKE ?) ORDER BY ad LIMIT 20`).all(term, term, term);
     }
-    res.json({ urun: urun || null, adaylar });
+    // Taranan kod bir ürün/ek-barkod ile eşleşmediyse, bir demirbaş sicil no'su
+    // olabilir (stok_hareketler.seri_no) -- QR etiketi bu ham değeri taşıyor,
+    // ürünün kendi barkod/kod alanında hiç yer almaz.
+    let sicil = null;
+    if (!urun && kod) {
+      const sc = db.prepare('SELECT urun_id FROM stok_hareketler WHERE seri_no=? LIMIT 1').get(kod);
+      if (sc) {
+        const su = db.prepare(`SELECT ${alanlar} FROM stok_urunler WHERE id=?`).get(sc.urun_id);
+        if (su) sicil = { seri_no: kod, urun_id: su.id, urun_adi: su.ad, urun_kodu: su.kod };
+      }
+    }
+    res.json({ urun: urun || null, adaylar, sicil });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -2204,6 +2215,21 @@ app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
   try {
     const rows = db.prepare("SELECT DISTINCT seri_no FROM stok_hareketler WHERE urun_id=? AND seri_no IS NOT NULL AND seri_no<>'' ORDER BY seri_no").all(urun_id);
     res.json(rows.map((r) => r.seri_no));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Bir rafın "varsayılan" (o gözde hep bulunan) malzemesi -- Raf QR'ı mobilde
+// okutulunca ürünü ayrıca aratmadan otomatik eklemek için. stok_urun_raf'ta
+// aynı raf_id için en fazla bir satır varsayilan=1 olması beklenir; birden
+// fazlaysa ilkini döneriz (UI tarafında tekilliğe zorlanmıyor, burada da
+// zorlamıyoruz).
+app.get('/api/stok/raf/:id/varsayilan-urun', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const atama = db.prepare('SELECT urun_id FROM stok_urun_raf WHERE raf_id=? AND varsayilan=1 LIMIT 1').get(req.params.id);
+    if (!atama) return res.json(null);
+    const urun = db.prepare('SELECT id, kod, ad, barkod, ana_birim, alis_fiyati, satis_fiyati, seri_no_takip, urun_tipi FROM stok_urunler WHERE id=?').get(atama.urun_id);
+    res.json(urun || null);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

@@ -15,9 +15,10 @@ import { cn } from "@/lib/utils";
 import {
   Users, Boxes, ScrollText, Building2, Wallet, ClipboardList,
   ArrowLeft, ArrowUpRight, Sparkles, History, Activity, CheckCircle2,
+  Radar, FileSignature,
 } from "lucide-react";
 
-const ICONS = { ik: Users, stok: Boxes, sozlesme: ScrollText, musteri: Building2, bordro: Wallet, is_takibi: ClipboardList };
+const ICONS = { ik: Users, stok: Boxes, sozlesme: ScrollText, musteri: Building2, bordro: Wallet, is_takibi: ClipboardList, devriye: Radar, ebys: FileSignature };
 
 const HEALTH_SHORT = { "İyi durumda": "İyi", "Normal akış": "Normal", "Takip gerekli": "İncele", "Kritik": "Kritik" };
 
@@ -36,11 +37,13 @@ const SCORE_STATUS_TEXT = (overall) => (overall >= 90 ? "Operasyon çok iyi" : o
 
 const NODES = [
   { key: "ik", pos: { top: "6%", left: "50%" }, popoverPos: { top: "16%", left: "50%" } },
-  { key: "sozlesme", pos: { top: "32%", left: "9%" }, popoverPos: { top: "32%", left: "27%" } },
-  { key: "stok", pos: { top: "32%", left: "91%" }, popoverPos: { top: "32%", left: "55%" } },
-  { key: "is_takibi", pos: { top: "80%", left: "17%" }, popoverPos: { top: "64%", left: "30%" } },
-  { key: "musteri", pos: { top: "80%", left: "83%" }, popoverPos: { top: "64%", left: "55%" } },
-  { key: "bordro", pos: { top: "97%", left: "50%" }, popoverPos: { top: "80%", left: "50%" } },
+  { key: "sozlesme", pos: { top: "26%", left: "8%" }, popoverPos: { top: "26%", left: "27%" } },
+  { key: "stok", pos: { top: "26%", left: "92%" }, popoverPos: { top: "26%", left: "55%" } },
+  { key: "devriye", pos: { top: "55%", left: "3%" }, popoverPos: { top: "50%", left: "27%" } },
+  { key: "ebys", pos: { top: "55%", left: "97%" }, popoverPos: { top: "50%", left: "55%" } },
+  { key: "is_takibi", pos: { top: "83%", left: "17%" }, popoverPos: { top: "70%", left: "30%" } },
+  { key: "musteri", pos: { top: "83%", left: "83%" }, popoverPos: { top: "70%", left: "55%" } },
+  { key: "bordro", pos: { top: "98%", left: "50%" }, popoverPos: { top: "86%", left: "50%" } },
 ];
 
 const SCORE_LEVEL = (score) => (score >= 90 ? "emerald" : score >= 75 ? "blue" : score >= 50 ? "amber" : "red");
@@ -78,12 +81,26 @@ export default function Atlas() {
     staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false,
     enabled: selected === "stok",
   });
+  const { data: devriyeRapor = [] } = useQuery({
+    queryKey: ["devriye-rapor-atlas"],
+    queryFn: () => {
+      const bitis = new Date();
+      const baslangic = new Date(Date.now() - 7 * 86400000);
+      return flowApi.devriye.rapor({ baslangic: baslangic.toISOString().slice(0, 10), bitis: bitis.toISOString().slice(0, 10) });
+    },
+    staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false,
+  });
+  const { data: correspondences = [] } = useQuery({
+    queryKey: ["correspondences-atlas"],
+    queryFn: () => flowApi.entities.Correspondence.list("-created_date", 500),
+    staleTime: 60 * 1000, refetchInterval: 10 * 60 * 1000, retry: false,
+  });
 
   const isPrivileged = user?.role === "admin" || user?.role === "yonetici";
   const dataReady = summary && exec && ikData;
 
   const { overall, modules } = dataReady
-    ? computeAtlasData({ ikData, stokUyari, exec, summary, contractAlerts })
+    ? computeAtlasData({ ikData, stokUyari, exec, summary, contractAlerts, devriyeRapor, correspondences })
     : { overall: null, modules: {} };
   const decisions = dataReady ? computeAtlasDecisions({ contractAlerts, stokUyari, summary }) : [];
   const [showAllDecisions, setShowAllDecisions] = useState(false);
@@ -94,7 +111,7 @@ export default function Atlas() {
   }
 
   const selectedModule = selected ? modules[selected] : null;
-  const selectedSuggestion = selected ? suggestionFor(selected, { stokUyari, contractAlerts, ikData, summary }) : null;
+  const selectedSuggestion = selected ? suggestionFor(selected, { stokUyari, contractAlerts, ikData, summary, devriyeRapor, correspondences }) : null;
 
   const overallLevel = dataReady ? SCORE_LEVEL(overall) : "emerald";
   const hour = new Date().getHours();

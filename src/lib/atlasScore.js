@@ -29,7 +29,7 @@ function scoreModule({ label, factors, subtitle, healthyText }) {
 
 const DONEM_METIN = { taslak: "Dönem taslak", onayli: "Dönem onaylı", kapali: "Dönem kapandı", yok: "Dönem oluşmadı" };
 
-export function computeAtlasData({ ikData, stokUyari, exec, summary, contractAlerts }) {
+export function computeAtlasData({ ikData, stokUyari, exec, summary, contractAlerts, devriyeRapor = [], correspondences = [] }) {
   const ik = ikData?.kpi || {};
   const donem = ikData?.bordro_donem || {};
   const su = stokUyari || {};
@@ -91,6 +91,21 @@ export function computeAtlasData({ ikData, stokUyari, exec, summary, contractAle
       subtitle: (summary?.overdueTickets || 0) > 0 ? null : `${summary?.openCount || 0} bekleyen iş`,
       healthyText: `${summary?.openCount || 0} bekleyen iş`,
     }),
+    devriye: scoreModule({
+      label: "Devriye",
+      factors: [
+        { key: "gec_plan_disi", count: (devriyeRapor || []).filter((r) => r.durum === "gec" || r.durum === "plan_disi").length, penalty: 2, cap: 12, label: "geciken/plan dışı devriye okuması" },
+      ],
+      healthyText: "Devriye rotaları normal",
+    }),
+    ebys: scoreModule({
+      label: "Evrak Yönetimi",
+      factors: [
+        { key: "kep_hata", count: (correspondences || []).filter((c) => c.kep_durum === "hata").length, penalty: 4, cap: 12, label: "KEP gönderim hatası" },
+        { key: "eimza_bekleyen", count: (correspondences || []).filter((c) => c.eimza_durum === "beklemede").length, penalty: 1, cap: 8, label: "bekleyen e-imza" },
+      ],
+      healthyText: "Evrak akışı normal",
+    }),
   };
 
   const keys = Object.keys(modules);
@@ -139,9 +154,27 @@ export function computeAtlasDecisions({ contractAlerts, stokUyari, summary }) {
 }
 
 // ── Kural tabanlı "Akıllı Öneri" — LLM yok, veriye dayalı şablon metin ──
-export function suggestionFor(moduleKey, { stokUyari, contractAlerts, ikData, summary } = {}) {
+export function suggestionFor(moduleKey, { stokUyari, contractAlerts, ikData, summary, devriyeRapor, correspondences } = {}) {
   const su = stokUyari || {};
   switch (moduleKey) {
+    case "devriye": {
+      const sorunlu = (devriyeRapor || []).filter((r) => r.durum === "gec" || r.durum === "plan_disi");
+      if (sorunlu.length === 0) {
+        return { title: "Devriye tarafı sakin.", text: "Geciken veya plan dışı okuma yok.", cta: null, to: null };
+      }
+      return { title: "Geciken/plan dışı devriye okumalarını incele.", text: `${sorunlu.length} okuma son 7 günde geç veya plan dışı gerçekleşti.`, cta: "Raporlara git", to: "/devriye/raporlar" };
+    }
+    case "ebys": {
+      const hata = (correspondences || []).filter((c) => c.kep_durum === "hata");
+      const bekleyen = (correspondences || []).filter((c) => c.eimza_durum === "beklemede");
+      if (hata.length > 0) {
+        return { title: "KEP gönderim hatalarını kontrol et.", text: `${hata.length} evrakta KEP gönderimi hatalı görünüyor.`, cta: "Evraklara git", to: "/ebys/evraklar" };
+      }
+      if (bekleyen.length > 0) {
+        return { title: "Bekleyen e-imzaları tamamla.", text: `${bekleyen.length} evrak e-imza bekliyor.`, cta: "Evraklara git", to: "/ebys/evraklar" };
+      }
+      return { title: "Evrak tarafı sakin.", text: "KEP hatası veya bekleyen e-imza yok.", cta: null, to: null };
+    }
     case "stok": {
       const kritik = su.kritik || [];
       if (kritik.length === 0) {

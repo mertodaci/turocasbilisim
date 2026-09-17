@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDb, db } = require('./db');
 const authRoutes = require('./authRoutes');
+const authMiddleware = require('./authMiddleware');
 const createEntityRouter = require('./entityRouter');
 const { checkPermission } = createEntityRouter;
 
@@ -283,8 +284,6 @@ const upload = multer({
     }
   },
 });
-
-const authMiddleware = require('./authMiddleware');
 
 // ===== ADMIN: Audit Log + Cop Kutusu endpoint'leri =====
 const { db: _adb } = require('./db');

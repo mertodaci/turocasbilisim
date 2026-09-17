@@ -271,16 +271,14 @@ export default function EmployeeDetail() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn("grid w-full", {
-          "grid-cols-3": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
-          "grid-cols-4": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
-          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
-          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
+          "grid-cols-3": [(canViewBelgeler || canViewTutanak), isPrivileged && employee.hire_date].filter(Boolean).length === 0,
+          "grid-cols-4": [(canViewBelgeler || canViewTutanak), isPrivileged && employee.hire_date].filter(Boolean).length === 1,
+          "grid-cols-5": [(canViewBelgeler || canViewTutanak), isPrivileged && employee.hire_date].filter(Boolean).length === 2,
         })}>
           <TabsTrigger value="kisisel">Kişisel Bilgiler</TabsTrigger>
           <TabsTrigger value="egitim">Eğitim</TabsTrigger>
           <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
-          {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
-          {canViewTutanak && <TabsTrigger value="tutanak">Tutanak & İhtar</TabsTrigger>}
+          {(canViewBelgeler || canViewTutanak) && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
         </TabsList>
 
@@ -683,47 +681,47 @@ export default function EmployeeDetail() {
         </div>
         </TabsContent>
 
-      {canViewBelgeler && (
+      {(canViewBelgeler || canViewTutanak) && (
         <TabsContent value="belgeler" className="space-y-6 mt-4">
-          <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Paperclip className="w-4 h-4 text-primary" /> Özlük Belgeleri
-            </h3>
-            <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} readOnly />
-          </div>
-        </TabsContent>
-      )}
+          {canViewBelgeler && (
+            <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-primary" /> Özlük Belgeleri
+              </h3>
+              <PersonelEvraklari personelId={employee.id} personelAdi={employee.full_name} readOnly />
+            </div>
+          )}
 
-      {canViewTutanak && (
-        <TabsContent value="tutanak" className="space-y-6 mt-4">
-          <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <FileWarning className="w-4 h-4 text-primary" /> Tutanak & İhtarlar
-            </h3>
-            {tutanaklar.length === 0 ? (
-              <div className="h-24 flex items-center justify-center text-muted-foreground text-sm">Kayıt yok.</div>
-            ) : (
-              <div className="space-y-3">
-                {tutanaklar.map((r) => (
-                  <div key={r.id} className="border border-border/50 rounded-xl p-4">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("text-xs px-2 py-0.5 rounded font-medium", r.tur === "ihtar" ? "bg-red-100 text-red-700" : r.tur === "savunma_talebi" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700")}>{turLabel(r.tur)}</span>
-                        <p className="text-sm font-medium">{r.konu}</p>
+          {canViewTutanak && (
+            <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-sm">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <FileWarning className="w-4 h-4 text-primary" /> Tutanak & İhtarlar
+              </h3>
+              {tutanaklar.length === 0 ? (
+                <div className="h-24 flex items-center justify-center text-muted-foreground text-sm">Kayıt yok.</div>
+              ) : (
+                <div className="space-y-3">
+                  {tutanaklar.map((r) => (
+                    <div key={r.id} className="border border-border/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-xs px-2 py-0.5 rounded font-medium", r.tur === "ihtar" ? "bg-red-100 text-red-700" : r.tur === "savunma_talebi" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700")}>{turLabel(r.tur)}</span>
+                          <p className="text-sm font-medium">{r.konu}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{(r.tarih || "").slice(0, 10)}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{(r.tarih || "").slice(0, 10)}</span>
+                      {r.aciklama && <p className="text-sm text-muted-foreground mt-2">{r.aciklama}</p>}
+                      {r.dosya_url && (
+                        <a href={r.dosya_url} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-1 text-xs mt-2">
+                          <Paperclip className="w-3.5 h-3.5" /> Belgeyi Aç
+                        </a>
+                      )}
                     </div>
-                    {r.aciklama && <p className="text-sm text-muted-foreground mt-2">{r.aciklama}</p>}
-                    {r.dosya_url && (
-                      <a href={r.dosya_url} target="_blank" rel="noreferrer" className="text-primary inline-flex items-center gap-1 text-xs mt-2">
-                        <Paperclip className="w-3.5 h-3.5" /> Belgeyi Aç
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
       )}
 

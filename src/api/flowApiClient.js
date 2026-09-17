@@ -58,6 +58,8 @@ const ENTITY_MAP = {
   LeaveAllowance:   'leave_allowances',
   LeaveType:        'leave_types',
   Hakedis:          'hakedisler',
+  FaturaAbone:      'fatura_aboneler',
+  FaturaIslem:      'fatura_islemler',
   Definition:       'definitions',
   Announcement:     'announcements',
   ExpenseReport:    'expense_reports',
@@ -407,6 +409,10 @@ const arsiv = {
   async bordro() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/bordro`, { credentials: 'include' })); },
 };
 
+const fatura = {
+  async islemlerTopluSil(body) { return handleResponse(await fetch(`${BASE_URL}/api/fatura/islemler/toplu-sil`, _sjson('POST', body))); },
+};
+
 // base44 nesnesi — tüm kullanımlar flowApi.entities.X veya flowApi.auth.X şeklinde
 export const flowApi = {
   auth,
@@ -414,6 +420,7 @@ export const flowApi = {
   ik,
   devriye,
   arsiv,
+  fatura,
   health: () => fetch(`${BASE_URL}/api/health`).then(r => { if (!r.ok) throw new Error('unhealthy'); return r.json(); }),
   entities: new Proxy({}, {
     get(_, entityName) {

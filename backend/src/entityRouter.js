@@ -13,7 +13,8 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'ik_subeler','ik_bolumler','ik_vardiyalar','ik_vardiya_planlari','ik_mesai_kayitlari',
   'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
   'ik_ozluk_evraklari','ik_tutanaklar','ik_izin_evraklari',
-  'ik_bordro_satirlari','correspondences','musteri_evraklari'];
+  'ik_bordro_satirlari','correspondences','musteri_evraklari',
+  'fatura_aboneler','fatura_islemler'];
 
 // Denetim Kaydı: generic create/update/delete için bu tablolarda loglama
 // atlanır — kullanıcının doğrudan yönettiği bir "ekran" değil, otomatik
@@ -133,6 +134,9 @@ const TABLE_TO_MODULE = {
   job_effort_logs: 'is_takibi_biletler',
   job_kanban_boards: 'is_takibi_kanban',
   hakedisler: 'hakedisler',
+  // ── Fatura Yönetimi ──
+  fatura_aboneler: 'fatura_aboneler',
+  fatura_islemler: 'fatura_islemler',
   // ── Stok / Depo Yönetimi ──
   stok_urunler: 'stok_urunler',
   stok_urun_gruplari: 'stok_gruplar',
@@ -339,6 +343,9 @@ const ALLOWED_COLUMNS = {
   job_effort_logs: ['ticket_id','team','person_id','person_name','hours','work_date','note'],
   job_kanban_boards: ['name','project_id','columns','is_active','color','icon','description'],
   hakedisler: ['year','sira_no','musteri','customer_id','contract_id','is_konusu','durum','sektor','anlasma_turu','kdv_durumu','sozlesme_baslangic','sozlesme_bitis','toplam_sozlesme_tutari','yil_hedefi','pesin_tutari','ocak','subat','mart','nisan','mayis','haziran','temmuz','agustos','eylul','ekim','kasim','aralik','aciklama','tahsilat'],
+  // ── Fatura Yönetimi ──
+  fatura_aboneler: ['abone_adi','abone_turu','tesisat_kullanim_yeri','sozlesme_no','adres','telefon','notlar','aktif','is_deleted'],
+  fatura_islemler: ['fatura_no','fatura_tanimi','abone_id','fatura_tarihi','son_odeme_tarihi','tuketim_miktari','tutar_kdv_haric','kdv_orani','kdv_tutari','diger_bedel','odenecek_tutar','toplam_tutar','aciklama','is_deleted'],
   // ── Stok / Depo Yönetimi — Faz 1 ──
   stok_urun_gruplari: ['ad','ust_grup_id','ust_grup_adi','sira','aktif'],
   stok_urunler: ['kod','ad','barkod','grup_id','grup_adi','uretici_kodu','uretici','urun_tipi','marka','model','ana_birim','kdv','alis_fiyati','satis_fiyati','varsayilan_raf_omru_ay','skt_uyari_gun','el_aleti_takip','seri_no_takip','gorsel_url','aktif','notlar','is_deleted'],
@@ -435,6 +442,8 @@ const REQUIRED_FIELDS = {
   job_projects: ['name'],
   announcements: ['title','content'],
   hakedisler: ['musteri'],
+  fatura_aboneler: ['abone_adi'],
+  fatura_islemler: ['fatura_no'],
   // expense_reports: zorunlu alan yok, frontend kontrolü yeterli
   stok_urun_gruplari: ['ad'],
   stok_urunler: ['ad'],

@@ -63,6 +63,10 @@ const MusteriTanimlari = lazy(() => import('./pages/MusteriTanimlari'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
 const SozlesmeGenelTanimlar = lazy(() => import('./pages/SozlesmeGenelTanimlar'));
+const FaturaGenelTanimlar = lazy(() => import('./pages/FaturaGenelTanimlar'));
+const FaturaAboneler = lazy(() => import('./pages/fatura/FaturaAboneler'));
+const FaturaIslemleri = lazy(() => import('./pages/fatura/FaturaIslemleri'));
+const FaturaRaporlar = lazy(() => import('./pages/fatura/FaturaRaporlar'));
 const SozlesmeForm = lazy(() => import('./pages/SozlesmeForm'));
 const JobTrackingV3 = lazy(() => import('./pages/JobTrackingV3'));
 const JobTrackingDashboard = lazy(() => import('./pages/JobTrackingDashboard'));
@@ -236,6 +240,10 @@ const AuthenticatedApp = () => {
         <Route path="/sozlesme-tanimlar" element={guard("sozlesme_tanimlar", <SozlesmeGenelTanimlar />)} />
         <Route path="/sozlesmeler/yeni" element={guard("sozlesmeler", <SozlesmeForm />)} />
         <Route path="/sozlesmeler/:id" element={guard("sozlesmeler", <SozlesmeForm />)} />
+        <Route path="/fatura-tanimlar" element={guard("fatura_tanimlar", <FaturaGenelTanimlar />)} />
+        <Route path="/fatura-aboneler" element={guard("fatura_aboneler", <FaturaAboneler />)} />
+        <Route path="/fatura-islemleri" element={guard("fatura_islemler", <FaturaIslemleri />)} />
+        <Route path="/fatura-raporlar" element={guard("fatura_raporlar", <FaturaRaporlar />)} />
         <Route path="/personel-hareketleri" element={guard("personel_hareketleri", <PersonnelMovements />)} />
         <Route path="/kart-yonetimi" element={guard("personel_hareketleri", <CardManagement />)} />
         <Route path="/org-sema" element={guard("employees", <OrgChart />)} />

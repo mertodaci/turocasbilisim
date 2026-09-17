@@ -737,6 +737,8 @@ function initDb() {
       'arsiv_ozet','arsiv_sozlesme','arsiv_musteri','arsiv_ik','arsiv_is_takibi','arsiv_bordro',
       // ── Yardım & Destek (DB-tabanlı düzenlenebilir modül kılavuzları) ──
       'yardim',
+      // ── Fatura Yönetimi (basit fatura giriş/liste modülü) ──
+      'fatura_tanimlar','fatura_aboneler','fatura_islemler','fatura_raporlar',
     ];
     const { v4: uuidv4 } = require('uuid');
     const now = new Date().toISOString();
@@ -1547,6 +1549,44 @@ function initDb() {
         created_by TEXT, created_date TEXT DEFAULT (datetime('now')), updated_date TEXT DEFAULT (datetime('now'))
       );
       CREATE INDEX IF NOT EXISTS idx_ik_bordro_satir_donem ON ik_bordro_satirlari(donem_id);
+      -- Fatura Yönetimi — basit fatura giriş/liste modülü (muhasebeleştirme YOK)
+      CREATE TABLE IF NOT EXISTS fatura_aboneler (
+        id TEXT PRIMARY KEY,
+        abone_adi TEXT NOT NULL,
+        abone_turu TEXT,
+        tesisat_kullanim_yeri TEXT,
+        sozlesme_no TEXT,
+        adres TEXT,
+        telefon TEXT,
+        notlar TEXT,
+        aktif INTEGER DEFAULT 1,
+        is_deleted INTEGER DEFAULT 0,
+        created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')),
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE TABLE IF NOT EXISTS fatura_islemler (
+        id TEXT PRIMARY KEY,
+        fatura_no TEXT,
+        fatura_tanimi TEXT,
+        abone_id TEXT,
+        fatura_tarihi TEXT,
+        son_odeme_tarihi TEXT,
+        tuketim_miktari REAL DEFAULT 0,
+        tutar_kdv_haric REAL DEFAULT 0,
+        kdv_orani REAL DEFAULT 20,
+        kdv_tutari REAL DEFAULT 0,
+        diger_bedel REAL DEFAULT 0,
+        odenecek_tutar REAL DEFAULT 0,
+        toplam_tutar REAL DEFAULT 0,
+        aciklama TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_by TEXT,
+        created_date TEXT DEFAULT (datetime('now')),
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_fatura_islemler_abone ON fatura_islemler(abone_id);
+      CREATE INDEX IF NOT EXISTS idx_fatura_islemler_tarih ON fatura_islemler(fatura_tarihi);
     `);
   } catch(e) { console.error('ik faz9 tablolari:', e.message); }
 

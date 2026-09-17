@@ -155,6 +155,15 @@ export const allNavItems = [
   ]
 },
 {
+  labelKey: "fatura_yonetimi", path: null, icon: Receipt, roles: ["admin", "yonetici", "ik"],
+  children: [
+    { labelKey: "fatura_tanimlar", path: "/fatura-tanimlar", icon: Wrench, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "fatura_aboneler", path: "/fatura-aboneler", icon: Users, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "fatura_islemler", path: "/fatura-islemleri", icon: Receipt, roles: ["admin", "yonetici", "ik"] },
+    { labelKey: "fatura_raporlar", path: "/fatura-raporlar", icon: BarChart3, roles: ["admin", "yonetici", "ik"] },
+  ]
+},
+{
   labelKey: "ebys", path: null, icon: FileSignature, roles: ["admin", "yonetici", "ik"],
   children: [
     { labelKey: "ebys_evraklar", path: "/ebys/evraklar", icon: FileText, roles: ["admin", "yonetici", "ik"] },

@@ -138,6 +138,22 @@ app.use('/api/entities/expense_reports',   createEntityRouter('expense_reports')
 app.use('/api/entities/expense_items',     createEntityRouter('expense_items'));
 app.use('/api/entities/announcements',     createEntityRouter('announcements'));
 app.use('/api/entities/hakedisler',        createEntityRouter('hakedisler'));
+app.use('/api/entities/fatura_aboneler',   createEntityRouter('fatura_aboneler'));
+app.use('/api/entities/fatura_islemler',   createEntityRouter('fatura_islemler'));
+
+// Fatura İşlemleri — toplu silme (soft-delete, ik/mesai/toplu-onay ile aynı desen)
+app.post('/api/fatura/islemler/toplu-sil', authMiddleware, (req, res) => {
+  if (!checkPermission(db, req.user?.role, 'fatura_islemler', 'can_delete')) return res.status(403).json({ error: 'Bu işlem için yetkiniz yok' });
+  const { ids = [] } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Kayıt seçin' });
+  const now = new Date().toISOString();
+  const upd = db.prepare("UPDATE fatura_islemler SET is_deleted=1, updated_date=? WHERE id=?");
+  let silinen = 0;
+  db.transaction(() => {
+    for (const id of ids) { upd.run(now, id); silinen++; }
+  })();
+  res.json({ ok: true, silinen });
+});
 
 // Rol ve yetki route'ları
 app.use('/api/entities/roles', createEntityRouter('roles'));

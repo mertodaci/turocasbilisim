@@ -76,12 +76,27 @@ export default function StokMobil() {
   // otomatik eklenir -- tek okutmayla hem konum hem malzeme hazır olur.
   const rafKoduIsle = async (rafId) => {
     try {
-      const raf = await flowApi.entities.StokRaf.get(rafId);
+      const [raf, u] = await Promise.all([
+        flowApi.stok.rafGetir(rafId),
+        flowApi.stok.rafVarsayilanUrun(rafId).catch(() => null),
+      ]);
       if (!raf || raf.is_deleted === 1) { toast.error("Raf bulunamadı"); return; }
+      // Depo bu işlem için kapatılmışsa (bkz. depoOptsGirisCikis) sessizce
+      // seçilmesin -- aksi halde ancak "Kaydet ve Onayla"da reddedilirdi.
+      if (!depoOptsGirisCikis.some((d) => d.value === raf.depo_id)) {
+        toast.error(`${raf.depo_adi || "Bu depo"} ${mode === "giris" ? "girişe" : "çıkışa"} kapalı — raf okutulamadı`);
+        return;
+      }
+      // Devam eden bir işlemde (zaten okutulmuş satırlar varken) farklı bir
+      // depoya ait raf okutulursa depoyu sessizce değiştirmek, önceki
+      // satırların yanlış depoya kaydedilmesine yol açar -- durdurup uyar.
+      if (depoId && depoId !== raf.depo_id && lines.length > 0) {
+        toast.error("Farklı bir depoya ait raf okutuldu — önce mevcut satırları kaydedin veya temizleyin");
+        return;
+      }
       setDepoId(raf.depo_id);
       setRafBilgi(raf);
       toast.success(`Konum: ${raf.depo_adi || ""} · ${raf.kod || raf.ad || ""}`);
-      const u = await flowApi.stok.rafVarsayilanUrun(raf.id).catch(() => null);
       if (u) ekle(u);
     } catch (e) { toast.error(String(e?.message || "Raf okunamadı")); }
   };
@@ -128,10 +143,15 @@ export default function StokMobil() {
 
   const barkodCoz = async (kod) => {
     const r = await flowApi.stok.barkodCoz({ kod, q: kod });
-    const u = r.urun || (r.adaylar?.length === 1 ? r.adaylar[0] : null);
-    if (u) return u;
-    if (r.adaylar?.length > 1) { toast.error(`${r.adaylar.length} eşleşme — tam barkod / kod okutun`); return null; }
+    // r.urun (tam barkod/kod eşleşmesi) ve r.sicil (tam sicil no eşleşmesi)
+    // ikisi de kesin eşleşme -- r.adaylar ise isim/kod üzerinde bulanık (LIKE)
+    // arama, bir sicil no'yla tesadüfen eşleşebilir (ör. sicil "20260005"
+    // bir ürün kodunun içinde geçebilir). Bu yüzden adaylar'ın tekil sonucu,
+    // kesin sicil eşleşmesinden ÖNCE değerlendirilmemeli.
+    if (r.urun) return r.urun;
     if (r.sicil) { toast.error(`Bu bir demirbaş sicil no'su (${r.sicil.urun_adi}) — Zimmet, Transfer veya Çıkış ekranından işlem yapın.`); return null; }
+    if (r.adaylar?.length === 1) return r.adaylar[0];
+    if (r.adaylar?.length > 1) { toast.error(`${r.adaylar.length} eşleşme — tam barkod / kod okutun`); return null; }
     setBilinmeyen({ kod });
     return null;
   };
@@ -141,9 +161,11 @@ export default function StokMobil() {
     if (!s || scanning) return;
     if (s.startsWith("RAF:")) {
       setScan(""); setOneriler([]);
-      if (mode === "sayim") toast.error("Sayımda raf okutma kullanılmaz — depo sayım başlangıcında zaten seçildi");
-      else await rafKoduIsle(s.slice(4));
-      inputRef.current?.focus();
+      setScanning(true);
+      try {
+        if (mode === "sayim") toast.error("Sayımda raf okutma kullanılmaz — depo sayım başlangıcında zaten seçildi");
+        else await rafKoduIsle(s.slice(4));
+      } finally { setScanning(false); inputRef.current?.focus(); }
       return;
     }
     setScanning(true);

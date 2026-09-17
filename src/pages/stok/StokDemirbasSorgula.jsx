@@ -6,6 +6,7 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CameraScanDialog from "@/components/stok/CameraScanDialog";
+import { seriNoCoz } from "@/lib/stokScan";
 import { ScanSearch, Camera, ArrowDownToLine, ArrowUpFromLine, HardHat, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,7 +28,9 @@ export default function StokDemirbasSorgula() {
   });
 
   const gonder = (sn) => {
-    const deger = (sn ?? seriNo).trim();
+    // Kamera okutması Zimmet ekranından basılan "...?seri_no=..." link
+    // formatındaki bir QR da olabilir -- seriNoCoz ikisini de kabul eder.
+    const deger = seriNoCoz(sn ?? seriNo);
     if (!deger) return;
     setSeriNo(deger);
     ara.mutate(deger);

@@ -65,6 +65,16 @@ export default function StokUrunRaf() {
   const handleSubmit = () => {
     if (!form.urun_id || !form.depo_id) { toast.error("Ürün ve depo zorunlu"); return; }
     const data = { ...form, urun_adi: urunAdi(form.urun_id), depo_adi: depoAdi(form.depo_id), raf_adi: form.raf_id ? rafAdi(form.raf_id) : "" };
+    // Backend rafın varsayılan ürününü LIMIT 1 ile seçiyor (bkz. /api/stok/raf/:id/varsayilan-urun) --
+    // yani aynı rafta iki "varsayılan" satır olursa hangisinin kullanılacağı
+    // belirsizleşir. Burada tekilliği kullanıcıya sorup uygulayarak koruyoruz.
+    if (form.varsayilan === 1 && form.raf_id) {
+      const eskiVarsayilan = atamalar.find((a) => a.raf_id === form.raf_id && a.varsayilan === 1 && a.id !== dialog.item?.id);
+      if (eskiVarsayilan) {
+        if (!confirm(`Bu rafın varsayılanı şu an "${eskiVarsayilan.urun_adi}" -- bunu kaldırıp yenisini varsayılan yapmak istiyor musunuz?`)) return;
+        updateMutation.mutate({ id: eskiVarsayilan.id, data: { varsayilan: 0 } });
+      }
+    }
     if (dialog.item) updateMutation.mutate({ id: dialog.item.id, data });
     else createMutation.mutate(data);
   };
@@ -135,7 +145,7 @@ export default function StokUrunRaf() {
             </div>
             <div>
               <Label className="mb-1.5 block">Depo *</Label>
-              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v, raf_id: "" })}
+              <SearchableSelect value={form.depo_id} onChange={(v) => setForm({ ...form, depo_id: v, raf_id: "", varsayilan: 0 })}
                 options={depolar.map((d) => ({ value: d.id, label: d.ad }))}
                 placeholder="Depo seçin" fixDialogWheelScroll />
             </div>

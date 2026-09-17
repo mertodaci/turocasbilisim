@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import CameraScanDialog from "@/components/stok/CameraScanDialog";
+import { seriNoCoz } from "@/lib/stokScan";
 import { Camera } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +17,7 @@ export default function SicilNoScanSelect({ value, onChange, options, placeholde
   const [kameraAcik, setKameraAcik] = useState(false);
 
   const handleScan = (kod) => {
-    const trimmed = kod.trim();
+    const trimmed = seriNoCoz(kod);
     const match = options.find((o) => o.value === trimmed);
     if (match) { onChange(trimmed); toast.success(`Sicil ${trimmed} seçildi`); }
     else toast.error(`"${trimmed}" bu listede müsait değil (yanlış ürün, başka depoda, ya da zaten bloklu/zimmetli olabilir)`);

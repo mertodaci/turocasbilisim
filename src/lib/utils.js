@@ -8,6 +8,14 @@ export function cn(...inputs) {
 
 export const isIframe = window.self !== window.top;
 
+// Yazdırma pencerelerine document.write ile basılan HTML'lerde serbest metin
+// alanlarını (ürün adı/kodu, barkod, sicil no, raf adı vb.) güvenli hale
+// getirir -- kullanıcı bu alanlara "<"/">" gibi karakterler girerse etiket
+// düzeni bozulmasın diye.
+export function escHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // Turkiye cep/sabit telefon formatlama: rakam disindaki her seyi atar, en
 // fazla 11 haneyi (basindaki 0 dahil) "0(5xx) xxx xx xx" seklinde diziyor.
 // Kullanici yazarken canli cagrilmak uzere tasarlandi (onChange handler).

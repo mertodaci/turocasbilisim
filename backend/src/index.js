@@ -2218,6 +2218,19 @@ app.get('/api/stok/demirbas-sicil-listesi', authMiddleware, (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Raf QR'ı mobilde okutulunca çözümlemek için -- generic /api/entities/stok_raflar/:id
+// rotası "stok_raflar" can_view izni istiyor, ama Mobil Hızlı İşlem ekranının
+// diğer tüm sorguları (barkod-coz, varsayilan-urun) stokFisPerm ile korunuyor.
+// İki farklı izinle korunan iki çağrı, sadece birine sahip bir rolde özelliği
+// sessizce yarım bırakırdı -- bu yüzden aynı izinle küçük, özel bir rota.
+app.get('/api/stok/raf/:id', authMiddleware, (req, res) => {
+  if (!stokFisPerm(req, 'can_view')) return res.status(403).json({ error: 'Yetkiniz yok' });
+  try {
+    const raf = db.prepare('SELECT id, depo_id, depo_adi, kod, ad, is_deleted FROM stok_raflar WHERE id=?').get(req.params.id);
+    res.json(raf || null);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Bir rafın "varsayılan" (o gözde hep bulunan) malzemesi -- Raf QR'ı mobilde
 // okutulunca ürünü ayrıca aratmadan otomatik eklemek için. stok_urun_raf'ta
 // aynı raf_id için en fazla bir satır varsayilan=1 olması beklenir; birden

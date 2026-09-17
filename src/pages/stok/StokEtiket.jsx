@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { flowApi } from "@/api/flowApiClient";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
+import { escHtml as esc } from "@/lib/utils";
 import { Tags, Plus, Trash2, Printer, ListPlus, HardHat, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,8 +15,6 @@ const ETIKET_BOYUTLARI = {
   standart: { label: "Standart (220×120px, A4 yazıcı)" },
   termal: { label: "Termal Etiket (40×30mm rulo)" },
 };
-
-const esc = (s) => (s || "").replace(/</g, "&lt;");
 
 export default function StokEtiket() {
   const qc = useQueryClient();
@@ -41,8 +40,8 @@ export default function StokEtiket() {
   const ekBarkodMap = useUrunEkBarkodMap();
   const { data: fisler = [] } = useQuery({ queryKey: ["stok_etiket_fisleri"], queryFn: () => flowApi.entities.StokEtiketFis.list("-created_date", 500) });
   const { data: raflar = [] } = useQuery({ queryKey: ["stok_raflar_min"], queryFn: () => flowApi.entities.StokRaf.list("depo_adi", 5000), enabled: mod === "raf" });
-  const tuketimUrunler = urunler.filter((u) => u.urun_tipi !== "demirbas");
-  const demirbasUrunler = urunler.filter((u) => u.urun_tipi === "demirbas");
+  const tuketimUrunler = useMemo(() => urunler.filter((u) => u.urun_tipi !== "demirbas"), [urunler]);
+  const demirbasUrunler = useMemo(() => urunler.filter((u) => u.urun_tipi === "demirbas"), [urunler]);
 
   const ekle = () => {
     const u = tuketimUrunler.find((x) => x.id === sel);
@@ -133,7 +132,7 @@ export default function StokEtiket() {
     }
     const labelsHtml = labels.map((l, i) => `<div class="lbl">
       <img class="qr-img" src="${qrImgs[i]}" />
-      <div><div class="ad">${esc(l.urun_adi)}</div><div class="kod">${l.urun_kodu || ""}${l.barkod ? " · " + l.barkod : ""}</div></div>
+      <div><div class="ad">${esc(l.urun_adi)}</div><div class="kod">${esc(l.urun_kodu)}${l.barkod ? " · " + esc(l.barkod) : ""}</div></div>
     </div>`).join("");
     w.document.write(`<html><head><title>Etiketler</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
@@ -164,7 +163,7 @@ export default function StokEtiket() {
     }
     const labelsHtml = demirbasSepet.map((l, i) => `<div class="lbl">
       <img class="qr-img" src="${qrImgs[i]}" />
-      <div><div class="ad">${esc(l.urun_adi)}</div><div class="sicil">${l.seri_no}</div></div>
+      <div><div class="ad">${esc(l.urun_adi)}</div><div class="sicil">${esc(l.seri_no)}</div></div>
     </div>`).join("");
     w.document.write(`<html><head><title>Demirbaş Sicil No Etiketleri</title><style>
       *{box-sizing:border-box;font-family:system-ui,Arial,sans-serif}
@@ -227,7 +226,7 @@ export default function StokEtiket() {
         <div className="bg-card border rounded-2xl p-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-end">
             <div className="flex-1 min-w-[240px]"><SearchableSelect value={sel} onChange={setSel} options={tuketimUrunler.map((u) => ({ value: u.id, label: `${u.kod ? u.kod + " · " : ""}${u.ad}`, keywords: [u.barkod, ekBarkodMap[u.id]].filter(Boolean).join(" ") }))} placeholder="Malzeme ara / okut" /></div>
-            <Input type="number" className="w-24" value={adet} onChange={(e) => setAdet(parseInt(e.target.value) || 1)} />
+            <Input type="number" min={1} max={500} className="w-24" value={adet} onChange={(e) => setAdet(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))} />
             <Button onClick={ekle} disabled={!sel}><Plus className="w-4 h-4 mr-1.5" /> Sepete Ekle</Button>
           </div>
           <div className="flex flex-wrap gap-2 pt-1 border-t">
@@ -251,8 +250,8 @@ export default function StokEtiket() {
                     <td className="px-3 py-1.5">{s.urun_adi}</td>
                     <td className="px-3 py-1.5 text-muted-foreground">{s.urun_kodu} / {s.barkod || "—"}</td>
                     <td className="px-3 py-1.5 text-right">
-                      <Input type="number" className="h-8 w-20 text-right inline-block" value={s.adet}
-                        onChange={(e) => setSepet(sepet.map((x, idx) => idx === i ? { ...x, adet: parseInt(e.target.value) || 1 } : x))} />
+                      <Input type="number" min={1} max={1000} className="h-8 w-20 text-right inline-block" value={s.adet}
+                        onChange={(e) => setSepet(sepet.map((x, idx) => idx === i ? { ...x, adet: Math.min(1000, Math.max(1, parseInt(e.target.value) || 1)) } : x))} />
                     </td>
                     <td className="px-3 py-1.5 text-right"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setSepet(sepet.filter((_, idx) => idx !== i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
                   </tr>

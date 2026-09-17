@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import SicilNoScanSelect from "@/components/stok/SicilNoScanSelect";
 import { useUrunEkBarkodMap } from "@/hooks/useUrunEkBarkod";
+import { escHtml } from "@/lib/utils";
 import { HardHat, Plus, Trash2, Undo2, Eye, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
@@ -98,9 +99,9 @@ export default function StokZimmet() {
     </style></head><body>
       <div class="lbl">
         <img class="qr-img" src="${qrImg}" />
-        <div class="ad">${(s.urun_adi || "").replace(/</g, "&lt;")}</div>
-        <div class="sicil">SN ${s.seri_no}</div>
-        <div class="kime">${kimeAit.replace(/</g, "&lt;")}</div>
+        <div class="ad">${escHtml(s.urun_adi)}</div>
+        <div class="sicil">SN ${escHtml(s.seri_no)}</div>
+        <div class="kime">${escHtml(kimeAit)}</div>
       </div>
     </body></html>`);
     w.document.close();

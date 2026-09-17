@@ -16,6 +16,59 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'ik_bordro_satirlari','correspondences','musteri_evraklari',
   'fatura_aboneler','fatura_islemler'];
 
+// GUVENLIK/BUTUNLUK: silme öncesi ilişkili kayıt kontrolü — ID/isim bazlı.
+// Bir üst kayıt (şube, bölüm, ürün grubu, müşteri, abone, vardiya, rol...)
+// silinirken ona bağlı alt kayıtlar varsa silme ENGELLENİR (bkz. findBlockingReference).
+// Yeni bir ilişkisel tablo eklenince buraya bir satır eklenmesi standarttır.
+const DELETE_GUARDS = {
+  ik_subeler: [{ table: 'employees', column: 'sube_id', label: 'çalışan' }],
+  ik_bolumler: [{ table: 'employees', column: 'bolum_id', label: 'çalışan' }],
+  stok_urun_gruplari: [{ table: 'stok_urunler', column: 'grup_id', label: 'ürün' }],
+  customers: [
+    { table: 'customer_contracts', column: 'customer_id', label: 'sözleşme' },
+    { table: 'job_tickets', column: 'customer_id', label: 'bilet' },
+  ],
+  fatura_aboneler: [{ table: 'fatura_islemler', column: 'abone_id', label: 'fatura' }],
+  ik_vardiyalar: [{ table: 'employees', column: 'vardiya_id', label: 'çalışan' }],
+  roles: [{ table: 'users', column: 'role', label: 'kullanıcı', matchField: 'name' }],
+};
+// Değer bazlı kontrol — `definitions` (category+value) kaydı silinirken, o
+// değeri düz metin olarak tutan kolonları kontrol eder. Yeni bir Definition
+// kategorisi bir formda <Select> olarak kullanılmaya başlanınca buraya
+// eklenmesi standarttır.
+const DEFINITION_VALUE_GUARDS = {
+  pozisyon: [{ table: 'employees', column: 'position', label: 'çalışan' }],
+  departman: [{ table: 'employees', column: 'department', label: 'çalışan' }],
+  egitim_seviyesi: [{ table: 'employees', column: 'education_level', label: 'çalışan' }],
+  uyruk: [{ table: 'employees', column: 'uyruk', label: 'çalışan' }],
+  ayrilis_nedeni: [{ table: 'employees', column: 'exit_reason', label: 'çalışan' }],
+  musteri_tipi: [{ table: 'customers', column: 'customer_type', label: 'müşteri' }],
+  sehir: [{ table: 'customers', column: 'city', label: 'müşteri' }],
+  sozlesme_turu: [{ table: 'customer_contracts', column: 'contract_type', label: 'sözleşme' }],
+  abone_turu: [{ table: 'fatura_aboneler', column: 'abone_turu', label: 'abone' }],
+  tesisat_kullanim_yeri: [{ table: 'fatura_aboneler', column: 'tesisat_kullanim_yeri', label: 'abone' }],
+  fatura_tarife_turu: [{ table: 'fatura_islemler', column: 'fatura_tanimi', label: 'fatura' }],
+  belge_turu: [{ table: 'ik_ozluk_evraklari', column: 'evrak_tipi', label: 'evrak' }],
+};
+function findBlockingReference(tableName, existing) {
+  for (const g of (DELETE_GUARDS[tableName] || [])) {
+    const val = g.matchField ? existing[g.matchField] : existing.id;
+    let sql = `SELECT COUNT(*) c FROM ${g.table} WHERE ${g.column} = ?`;
+    if (SOFT_DELETE_TABLES.includes(g.table)) sql += ' AND (is_deleted IS NULL OR is_deleted = 0)';
+    const { c } = db.prepare(sql).get(val);
+    if (c > 0) return { count: c, label: g.label };
+  }
+  if (tableName === 'definitions' && existing.category) {
+    for (const g of (DEFINITION_VALUE_GUARDS[existing.category] || [])) {
+      let sql = `SELECT COUNT(*) c FROM ${g.table} WHERE ${g.column} = ?`;
+      if (SOFT_DELETE_TABLES.includes(g.table)) sql += ' AND (is_deleted IS NULL OR is_deleted = 0)';
+      const { c } = db.prepare(sql).get(existing.value);
+      if (c > 0) return { count: c, label: g.label };
+    }
+  }
+  return null;
+}
+
 // Denetim Kaydı: generic create/update/delete için bu tablolarda loglama
 // atlanır — kullanıcının doğrudan yönettiği bir "ekran" değil, otomatik
 // üretilen yüksek hacimli iç kayıtlar (audit_log'un kendisi hariç, sonsuz
@@ -1240,6 +1293,10 @@ function createEntityRouter(tableName) {
       // GUVENLIK/BUTUNLUK: kapali donem satir/puantaj/kesinti kaydi bu genel yoldan silinemez.
       if (['ik_bordro_satirlari', 'ik_kesintiler', 'ik_puantaj'].includes(tableName) && req.user?.role !== 'admin' && ikKayitDonemKapaliMi(tableName, existing)) {
         return res.status(400).json({ error: 'Kapalı döneme ait bu kayıt silinemez' });
+      }
+      const blocking = findBlockingReference(tableName, existing);
+      if (blocking) {
+        return res.status(409).json({ error: `Bu kayıt ${blocking.count} ${blocking.label} kaydıyla ilişkili olduğu için silinemez. Önce ilişkili kayıtları güncelleyin veya kaldırın.` });
       }
       if (SOFT_DELETE_TABLES.includes(tableName)) {
         // Soft delete: kaydi silme, is_deleted=1 yap (geri getirilebilir)

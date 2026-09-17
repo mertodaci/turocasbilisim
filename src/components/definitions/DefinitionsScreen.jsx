@@ -130,6 +130,7 @@ export function CategoryPanel({ category, showColor = false }) {
   const deleteMutation = useMutation({
     mutationFn: (id) => flowApi.entities.Definition.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["definitions", category] }); toast.success("Silindi"); },
+    onError: (e) => toast.error(e?.message || "Silinemedi"),
   });
 
   const activeItems = items.filter(i => i.is_active == 1 || i.is_active === true);

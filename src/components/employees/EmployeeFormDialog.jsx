@@ -241,7 +241,7 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const handleSubmit = (e) => {
     e.preventDefault();
     const err = getValidationError();
-    if (err) { setActiveTab(err.tab); toast.error(err.message); return; }
+    if (err) { if (!embedded) setActiveTab(err.tab); toast.error(err.message); return; }
     const payload = { ...form, show_in_job_tracking: form.show_in_job_tracking ? 1 : 0 };
     if (form.education_history && form.education_history.length > 0) {
       payload.university = form.education_history[0].university || "";
@@ -265,6 +265,525 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   };
 
   const isDirty = !isEqual(form, formBaseline);
+
+  const kisiselContent = (
+    <div className="space-y-3">
+      <div>
+        <Label className="mb-1.5 block">Ad Soyad *</Label>
+        <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Ad Soyad" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label className="mb-1.5 block">Uyruk</Label>
+          <SearchableSelect value={form.uyruk} onChange={(v) => setForm({ ...form, uyruk: v })}
+            options={uyrukOptions.map((u) => ({ value: u.value, label: u.label }))} placeholder="Uyruk seçin" fixDialogWheelScroll />
+        </div>
+        <div>
+          <Label className="mb-1.5 block">TC Kimlik No{(form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye" ? " *" : ""}</Label>
+          <Input value={form.tc} onChange={(e) => setForm({ ...form, tc: e.target.value.replace(/\D/g, "").slice(0, 11) })} placeholder="12345678901" maxLength={11} />
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Doğum Tarihi *</Label>
+          <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label className="mb-1.5 block">Cinsiyet</Label>
+          <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="erkek">Erkek</SelectItem>
+              <SelectItem value="kadin">Kadin</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Departman *</Label>
+          <Select value={form.department} onValueChange={(v) => setForm({ ...form, department: v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              {departmentOptions.map((d) => (
+                <SelectItem key={d.id} value={d.value}>{d.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Kart ID</Label>
+          <Input value={form.card_uid} onChange={(e) => setForm({ ...form, card_uid: e.target.value.trim().toUpperCase() })} placeholder="Örn: E9632487" />
+        </div>
+      </div>
+    </div>
+  );
+
+  const iletisimContent = (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="mb-1.5 block">Telefon</Label>
+          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: formatTrPhone(e.target.value) })} placeholder="0(5xx) xxx xx xx" />
+        </div>
+        <div>
+          <Label className="mb-1.5 block">E-posta</Label>
+          <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ornek@firma.com" />
+        </div>
+      </div>
+      <div>
+        <Label className="mb-1.5 block">Adres</Label>
+        <Input value={form.personel_adresi} onChange={(e) => setForm({ ...form, personel_adresi: e.target.value })} />
+      </div>
+
+      <div className="pt-2 border-t">
+        <div className="flex items-center justify-between mb-2 mt-3">
+          <Label>Acil Durumda Ulaşılacak Kişiler</Label>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, emergency_contacts: [...(form.emergency_contacts || []), { relation: "", full_name: "", phone: "", order: (form.emergency_contacts || []).length + 1 }] })}
+            className="text-xs text-primary hover:underline"
+          >
+            + Kişi Ekle
+          </button>
+        </div>
+        <div className="space-y-3">
+          {(form.emergency_contacts || []).map((kisi, idx) => (
+            <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Kişi</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, emergency_contacts: form.emergency_contacts.filter((_, i) => i !== idx) })}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Yakınlık Derecesi</Label>
+                  <Input
+                    placeholder="ör. Eşi, Kardeşi"
+                    value={kisi.relation}
+                    onChange={(e) => {
+                      const updated = [...form.emergency_contacts];
+                      updated[idx] = { ...updated[idx], relation: e.target.value };
+                      setForm({ ...form, emergency_contacts: updated });
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Adı Soyadı</Label>
+                  <Input
+                    value={kisi.full_name}
+                    onChange={(e) => {
+                      const updated = [...form.emergency_contacts];
+                      updated[idx] = { ...updated[idx], full_name: e.target.value };
+                      setForm({ ...form, emergency_contacts: updated });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Telefon Numarası</Label>
+                  <Input
+                    placeholder="0(5xx) xxx xx xx"
+                    value={kisi.phone}
+                    onChange={(e) => {
+                      const updated = [...form.emergency_contacts];
+                      updated[idx] = { ...updated[idx], phone: formatTrPhone(e.target.value) };
+                      setForm({ ...form, emergency_contacts: updated });
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Sıra Numarası (öncelik)</Label>
+                  <Input
+                    type="number" min="1"
+                    value={kisi.order || ""}
+                    onChange={(e) => {
+                      const updated = [...form.emergency_contacts];
+                      updated[idx] = { ...updated[idx], order: e.target.value };
+                      setForm({ ...form, emergency_contacts: updated });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          {(!form.emergency_contacts || form.emergency_contacts.length === 0) && (
+            <p className="text-xs text-muted-foreground italic">Henüz acil durum kişisi eklenmedi.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const isContent = (
+    <div className="space-y-3">
+      <div>
+        <Label className="mb-1.5 block">Pozisyon / Unvan</Label>
+        <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v })}>
+          <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+          <SelectContent>
+            {positionOptions.map((p) => (
+              <SelectItem key={p.id} value={p.value}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="mb-1.5 block">Bagli Oldugu Yonetici</Label>
+        <Select
+          value={form.manager_id || "none"}
+          onValueChange={(v) => {
+            if (v === "none") {
+              setForm({ ...form, manager_id: "", manager_name: "" });
+            } else {
+              const mgr = allEmployees.find((e) => e.id === v);
+              setForm({ ...form, manager_id: v, manager_name: mgr?.full_name || "" });
+            }
+          }}
+        >
+          <SelectTrigger><SelectValue placeholder="Yonetici seciniz (opsiyonel)" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Secilmedi</SelectItem>
+            {allEmployees
+              .filter((e) => !employee || e.id !== employee.id)
+              .map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="mb-1.5 block">Ise Baslama Tarihi</Label>
+        <Input type="date" value={form.hire_date} onChange={(e) => setForm({ ...form, hire_date: e.target.value })} />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
+        <Checkbox
+          checked={form.show_in_job_tracking}
+          onCheckedChange={(v) => setForm({ ...form, show_in_job_tracking: v === true })}
+        />
+        <span className="text-sm">İş Takibi kullanıyor (bilet sorumlusu olarak seçilebilir)</span>
+      </label>
+
+      {employee && (
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <Label className="mb-1.5 block">Izin Bakiyesi</Label>
+            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
+              {hasHireDate ? (
+                <span className={`font-semibold ${leaveBalance < 0 ? "text-red-600" : leaveBalance <= 3 ? "text-orange-500" : "text-green-600"}`}>
+                  {leaveBalance} gun
+                  <span className="text-muted-foreground font-normal ml-1.5">({leaveUsed || 0} / {leaveEntitled} kullanildi)</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Tanim yok</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <Label className="mb-1.5 block">Sonraki Izin Hak Edis Tarihi</Label>
+            <Input type="date" value={form.next_leave_entitlement_date} onChange={(e) => setForm({ ...form, next_leave_entitlement_date: e.target.value })} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const egitimContent = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="mb-1.5 block">Egitim Durumu</Label>
+          <Select value={form.education_level} onValueChange={(v) => setForm({ ...form, education_level: v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              {educationLevelOptions.map((o) => (
+                <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1.5 block">En Yuksek Egitim</Label>
+          <Select value={form.highest_education} onValueChange={(v) => setForm({ ...form, highest_education: v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              {educationLevelOptions.map((o) => (
+                <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Universite Bilgileri</Label>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, education_history: [...(form.education_history || []), { university: "", department: "", graduation_date: "", gpa: "" }] })}
+            className="text-xs text-primary hover:underline"
+          >
+            + Universite Ekle
+          </button>
+        </div>
+        <div className="space-y-3">
+          {(form.education_history || []).map((edu, idx) => (
+            <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Universite</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, education_history: form.education_history.filter((_, i) => i !== idx) })}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs text-muted-foreground">Üniversite</Label>
+                <Input
+                  placeholder="Universite adi"
+                  value={edu.university}
+                  onChange={(e) => {
+                    const updated = [...form.education_history];
+                    updated[idx] = { ...updated[idx], university: e.target.value };
+                    setForm({ ...form, education_history: updated });
+                  }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Bölüm</Label>
+                  <Input
+                    placeholder="Bolum adi"
+                    value={edu.department}
+                    onChange={(e) => {
+                      const updated = [...form.education_history];
+                      updated[idx] = { ...updated[idx], department: e.target.value };
+                      setForm({ ...form, education_history: updated });
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Tarihi</Label>
+                  <Input
+                    type="date"
+                    value={edu.graduation_date}
+                    onChange={(e) => {
+                      const updated = [...form.education_history];
+                      updated[idx] = { ...updated[idx], graduation_date: e.target.value };
+                      setForm({ ...form, education_history: updated });
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Not Ortalaması</Label>
+                <Input
+                  type="number" step="0.01" min="0" max="4" placeholder="örn. 3.24"
+                  value={edu.gpa || ""}
+                  onChange={(e) => {
+                    const updated = [...form.education_history];
+                    updated[idx] = { ...updated[idx], gpa: e.target.value };
+                    setForm({ ...form, education_history: updated });
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+          {(!form.education_history || form.education_history.length === 0) && (
+            <p className="text-xs text-muted-foreground italic">Henuz universite eklenmedi.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Sertifikalar & Eğitimler */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Sertifikalar & Eğitimler</Label>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, certificates: [...(form.certificates || []), { name: "", institution: "", date: "", document_url: "", document_name: "" }] })}
+            className="text-xs text-primary hover:underline"
+          >
+            + Sertifika/Eğitim Ekle
+          </button>
+        </div>
+        <div className="space-y-3">
+          {(form.certificates || []).map((cert, idx) => (
+            <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Sertifika/Eğitim</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, certificates: form.certificates.filter((_, i) => i !== idx) })}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <Input
+                placeholder="Sertifika / eğitim adı"
+                value={cert.name}
+                onChange={(e) => {
+                  const updated = [...form.certificates];
+                  updated[idx] = { ...updated[idx], name: e.target.value };
+                  setForm({ ...form, certificates: updated });
+                }}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Kurum"
+                  value={cert.institution}
+                  onChange={(e) => {
+                    const updated = [...form.certificates];
+                    updated[idx] = { ...updated[idx], institution: e.target.value };
+                    setForm({ ...form, certificates: updated });
+                  }}
+                />
+                <Input
+                  type="date"
+                  value={cert.date}
+                  onChange={(e) => {
+                    const updated = [...form.certificates];
+                    updated[idx] = { ...updated[idx], date: e.target.value };
+                    setForm({ ...form, certificates: updated });
+                  }}
+                />
+              </div>
+              {cert.document_url ? (
+                <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
+                  <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <a href={cert.document_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex-1 truncate">{cert.document_name || "Belge"}</a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...form.certificates];
+                      updated[idx] = { ...updated[idx], document_url: "", document_name: "" };
+                      setForm({ ...form, certificates: updated });
+                    }}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => certInputRefs.current[idx]?.click()}
+                  disabled={uploadingCertIdx === idx}
+                  className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50"
+                >
+                  {uploadingCertIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {uploadingCertIdx === idx ? "Yukleniyor..." : "Belge Ekle"}
+                </button>
+              )}
+              <input
+                ref={(el) => { certInputRefs.current[idx] = el; }}
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => handleCertDocUpload(idx, e)}
+              />
+            </div>
+          ))}
+          {(!form.certificates || form.certificates.length === 0) && (
+            <p className="text-xs text-muted-foreground italic">Henuz sertifika/eğitim eklenmedi.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Belgeler */}
+      <div>
+        <Label className="mb-1.5 block">Belgeler</Label>
+        {form.education_documents?.length > 0 && (
+          <div className="space-y-1.5 mb-2">
+            {form.education_documents.map((doc, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
+                <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex-1 truncate">{doc.name}</a>
+                <button type="button" onClick={() => removeDoc(idx)} className="text-muted-foreground hover:text-destructive"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button type="button" onClick={() => docInputRef.current?.click()} disabled={uploadingDoc} className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50">
+          {uploadingDoc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          {uploadingDoc ? "Yukleniyor..." : "Belge Ekle"}
+        </button>
+        <input ref={docInputRef} type="file" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={handleDocUpload} />
+      </div>
+    </div>
+  );
+
+  const ozlukContent = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="mb-1.5 block">Şube / Lokasyon</Label>
+          <Select value={form.sube_id || "none"} onValueChange={(v) => setForm({ ...form, sube_id: v === "none" ? "" : v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Secilmedi</SelectItem>
+              {subeler.map((s) => <SelectItem key={s.id} value={s.id}>{s.ad}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Bölüm</Label>
+          <Select value={form.bolum_id || "none"} onValueChange={(v) => setForm({ ...form, bolum_id: v === "none" ? "" : v })}>
+            <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Secilmedi</SelectItem>
+              {bolumler.filter((b) => !form.sube_id || !b.sube_id || b.sube_id === form.sube_id).map((b) => <SelectItem key={b.id} value={b.id}>{b.ad}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Meslek Kodu (SGK)</Label>
+          <Input value={form.meslek_kodu} onChange={(e) => setForm({ ...form, meslek_kodu: e.target.value })} placeholder="örn: 4225.03" />
+        </div>
+        <div>
+          <Label className="mb-1.5 block">Kanun No (SGK teşvik)</Label>
+          <Input value={form.kanun_no} onChange={(e) => setForm({ ...form, kanun_no: e.target.value })} />
+        </div>
+      </div>
+      {canViewSalary && (
+        <div>
+          <Label className="mb-1.5 block">Aylık Ücret (₺)</Label>
+          <Input type="number" disabled={!canEditSalary} value={form.aylik_ucret} onChange={(e) => setForm({ ...form, aylik_ucret: e.target.value })} />
+        </div>
+      )}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
+        <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.emekli_mi} onCheckedChange={(v) => setForm({ ...form, emekli_mi: v ? 1 : 0 })} /> Emekli</label>
+        <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.sahsi_hesap_aktif} onCheckedChange={(v) => setForm({ ...form, sahsi_hesap_aktif: v ? 1 : 0 })} /> Şahsi hesap kullan</label>
+      </div>
+      {!!form.sahsi_hesap_aktif && (
+        <div className="grid grid-cols-2 gap-3 border border-border/50 rounded-xl p-3 bg-muted/20">
+          <div>
+            <Label className="mb-1.5 block">Aylık Şahsi Hesap (₺)</Label>
+            <Input type="number" value={form.sahsi_hesap_tutar} onChange={(e) => setForm({ ...form, sahsi_hesap_tutar: e.target.value })} />
+          </div>
+          <div>
+            <Label className="mb-1.5 block">Banka</Label>
+            <Input value={form.sahsi_hesap_banka} onChange={(e) => setForm({ ...form, sahsi_hesap_banka: e.target.value })} />
+          </div>
+          <div className="col-span-2">
+            <Label className="mb-1.5 block">IBAN</Label>
+            <Input value={form.sahsi_hesap_iban} onChange={(e) => setForm({ ...form, sahsi_hesap_iban: e.target.value })} />
+          </div>
+          <div className="col-span-2">
+            <Label className="mb-1.5 block">Açıklama</Label>
+            <Input value={form.sahsi_hesap_aciklama} onChange={(e) => setForm({ ...form, sahsi_hesap_aciklama: e.target.value })} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const formBody = (
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
@@ -293,536 +812,48 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1 mt-4">
-            <TabsList className="w-full grid grid-cols-5 shrink-0">
-              <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
-              <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
-              <TabsTrigger value="is">İş</TabsTrigger>
-              <TabsTrigger value="egitim">Eğitim</TabsTrigger>
-              <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1">
-            <TabsContent value="kisisel" className="mt-0">
-            <div className="space-y-3">
+          {embedded ? (
+            <div className="flex-1 min-h-0 mt-4 space-y-6">
               <div>
-                <Label className="mb-1.5 block">Ad Soyad *</Label>
-                <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Ad Soyad" />
+                <h3 className="text-sm font-semibold mb-3">Kişisel</h3>
+                {kisiselContent}
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Uyruk</Label>
-                  <SearchableSelect value={form.uyruk} onChange={(v) => setForm({ ...form, uyruk: v })}
-                    options={uyrukOptions.map((u) => ({ value: u.value, label: u.label }))} placeholder="Uyruk seçin" fixDialogWheelScroll />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">TC Kimlik No{(form.uyruk || "").trim().toLocaleLowerCase("tr") === "türkiye" ? " *" : ""}</Label>
-                  <Input value={form.tc} onChange={(e) => setForm({ ...form, tc: e.target.value.replace(/\D/g, "").slice(0, 11) })} placeholder="12345678901" maxLength={11} />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Doğum Tarihi *</Label>
-                  <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
-                </div>
+              <div>
+                <h3 className="text-sm font-semibold mb-3">İletişim Bilgileri</h3>
+                {iletisimContent}
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Cinsiyet</Label>
-                  <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="erkek">Erkek</SelectItem>
-                      <SelectItem value="kadin">Kadin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Departman *</Label>
-                  <Select value={form.department} onValueChange={(v) => setForm({ ...form, department: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      {departmentOptions.map((d) => (
-                        <SelectItem key={d.id} value={d.value}>{d.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Kart ID</Label>
-                  <Input value={form.card_uid} onChange={(e) => setForm({ ...form, card_uid: e.target.value.trim().toUpperCase() })} placeholder="Örn: E9632487" />
-                </div>
+              <div>
+                <h3 className="text-sm font-semibold mb-3">İş</h3>
+                {isContent}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Eğitim</h3>
+                {egitimContent}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Özlük & Bordro</h3>
+                {ozlukContent}
               </div>
             </div>
-            </TabsContent>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1 mt-4">
+              <TabsList className="w-full grid grid-cols-5 shrink-0">
+                <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
+                <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
+                <TabsTrigger value="is">İş</TabsTrigger>
+                <TabsTrigger value="egitim">Eğitim</TabsTrigger>
+                <TabsTrigger value="ozluk">Özlük & Bordro</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="iletisim" className="mt-0">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Telefon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: formatTrPhone(e.target.value) })} placeholder="0(5xx) xxx xx xx" />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">E-posta</Label>
-                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ornek@firma.com" />
-                </div>
+              <div className="flex-1 min-h-0 overflow-y-auto mt-3 pr-1">
+                <TabsContent value="kisisel" className="mt-0">{kisiselContent}</TabsContent>
+                <TabsContent value="iletisim" className="mt-0">{iletisimContent}</TabsContent>
+                <TabsContent value="is" className="mt-0">{isContent}</TabsContent>
+                <TabsContent value="egitim" className="mt-0">{egitimContent}</TabsContent>
+                <TabsContent value="ozluk" className="mt-0">{ozlukContent}</TabsContent>
               </div>
-              <div>
-                <Label className="mb-1.5 block">Adres</Label>
-                <Input value={form.personel_adresi} onChange={(e) => setForm({ ...form, personel_adresi: e.target.value })} />
-              </div>
-
-              <div className="pt-2 border-t">
-                <div className="flex items-center justify-between mb-2 mt-3">
-                  <Label>Acil Durumda Ulaşılacak Kişiler</Label>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, emergency_contacts: [...(form.emergency_contacts || []), { relation: "", full_name: "", phone: "", order: (form.emergency_contacts || []).length + 1 }] })}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    + Kişi Ekle
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {(form.emergency_contacts || []).map((kisi, idx) => (
-                    <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Kişi</span>
-                        <button
-                          type="button"
-                          onClick={() => setForm({ ...form, emergency_contacts: form.emergency_contacts.filter((_, i) => i !== idx) })}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Yakınlık Derecesi</Label>
-                          <Input
-                            placeholder="ör. Eşi, Kardeşi"
-                            value={kisi.relation}
-                            onChange={(e) => {
-                              const updated = [...form.emergency_contacts];
-                              updated[idx] = { ...updated[idx], relation: e.target.value };
-                              setForm({ ...form, emergency_contacts: updated });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Adı Soyadı</Label>
-                          <Input
-                            value={kisi.full_name}
-                            onChange={(e) => {
-                              const updated = [...form.emergency_contacts];
-                              updated[idx] = { ...updated[idx], full_name: e.target.value };
-                              setForm({ ...form, emergency_contacts: updated });
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Telefon Numarası</Label>
-                          <Input
-                            placeholder="0(5xx) xxx xx xx"
-                            value={kisi.phone}
-                            onChange={(e) => {
-                              const updated = [...form.emergency_contacts];
-                              updated[idx] = { ...updated[idx], phone: formatTrPhone(e.target.value) };
-                              setForm({ ...form, emergency_contacts: updated });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Sıra Numarası (öncelik)</Label>
-                          <Input
-                            type="number" min="1"
-                            value={kisi.order || ""}
-                            onChange={(e) => {
-                              const updated = [...form.emergency_contacts];
-                              updated[idx] = { ...updated[idx], order: e.target.value };
-                              setForm({ ...form, emergency_contacts: updated });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(!form.emergency_contacts || form.emergency_contacts.length === 0) && (
-                    <p className="text-xs text-muted-foreground italic">Henüz acil durum kişisi eklenmedi.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            </TabsContent>
-
-            <TabsContent value="is" className="mt-0">
-            <div className="space-y-3">
-              <div>
-                <Label className="mb-1.5 block">Pozisyon / Unvan</Label>
-                <Select value={form.position} onValueChange={(v) => setForm({ ...form, position: v })}>
-                  <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                  <SelectContent>
-                    {positionOptions.map((p) => (
-                      <SelectItem key={p.id} value={p.value}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block">Bagli Oldugu Yonetici</Label>
-                <Select
-                  value={form.manager_id || "none"}
-                  onValueChange={(v) => {
-                    if (v === "none") {
-                      setForm({ ...form, manager_id: "", manager_name: "" });
-                    } else {
-                      const mgr = allEmployees.find((e) => e.id === v);
-                      setForm({ ...form, manager_id: v, manager_name: mgr?.full_name || "" });
-                    }
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Yonetici seciniz (opsiyonel)" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Secilmedi</SelectItem>
-                    {allEmployees
-                      .filter((e) => !employee || e.id !== employee.id)
-                      .map((e) => (
-                        <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block">Ise Baslama Tarihi</Label>
-                <Input type="date" value={form.hire_date} onChange={(e) => setForm({ ...form, hire_date: e.target.value })} />
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none pt-1">
-                <Checkbox
-                  checked={form.show_in_job_tracking}
-                  onCheckedChange={(v) => setForm({ ...form, show_in_job_tracking: v === true })}
-                />
-                <span className="text-sm">İş Takibi kullanıyor (bilet sorumlusu olarak seçilebilir)</span>
-              </label>
-
-              {employee && (
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <Label className="mb-1.5 block">Izin Bakiyesi</Label>
-                    <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
-                      {hasHireDate ? (
-                        <span className={`font-semibold ${leaveBalance < 0 ? "text-red-600" : leaveBalance <= 3 ? "text-orange-500" : "text-green-600"}`}>
-                          {leaveBalance} gun
-                          <span className="text-muted-foreground font-normal ml-1.5">({leaveUsed || 0} / {leaveEntitled} kullanildi)</span>
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Tanim yok</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">Sonraki Izin Hak Edis Tarihi</Label>
-                    <Input type="date" value={form.next_leave_entitlement_date} onChange={(e) => setForm({ ...form, next_leave_entitlement_date: e.target.value })} />
-                  </div>
-                </div>
-              )}
-            </div>
-            </TabsContent>
-
-            <TabsContent value="egitim" className="mt-0">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Egitim Durumu</Label>
-                  <Select value={form.education_level} onValueChange={(v) => setForm({ ...form, education_level: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      {educationLevelOptions.map((o) => (
-                        <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">En Yuksek Egitim</Label>
-                  <Select value={form.highest_education} onValueChange={(v) => setForm({ ...form, highest_education: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      {educationLevelOptions.map((o) => (
-                        <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Universite Bilgileri</Label>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, education_history: [...(form.education_history || []), { university: "", department: "", graduation_date: "", gpa: "" }] })}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    + Universite Ekle
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {(form.education_history || []).map((edu, idx) => (
-                    <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Universite</span>
-                        <button
-                          type="button"
-                          onClick={() => setForm({ ...form, education_history: form.education_history.filter((_, i) => i !== idx) })}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div>
-                        <Label className="mb-1 block text-xs text-muted-foreground">Üniversite</Label>
-                        <Input
-                          placeholder="Universite adi"
-                          value={edu.university}
-                          onChange={(e) => {
-                            const updated = [...form.education_history];
-                            updated[idx] = { ...updated[idx], university: e.target.value };
-                            setForm({ ...form, education_history: updated });
-                          }}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Bölüm</Label>
-                          <Input
-                            placeholder="Bolum adi"
-                            value={edu.department}
-                            onChange={(e) => {
-                              const updated = [...form.education_history];
-                              updated[idx] = { ...updated[idx], department: e.target.value };
-                              setForm({ ...form, education_history: updated });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Tarihi</Label>
-                          <Input
-                            type="date"
-                            value={edu.graduation_date}
-                            onChange={(e) => {
-                              const updated = [...form.education_history];
-                              updated[idx] = { ...updated[idx], graduation_date: e.target.value };
-                              setForm({ ...form, education_history: updated });
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="mb-1 block text-xs text-muted-foreground">Mezuniyet Not Ortalaması</Label>
-                        <Input
-                          type="number" step="0.01" min="0" max="4" placeholder="örn. 3.24"
-                          value={edu.gpa || ""}
-                          onChange={(e) => {
-                            const updated = [...form.education_history];
-                            updated[idx] = { ...updated[idx], gpa: e.target.value };
-                            setForm({ ...form, education_history: updated });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {(!form.education_history || form.education_history.length === 0) && (
-                    <p className="text-xs text-muted-foreground italic">Henuz universite eklenmedi.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Sertifikalar & Eğitimler */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Sertifikalar & Eğitimler</Label>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, certificates: [...(form.certificates || []), { name: "", institution: "", date: "", document_url: "", document_name: "" }] })}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    + Sertifika/Eğitim Ekle
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {(form.certificates || []).map((cert, idx) => (
-                    <div key={idx} className="border border-border/50 rounded-xl p-3 space-y-2 bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground font-medium">{idx + 1}. Sertifika/Eğitim</span>
-                        <button
-                          type="button"
-                          onClick={() => setForm({ ...form, certificates: form.certificates.filter((_, i) => i !== idx) })}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <Input
-                        placeholder="Sertifika / eğitim adı"
-                        value={cert.name}
-                        onChange={(e) => {
-                          const updated = [...form.certificates];
-                          updated[idx] = { ...updated[idx], name: e.target.value };
-                          setForm({ ...form, certificates: updated });
-                        }}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          placeholder="Kurum"
-                          value={cert.institution}
-                          onChange={(e) => {
-                            const updated = [...form.certificates];
-                            updated[idx] = { ...updated[idx], institution: e.target.value };
-                            setForm({ ...form, certificates: updated });
-                          }}
-                        />
-                        <Input
-                          type="date"
-                          value={cert.date}
-                          onChange={(e) => {
-                            const updated = [...form.certificates];
-                            updated[idx] = { ...updated[idx], date: e.target.value };
-                            setForm({ ...form, certificates: updated });
-                          }}
-                        />
-                      </div>
-                      {cert.document_url ? (
-                        <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
-                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <a href={cert.document_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex-1 truncate">{cert.document_name || "Belge"}</a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = [...form.certificates];
-                              updated[idx] = { ...updated[idx], document_url: "", document_name: "" };
-                              setForm({ ...form, certificates: updated });
-                            }}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => certInputRefs.current[idx]?.click()}
-                          disabled={uploadingCertIdx === idx}
-                          className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50"
-                        >
-                          {uploadingCertIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                          {uploadingCertIdx === idx ? "Yukleniyor..." : "Belge Ekle"}
-                        </button>
-                      )}
-                      <input
-                        ref={(el) => { certInputRefs.current[idx] = el; }}
-                        type="file"
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => handleCertDocUpload(idx, e)}
-                      />
-                    </div>
-                  ))}
-                  {(!form.certificates || form.certificates.length === 0) && (
-                    <p className="text-xs text-muted-foreground italic">Henuz sertifika/eğitim eklenmedi.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Belgeler */}
-              <div>
-                <Label className="mb-1.5 block">Belgeler</Label>
-                {form.education_documents?.length > 0 && (
-                  <div className="space-y-1.5 mb-2">
-                    {form.education_documents.map((doc, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
-                        <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex-1 truncate">{doc.name}</a>
-                        <button type="button" onClick={() => removeDoc(idx)} className="text-muted-foreground hover:text-destructive"><X className="w-3.5 h-3.5" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <button type="button" onClick={() => docInputRef.current?.click()} disabled={uploadingDoc} className="flex items-center gap-2 text-xs text-primary hover:underline disabled:opacity-50">
-                  {uploadingDoc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                  {uploadingDoc ? "Yukleniyor..." : "Belge Ekle"}
-                </button>
-                <input ref={docInputRef} type="file" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={handleDocUpload} />
-              </div>
-            </div>
-            </TabsContent>
-
-            <TabsContent value="ozluk" className="mt-0">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="mb-1.5 block">Şube / Lokasyon</Label>
-                  <Select value={form.sube_id || "none"} onValueChange={(v) => setForm({ ...form, sube_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Secilmedi</SelectItem>
-                      {subeler.map((s) => <SelectItem key={s.id} value={s.id}>{s.ad}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Bölüm</Label>
-                  <Select value={form.bolum_id || "none"} onValueChange={(v) => setForm({ ...form, bolum_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Seciniz" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Secilmedi</SelectItem>
-                      {bolumler.filter((b) => !form.sube_id || !b.sube_id || b.sube_id === form.sube_id).map((b) => <SelectItem key={b.id} value={b.id}>{b.ad}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Meslek Kodu (SGK)</Label>
-                  <Input value={form.meslek_kodu} onChange={(e) => setForm({ ...form, meslek_kodu: e.target.value })} placeholder="örn: 4225.03" />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Kanun No (SGK teşvik)</Label>
-                  <Input value={form.kanun_no} onChange={(e) => setForm({ ...form, kanun_no: e.target.value })} />
-                </div>
-              </div>
-              {canViewSalary && (
-                <div>
-                  <Label className="mb-1.5 block">Aylık Ücret (₺)</Label>
-                  <Input type="number" disabled={!canEditSalary} value={form.aylik_ucret} onChange={(e) => setForm({ ...form, aylik_ucret: e.target.value })} />
-                </div>
-              )}
-              <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
-                <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.emekli_mi} onCheckedChange={(v) => setForm({ ...form, emekli_mi: v ? 1 : 0 })} /> Emekli</label>
-                <label className="flex items-center gap-2 text-sm"><Switch checked={!!form.sahsi_hesap_aktif} onCheckedChange={(v) => setForm({ ...form, sahsi_hesap_aktif: v ? 1 : 0 })} /> Şahsi hesap kullan</label>
-              </div>
-              {!!form.sahsi_hesap_aktif && (
-                <div className="grid grid-cols-2 gap-3 border border-border/50 rounded-xl p-3 bg-muted/20">
-                  <div>
-                    <Label className="mb-1.5 block">Aylık Şahsi Hesap (₺)</Label>
-                    <Input type="number" value={form.sahsi_hesap_tutar} onChange={(e) => setForm({ ...form, sahsi_hesap_tutar: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">Banka</Label>
-                    <Input value={form.sahsi_hesap_banka} onChange={(e) => setForm({ ...form, sahsi_hesap_banka: e.target.value })} />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="mb-1.5 block">IBAN</Label>
-                    <Input value={form.sahsi_hesap_iban} onChange={(e) => setForm({ ...form, sahsi_hesap_iban: e.target.value })} />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="mb-1.5 block">Açıklama</Label>
-                    <Input value={form.sahsi_hesap_aciklama} onChange={(e) => setForm({ ...form, sahsi_hesap_aciklama: e.target.value })} />
-                  </div>
-                </div>
-              )}
-            </div>
-            </TabsContent>
-            </div>
-          </Tabs>
+            </Tabs>
+          )}
 
           <div className="flex justify-end gap-3 pt-3 border-t shrink-0">
             {!embedded && <Button type="button" variant="outline" onClick={handleClose}>Iptal</Button>}

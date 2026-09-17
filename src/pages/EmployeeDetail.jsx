@@ -28,7 +28,7 @@ const LEAVE_TYPE_LABELS = {
 };
 
 export default function EmployeeDetail() {
-  const [activeTab, setActiveTab] = useState("genel");
+  const [activeTab, setActiveTab] = useState("kisisel");
   const [terminateOpen, setTerminateOpen] = useState(false);
   const [formPrintLeave, setFormPrintLeave] = useState(null);
   const [showReconciliation, setShowReconciliation] = useState(false);
@@ -93,7 +93,7 @@ export default function EmployeeDetail() {
     mutationFn: (data) => flowApi.entities.Employee.update(employeeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee", employeeId] });
-      setActiveTab("genel");
+      setActiveTab("kisisel");
     },
   });
 
@@ -271,11 +271,10 @@ export default function EmployeeDetail() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn("grid w-full", {
-          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 0,
-          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 1,
-          "grid-cols-7": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 2,
-          "grid-cols-8": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 3,
-          "grid-cols-9": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date, isPrivileged].filter(Boolean).length === 4,
+          "grid-cols-5": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 0,
+          "grid-cols-6": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 1,
+          "grid-cols-7": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 2,
+          "grid-cols-8": [canViewBelgeler, canViewTutanak, isPrivileged && employee.hire_date].filter(Boolean).length === 3,
         })}>
           <TabsTrigger value="kisisel">Kişisel</TabsTrigger>
           <TabsTrigger value="iletisim">İletişim Bilgileri</TabsTrigger>
@@ -285,7 +284,6 @@ export default function EmployeeDetail() {
           {canViewBelgeler && <TabsTrigger value="belgeler">Belgeler</TabsTrigger>}
           {canViewTutanak && <TabsTrigger value="tutanak">Tutanak & İhtar</TabsTrigger>}
           {isPrivileged && employee.hire_date && <TabsTrigger value="izin">İzin & Hareketler</TabsTrigger>}
-          {isPrivileged && <TabsTrigger value="duzenle">Düzenle</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="kisisel" className="space-y-6 mt-4">

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Navigate } from "react-router-dom";
-import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning, MapPin, Wallet } from "lucide-react";
+import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning, MapPin, Wallet, CreditCard, Flag, Landmark, ShieldCheck, ContactRound } from "lucide-react";
 import { format, differenceInYears, addYears } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,12 @@ export default function EmployeeDetail() {
     queryFn: () => flowApi.entities.IkSube.list("ad", 2000),
   });
   const getSubeAdi = (id) => subeler.find((s) => s.id === id)?.ad;
+
+  const { data: bolumler = [] } = useQuery({
+    queryKey: ["ik_bolumler_min"],
+    queryFn: () => flowApi.entities.IkBolum.list("ad", 3000),
+  });
+  const getBolumAdi = (id) => bolumler.find((b) => b.id === id)?.ad;
 
   const { data: tutanaklar = [] } = useQuery({
     queryKey: ["ik_tutanaklar", employeeId],
@@ -417,8 +423,127 @@ export default function EmployeeDetail() {
               </div>
             </div>
           )}
+          {employee.card_uid && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4 text-slate-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Kart ID</p>
+                <p className="text-sm font-medium">{employee.card_uid}</p>
+              </div>
+            </div>
+          )}
+          {employee.uyruk && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center shrink-0">
+                <Flag className="w-4 h-4 text-sky-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Uyruk</p>
+                <p className="text-sm font-medium">{employee.uyruk}</p>
+              </div>
+            </div>
+          )}
+          {employee.bolum_id && getBolumAdi(employee.bolum_id) && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                <Building2 className="w-4 h-4 text-violet-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Bölüm</p>
+                <p className="text-sm font-medium">{getBolumAdi(employee.bolum_id)}</p>
+              </div>
+            </div>
+          )}
+          {employee.meslek_kodu && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Meslek Kodu (SGK)</p>
+                <p className="text-sm font-medium">{employee.meslek_kodu}</p>
+              </div>
+            </div>
+          )}
+          {employee.kanun_no && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Kanun No</p>
+                <p className="text-sm font-medium">{employee.kanun_no}</p>
+              </div>
+            </div>
+          )}
+          {employee.personel_adresi && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-cyan-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Adres</p>
+                <p className="text-sm font-medium">{employee.personel_adresi}</p>
+              </div>
+            </div>
+          )}
+          {employee.emekli_mi == 1 && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-4 h-4 text-teal-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Emekli</p>
+                <p className="text-sm font-medium">Evet</p>
+              </div>
+            </div>
+          )}
+          {isPrivileged && Number(employee.ticket_aylik) > 0 && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-lime-50 flex items-center justify-center shrink-0">
+                <Wallet className="w-4 h-4 text-lime-600" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Ticket Aylık</p>
+                <p className="text-sm font-medium">{Number(employee.ticket_aylik).toLocaleString("tr-TR")} ₺</p>
+              </div>
+            </div>
+          )}
+          {isPrivileged && employee.sahsi_hesap_aktif == 1 && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-lime-50 flex items-center justify-center shrink-0">
+                <Landmark className="w-4 h-4 text-lime-600" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground">Şahsi Hesap</p>
+                <p className="text-sm font-medium">{Number(employee.sahsi_hesap_tutar || 0).toLocaleString("tr-TR")} ₺</p>
+                {(employee.sahsi_hesap_banka || employee.sahsi_hesap_iban) && (
+                  <p className="text-[11px] text-muted-foreground">{[employee.sahsi_hesap_banka, employee.sahsi_hesap_iban].filter(Boolean).join(" · ")}</p>
+                )}
+              </div>
+            </div>
+          )}
 
         </div>
+
+        {employee.emergency_contacts?.length > 0 && (
+          <div className="mt-6 pt-5 border-t border-border/50">
+            <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+              <ContactRound className="w-3.5 h-3.5" /> Acil Durum Kişileri
+            </h4>
+            <div className="space-y-2">
+              {employee.emergency_contacts.map((kisi, idx) => (
+                <div key={idx} className="text-sm text-foreground flex flex-wrap items-center gap-x-2">
+                  <span className="font-medium">{kisi.full_name}</span>
+                  {kisi.relation && <span className="text-muted-foreground">· {kisi.relation}</span>}
+                  {kisi.phone && <span className="text-muted-foreground">· {kisi.phone}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
         </TabsContent>

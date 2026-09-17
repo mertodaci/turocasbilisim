@@ -52,6 +52,7 @@ const ENTITY_MAP = {
   Correspondence:   'correspondences',
   MusteriEvrak:     'musteri_evraklari',
   EbysAyarlar:      'ebys_ayarlari',
+  ModuleGuide:      'module_guides',
   Conversation:     'conversations',
   Message:          'messages',
   LeaveAllowance:   'leave_allowances',

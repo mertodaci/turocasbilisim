@@ -18,6 +18,7 @@ export const MODULES = [
   { key: "my_leave_requests",   label: "İzinlerim",              path: "/izinlerim" },
   { key: "ik_leave_requests",   label: "İzin Yönetimi (IK)",     path: "/ik-izin-yonetimi" },
   { key: "personal_calendar",   label: "Kişisel Takvim",         path: "/kisisel-takvim" },
+  { key: "yardim",              label: "Yardım & Destek",        path: "/yardim" },
   { key: "employee_report",     label: "Çalışan Raporu",         path: "/calisan-raporu" },
   { key: "personel_hareketleri", label: "PDKS (Personel Hareketleri)", path: "/personel-hareketleri" },
   { key: "users",               label: "Kullanıcılar",           path: "/kullanicilar" },

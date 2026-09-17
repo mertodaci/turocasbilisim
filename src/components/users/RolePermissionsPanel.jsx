@@ -20,7 +20,7 @@ const ROLE_ICONS = {
 
 const CATEGORIES = [
   { label: "Ana Menü",         keys: ["dashboard"] },
-  { label: "Destek Merkezi",   keys: ["support_center", "messages", "todos", "expenses", "my_leave_requests", "personal_calendar"] },
+  { label: "Destek Merkezi",   keys: ["support_center", "messages", "todos", "expenses", "my_leave_requests", "personal_calendar", "yardim"] },
   { label: "İş Takibi",         keys: ["is_takibi", "is_takibi_dashboard", "is_takibi_projeler", "is_takibi_biletler", "is_takibi_kanban", "is_takibi_bilet_durumlari", "is_takibi_bilet_tipleri", "is_takibi_tanimlar_v2"] },
   { label: "İnsan Kaynakları", keys: ["employees", "leave_requests", "ik_leave_requests", "leave_allowances", "leave_types", "ik_expense_requests", "employee_report", "quick_report", "org_chart", "personel_hareketleri"] },
   { label: "Müşteriler",       keys: ["customers", "musteri_kullanicilari", "customer_map", "musteri_tanimlari"] },

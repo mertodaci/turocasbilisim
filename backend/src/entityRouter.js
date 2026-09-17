@@ -47,6 +47,7 @@ const JSON_COLUMNS = {
   stok_etiket_fisleri: ['satirlar_json'],
   ik_vardiya_planlari: ['adimlar_json', 'personel_ids_json'],
   ik_toplu_yukleme: ['onizleme_json', 'geri_alma_json'],
+  module_guides: ['steps'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -115,6 +116,7 @@ const TABLE_TO_MODULE = {
   correspondences: 'ebys_evraklar',
   musteri_evraklari: 'customers',
   ebys_ayarlari: 'ebys_ayarlari',
+  module_guides: 'yardim',
   conversations: 'messages',
   messages: 'messages',
   leave_allowances: 'leave_requests',
@@ -322,6 +324,7 @@ const ALLOWED_COLUMNS = {
   correspondences: ['document_number','subject','document_type','direction','customer_id','customer_name','recipient_ids','recipient_names','content','attachments','tags','status','date','author_id','author_name','approver_id','approver_name','approval_note','approved_at','related_task_id','kep_no','kep_durum','eimza_durum','eimza_tarihi','eimza_imzalayan'],
   musteri_evraklari: ['customer_id','customer_name','evrak_tipi','dosya_url','dosya_adi','tarih','aciklama','yukleyen'],
   ebys_ayarlari: ['kep_kullanici_adi','kep_api_anahtari','kep_aktif','eimza_saglayici','eimza_api_anahtari','eimza_aktif','updated_by'],
+  module_guides: ['module_key','summary','steps','updated_by'],
   conversations: ['title','type','name','participants','last_message','last_message_id','last_message_at','last_message_sender_email','last_read_message_id_by_user','status','archived_by','deleted_by'],
   messages: ['conversation_id','content','sender_id','sender_name','sender_email','message_type','file_url','file_name','file_size','file_type','meet_link','reply_to_id','reactions'],
   definitions: ['category','name','value','description','is_active','sort_order','color','icon','label'],

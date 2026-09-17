@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { HelpCircle, Mail, Phone, CheckCircle2, ChevronRight } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { HelpCircle, Mail, Phone, CheckCircle2, ChevronRight, Pencil, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { allNavItems } from "@/components/layout/navItems";
-import { MODULE_GUIDES } from "@/lib/moduleGuides";
+import { flowApi } from "@/api/flowApiClient";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Bir düğümün altındaki tüm tıklanabilir yaprakları (label+path+icon) düz
-// bir diziye toplar — BottomNav.jsx'teki collectLeafKeys ile aynı özyineleme,
-// burada path/icon da taşıyan bir varyantı.
 function collectLeaves(node) {
   if (!node.children || node.children.length === 0) {
     return node.path ? [node] : [];
@@ -20,26 +22,81 @@ function collectLeaves(node) {
 export default function Yardim() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const userPerms = user?.permissions || [];
   const userRole = user?.role || "kullanici";
+
   const canViewModule = (moduleKey) => {
     if (userRole === "admin") return true;
     const perm = userPerms.find((p) => p.module === moduleKey);
     return perm ? perm.can_view == 1 : false;
   };
+  const canEditModule = () => {
+    if (userRole === "admin") return true;
+    const perm = userPerms.find((p) => p.module === "yardim");
+    return perm ? (perm.can_edit == 1 || perm.can_add == 1) : false;
+  };
+  const canEdit = canEditModule();
+
+  const { data: guides = [] } = useQuery({
+    queryKey: ["module_guides"],
+    queryFn: () => flowApi.entities.ModuleGuide.list(),
+  });
+  const guideMap = useMemo(() => {
+    const m = {};
+    guides.forEach((g) => { m[g.module_key] = g; });
+    return m;
+  }, [guides]);
 
   const modules = useMemo(
-    () => allNavItems.filter((item) => MODULE_GUIDES[item.labelKey] && canViewModule(item.labelKey)),
+    () => allNavItems.filter((item) => canViewModule(item.labelKey)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [userRole, userPerms.length]
   );
 
   const [activeKey, setActiveKey] = useState(modules[0]?.labelKey);
   const activeModule = modules.find((m) => m.labelKey === activeKey) || modules[0];
-  const guide = activeModule ? MODULE_GUIDES[activeModule.labelKey] : null;
+  const guide = activeModule ? guideMap[activeModule.labelKey] : null;
   const relatedScreens = activeModule?.children
     ? collectLeaves(activeModule).filter((leaf) => canViewModule(leaf.labelKey))
     : [];
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState({ summary: "", stepsText: "" });
+
+  const openEdit = () => {
+    setForm({
+      summary: guide?.summary || "",
+      stepsText: (guide?.steps || []).join("\n"),
+    });
+    setDialogOpen(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const steps = form.stepsText.split("\n").map((s) => s.trim()).filter(Boolean);
+      const payload = { summary: form.summary, steps, updated_by: user?.email };
+      if (guide) {
+        return flowApi.entities.ModuleGuide.update(guide.id, payload);
+      }
+      return flowApi.entities.ModuleGuide.create({ module_key: activeModule.labelKey, ...payload });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["module_guides"] });
+      setDialogOpen(false);
+      toast.success("Kılavuz kaydedildi");
+    },
+    onError: () => toast.error("Kaydedilemedi"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => flowApi.entities.ModuleGuide.delete(guide.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["module_guides"] });
+      toast.success("Kılavuz silindi");
+    },
+    onError: () => toast.error("Silinemedi"),
+  });
 
   return (
     <div className="space-y-6">
@@ -80,26 +137,55 @@ export default function Yardim() {
 
         {/* Sağ panel — seçili modülün kılavuzu */}
         <div className="lg:col-span-3">
-          {activeModule && guide ? (
+          {activeModule ? (
             <div className="bg-card rounded-2xl border border-border/50 shadow-sm">
               <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50 rounded-t-2xl bg-muted/30">
                 <activeModule.icon className="w-5 h-5 text-primary" />
-                <h2 className="text-base font-semibold">{t(activeModule.labelKey)}</h2>
+                <h2 className="text-base font-semibold flex-1">{t(activeModule.labelKey)}</h2>
+                {canEdit && (
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={openEdit}>
+                      <Pencil className="w-3.5 h-3.5" /> {guide ? "Düzenle" : "Kılavuz Ekle"}
+                    </Button>
+                    {guide && (
+                      <Button
+                        size="sm" variant="ghost" className="h-8 gap-1.5 text-destructive hover:text-destructive"
+                        onClick={() => { if (confirm("Bu kılavuz silinsin mi?")) deleteMutation.mutate(); }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Sil
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="p-6 space-y-5">
-                <p className="text-sm text-muted-foreground leading-relaxed">{guide.summary}</p>
-
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Temel İş Akışı</h3>
-                  <ol className="space-y-2">
-                    {guide.steps.map((step, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
+                {guide ? (
+                  <>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{guide.summary}</p>
+                    {guide.steps?.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Temel İş Akışı</h3>
+                        <ol className="space-y-2">
+                          {guide.steps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2.5 text-sm">
+                              <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-muted-foreground">Bu modül için henüz bir kılavuz eklenmedi.</p>
+                    {canEdit && (
+                      <Button size="sm" className="mt-3 gap-1.5" onClick={openEdit}>
+                        <Plus className="w-3.5 h-3.5" /> Kılavuz Ekle
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {relatedScreens.length > 0 && (
                   <div>
@@ -151,6 +237,38 @@ export default function Yardim() {
           </div>
         </div>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{activeModule ? t(activeModule.labelKey) : ""} — Kılavuz</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Özet</label>
+              <Textarea
+                value={form.summary}
+                onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+                rows={4}
+                placeholder="Bu modül ne işe yarar, kısa bir özet yazın."
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Adımlar (her satır bir adım)</label>
+              <Textarea
+                value={form.stepsText}
+                onChange={(e) => setForm((f) => ({ ...f, stepsText: e.target.value }))}
+                rows={6}
+                placeholder={"Adım 1\nAdım 2\nAdım 3"}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>İptal</Button>
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>Kaydet</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

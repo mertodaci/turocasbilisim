@@ -14,7 +14,7 @@ const SOFT_DELETE_TABLES = ['customers','job_tickets','job_projects','employees'
   'ik_kesinti_planlari','ik_kesintiler','ik_ic_borclar','ik_personel_masraf',
   'ik_ozluk_evraklari','ik_tutanaklar','ik_izin_evraklari',
   'ik_bordro_satirlari','correspondences','musteri_evraklari',
-  'fatura_aboneler','fatura_islemler'];
+  'fatura_aboneler','fatura_islemler','arsiv_belgeler'];
 
 // GUVENLIK/BUTUNLUK: silme öncesi ilişkili kayıt kontrolü — ID/isim bazlı.
 // Bir üst kayıt (şube, bölüm, ürün grubu, müşteri, abone, vardiya, rol...)
@@ -103,6 +103,7 @@ const JSON_COLUMNS = {
   ik_vardiya_planlari: ['adimlar_json', 'personel_ids_json'],
   ik_toplu_yukleme: ['onizleme_json', 'geri_alma_json'],
   module_guides: ['steps'],
+  arsiv_belgeler: ['etiketler'],
 };
 
 function parseJsonColumns(tableName, row) {
@@ -170,6 +171,7 @@ const TABLE_TO_MODULE = {
   product_modules: 'definitions',
   correspondences: 'ebys_evraklar',
   musteri_evraklari: 'customers',
+  arsiv_belgeler: 'arsiv_belgeler',
   ebys_ayarlari: 'ebys_ayarlari',
   module_guides: 'yardim',
   conversations: 'messages',
@@ -381,6 +383,7 @@ const ALLOWED_COLUMNS = {
   product_modules: ['product_id','name','description','is_active','sort_order'],
   correspondences: ['document_number','subject','document_type','direction','customer_id','customer_name','recipient_ids','recipient_names','content','attachments','tags','status','date','author_id','author_name','approver_id','approver_name','approval_note','approved_at','related_task_id','kep_no','kep_durum','eimza_durum','eimza_tarihi','eimza_imzalayan'],
   musteri_evraklari: ['customer_id','customer_name','evrak_tipi','dosya_url','dosya_adi','tarih','aciklama','yukleyen'],
+  arsiv_belgeler: ['kategori','kaynak_modul','kaynak_kayit_id','kaynak_kayit_ozet','baslik','dosya_url','dosya_adi','etiketler','tarih','yukleyen'],
   ebys_ayarlari: ['kep_kullanici_adi','kep_api_anahtari','kep_aktif','eimza_saglayici','eimza_api_anahtari','eimza_aktif','updated_by'],
   module_guides: ['module_key','summary','steps','updated_by'],
   conversations: ['title','type','name','participants','last_message','last_message_id','last_message_at','last_message_sender_email','last_read_message_id_by_user','status','archived_by','deleted_by'],

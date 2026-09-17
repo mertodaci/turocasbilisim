@@ -60,6 +60,7 @@ export const MODULES = [
   { key: "arsiv_ik",            label: "Arşiv — İnsan Kaynakları", path: "/arsiv/ik" },
   { key: "arsiv_is_takibi",     label: "Arşiv — İş Takibi",      path: "/arsiv/is-takibi" },
   { key: "arsiv_bordro",        label: "Arşiv — Bordro",         path: "/arsiv/bordro" },
+  { key: "arsiv_belgeler",      label: "Arşiv — Arama/Belge Ekle", path: "/arsiv/arama" },
   // ── Stok / Depo Yönetimi — Faz 1: Tanımlar ──
   { key: "stok_urunler",        label: "Ürün Kartları",          path: "/stok/urunler" },
   { key: "stok_gruplar",        label: "Ürün Grupları",          path: "/stok/gruplar" },

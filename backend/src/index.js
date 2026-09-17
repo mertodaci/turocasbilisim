@@ -6,6 +6,7 @@ const authRoutes = require('./authRoutes');
 const authMiddleware = require('./authMiddleware');
 const createEntityRouter = require('./entityRouter');
 const { checkPermission } = createEntityRouter;
+const { pusulaHtmlUret } = require('./ikBordroPusula');
 
 const app = express();
 const helmet = require('helmet');
@@ -128,6 +129,7 @@ app.use('/api/entities/customer_contracts',createEntityRouter('customer_contract
 app.use('/api/entities/customer_modules',  createEntityRouter('customer_modules'));
 app.use('/api/entities/correspondences',   createEntityRouter('correspondences'));
 app.use('/api/entities/musteri_evraklari', createEntityRouter('musteri_evraklari'));
+app.use('/api/entities/arsiv_belgeler',    createEntityRouter('arsiv_belgeler'));
 app.use('/api/entities/ebys_ayarlari',     createEntityRouter('ebys_ayarlari'));
 app.use('/api/entities/module_guides',     createEntityRouter('module_guides'));
 app.use('/api/entities/conversations',     createEntityRouter('conversations'));
@@ -426,6 +428,29 @@ app.get('/api/arsiv/bordro', authMiddleware, requireRoles('admin','yonetici'), (
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Dijital Arşiv — merkezi belge deposu üzerinde serbest metin/kategori/kaynak/
+// tarih aralığı araması. Generic /api/entities/:table yalnızca eşitlik filtresi
+// destekliyor; burada stok modülündeki parti arama deseniyle (whitelist +
+// parametrize LIKE) aynı yaklaşım kullanılıyor.
+app.get('/api/arsiv/ara', authMiddleware, requireRoles('admin','yonetici'), (req, res) => {
+  try {
+    const { q, kategori, kaynak_modul, baslangic, bitis } = req.query;
+    const cond = ['is_deleted = 0'];
+    const params = [];
+    if (q) {
+      cond.push('(baslik LIKE ? OR dosya_adi LIKE ? OR kaynak_kayit_ozet LIKE ? OR etiketler LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (kategori) { cond.push('kategori = ?'); params.push(kategori); }
+    if (kaynak_modul) { cond.push('kaynak_modul = ?'); params.push(kaynak_modul); }
+    if (baslangic) { cond.push('tarih >= ?'); params.push(baslangic); }
+    if (bitis) { cond.push('tarih <= ?'); params.push(bitis); }
+    const where = 'WHERE ' + cond.join(' AND ');
+    const rows = _adb.prepare(`SELECT * FROM arsiv_belgeler ${where} ORDER BY tarih DESC, created_date DESC LIMIT 500`).all(...params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // === Personel Hareketleri: CSV kart log import ===
 // === PDKS: ESP32 kapi kontrol daemon proxy'si (kart tanimlama + canli durum) ===
 // pdks_daemon.py sunucunun kendi icinde (127.0.0.1:8091) calisir, disariya kapali.
@@ -636,7 +661,7 @@ app.get('/api/files/:filename', authMiddleware, (req, res) => {
   // dusuyordu (resimler <img> etiketinde cogu tarayicida yine de goruntuleniyordu,
   // o yuzden fark edilmemisti). Onizlenebilir turlerde "inline" gonderiyoruz;
   // digerleri (docx/xlsx/zip vb, zaten tarayicida onizlenemez) eskisi gibi indiriliyor.
-  const previewable = /\.(png|jpe?g|gif|webp|pdf|txt)$/i.test(filename);
+  const previewable = /\.(png|jpe?g|gif|webp|pdf|txt|html)$/i.test(filename);
   res.setHeader('Content-Disposition', `${previewable ? 'inline' : 'attachment'}; filename="${encodeURIComponent(filename)}"`);
   res.sendFile(filePath);
 });
@@ -3299,7 +3324,33 @@ app.post('/api/ik/bordro/kapat', authMiddleware, (req, res) => {
     } catch (e) {}
     return res.json({ ok: true, durum: 'onayli' });
   }
-  db.prepare("UPDATE ik_bordro_donemleri SET durum='kapali', kapatan=?, kapanis_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
+  // Dönem kapatılırken her personel için gerçek bir pusula dosyası üretilip
+  // Dijital Arşiv'e (arsiv_belgeler) kaydedilir -- kilit + pusula üretimi
+  // atomik olsun diye tek transaction'da. Dönem tekrar kapatılırsa (kilit
+  // açılıp düzeltme yapılıp tekrar kapatılırsa) o döneme ait eski pusulalar
+  // soft-delete edilip yeni set eklenir, mükerrer birikme olmaz.
+  const donemTarih = `${yil}-${String(ay).padStart(2, '0')}`;
+  const kapatTx = db.transaction(() => {
+    db.prepare("UPDATE arsiv_belgeler SET is_deleted=1, updated_date=? WHERE kaynak_modul='bordro' AND tarih=? AND is_deleted=0")
+      .run(now, donemTarih);
+    const satirlar = db.prepare('SELECT * FROM ik_bordro_satirlari WHERE donem_id=?').all(donem.id);
+    const sirket = db.prepare("SELECT * FROM ik_sirket_bilgileri WHERE kapsam='genel'").get();
+    const insertBelge = db.prepare(`INSERT INTO arsiv_belgeler
+      (id, kategori, kaynak_modul, kaynak_kayit_id, kaynak_kayit_ozet, baslik, dosya_url, dosya_adi, tarih, yukleyen)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`);
+    for (const satir of satirlar) {
+      const html = pusulaHtmlUret(satir, donem, sirket);
+      const dosyaAdi = `${Date.now()}-${Math.round(Math.random() * 1e9)}.html`;
+      fs.writeFileSync(path.join(uploadDir, dosyaAdi), html, 'utf8');
+      insertBelge.run(
+        _stokUUID(), 'Bordro Pusulası', 'bordro', satir.personel_id, satir.personel_adi,
+        `${ay}/${yil} Bordro Pusulası — ${satir.personel_adi}`, `/api/files/${dosyaAdi}`, dosyaAdi,
+        donemTarih, req.user.email
+      );
+    }
+    db.prepare("UPDATE ik_bordro_donemleri SET durum='kapali', kapatan=?, kapanis_tarihi=?, updated_date=? WHERE id=?").run(req.user.email, now, now, donem.id);
+  });
+  kapatTx();
   try {
     db.prepare("INSERT INTO audit_log (id, actor_email, action, target, old_value, new_value) VALUES (?,?,?,?,?,?)")
       .run(_stokUUID(), req.user.email, 'bordro_donem_kapatildi', `${yil}-${String(ay).padStart(2,'0')}`, donem.durum, 'kapali');

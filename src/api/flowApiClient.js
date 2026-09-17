@@ -51,6 +51,7 @@ const ENTITY_MAP = {
   CustomerModule:   'customer_modules',
   Correspondence:   'correspondences',
   MusteriEvrak:     'musteri_evraklari',
+  ArsivBelge:       'arsiv_belgeler',
   EbysAyarlar:      'ebys_ayarlari',
   ModuleGuide:      'module_guides',
   Conversation:     'conversations',
@@ -407,6 +408,10 @@ const arsiv = {
   async ik() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/ik`, { credentials: 'include' })); },
   async isTakibi() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/is-takibi`, { credentials: 'include' })); },
   async bordro() { return handleResponse(await fetch(`${BASE_URL}/api/arsiv/bordro`, { credentials: 'include' })); },
+  async ara(params = {}) {
+    const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
+    return handleResponse(await fetch(`${BASE_URL}/api/arsiv/ara?${qs.toString()}`, { credentials: 'include' }));
+  },
 };
 
 const fatura = {

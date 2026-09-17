@@ -751,7 +751,7 @@ function initDb() {
       // ── EBYS (Elektronik Belge Yönetim Sistemi) ────────────────────
       'ebys_evraklar','ebys_tanimlar','ebys_ayarlari',
       // ── Arşiv Yönetimi ──────────────────────────────────────────────
-      'arsiv_ozet','arsiv_sozlesme','arsiv_musteri','arsiv_ik','arsiv_is_takibi','arsiv_bordro',
+      'arsiv_ozet','arsiv_sozlesme','arsiv_musteri','arsiv_ik','arsiv_is_takibi','arsiv_bordro','arsiv_belgeler',
       // ── Yardım & Destek (DB-tabanlı düzenlenebilir modül kılavuzları) ──
       'yardim',
       // ── Fatura Yönetimi (basit fatura giriş/liste modülü) ──
@@ -1517,6 +1517,27 @@ function initDb() {
         updated_date TEXT DEFAULT (datetime('now'))
       );
       INSERT OR IGNORE INTO guvenlik_ayarlari (id) VALUES ('varsayilan');
+      -- Dijital Arşiv — merkezi belge deposu. Sözleşme/İş Takibi/İK/Bordro
+      -- arşiv ekranlarından "Belge Ekle" ile veya bordro dönemi kapatılırken
+      -- (otomatik pusula) beslenir; kaynak_kayit_id boş bırakılırsa (kaynak_modul
+      -- 'genel') hiçbir kayda bağlı olmayan, bağımsız bir arşiv belgesi olur.
+      CREATE TABLE IF NOT EXISTS arsiv_belgeler (
+        id TEXT PRIMARY KEY,
+        kategori TEXT,
+        kaynak_modul TEXT,
+        kaynak_kayit_id TEXT,
+        kaynak_kayit_ozet TEXT,
+        baslik TEXT NOT NULL,
+        dosya_url TEXT NOT NULL,
+        dosya_adi TEXT,
+        etiketler TEXT DEFAULT '[]',
+        tarih TEXT,
+        yukleyen TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_date TEXT DEFAULT (datetime('now')),
+        updated_date TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_arsiv_belgeler_kaynak ON arsiv_belgeler(kaynak_modul, kaynak_kayit_id);
       -- EBYS ayarları — KEP/e-imza "hazır altyapı": gerçek sağlayıcı
       -- hesabı/API anahtarı geldiğinde bu tek-satır ayara işlenir, o âna
       -- kadar aktif switch'leri kapalı kalır (evrak gönderim/imza

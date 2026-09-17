@@ -59,6 +59,7 @@ const ArsivMusteriEvraklari = lazy(() => import('./pages/arsiv/ArsivMusteriEvrak
 const ArsivIk = lazy(() => import('./pages/arsiv/ArsivIk'));
 const ArsivIsTakibi = lazy(() => import('./pages/arsiv/ArsivIsTakibi'));
 const ArsivBordro = lazy(() => import('./pages/arsiv/ArsivBordro'));
+const ArsivArama = lazy(() => import('./pages/arsiv/ArsivArama'));
 const MusteriTanimlari = lazy(() => import('./pages/MusteriTanimlari'));
 const SozlesmeUrunler = lazy(() => import('./pages/SozlesmeUrunler'));
 const SozlesmeModuller = lazy(() => import('./pages/SozlesmeModuller'));
@@ -343,6 +344,7 @@ const AuthenticatedApp = () => {
         <Route path="/arsiv/ik" element={guard("arsiv_ik", <ArsivIk />)} />
         <Route path="/arsiv/is-takibi" element={guard("arsiv_is_takibi", <ArsivIsTakibi />)} />
         <Route path="/arsiv/bordro" element={guard("arsiv_bordro", <ArsivBordro />)} />
+        <Route path="/arsiv/arama" element={guard("arsiv_belgeler", <ArsivArama />)} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity, FileSignature, Archive, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Users, BarChart3, ClipboardList, CalendarDays, Building2, MessageCircle, CheckSquare, Umbrella, FileSpreadsheet, Wrench, ShieldCheck, ShieldOff, Receipt, Megaphone, FileText, Trash2, ScrollText, Clock, CreditCard, Wallet, Boxes, ArrowLeftRight, Layers, ClipboardCheck, ShoppingCart, HardHat, Smartphone, Tags, FileUp, FileCode2, CalendarClock, Calculator, Lock, ScanSearch, Radar, QrCode, Camera, Activity, FileSignature, Archive, HelpCircle, Search } from "lucide-react";
 
 // Tek doğruluk kaynağı: uygulamanın tüm navigasyon ağacı. BottomNav.jsx
 // (alt bar + uçan alt-menüler) ve GlobalSearch.jsx (⌘K hızlı atlama) buradan
@@ -180,6 +180,7 @@ export const allNavItems = [
     { labelKey: "arsiv_ik", path: "/arsiv/ik", icon: Users, roles: ["admin", "yonetici"] },
     { labelKey: "arsiv_is_takibi", path: "/arsiv/is-takibi", icon: ClipboardList, roles: ["admin", "yonetici"] },
     { labelKey: "arsiv_bordro", path: "/arsiv/bordro", icon: Wallet, roles: ["admin", "yonetici"] },
+    { labelKey: "arsiv_arama", path: "/arsiv/arama", icon: Search, roles: ["admin", "yonetici"] },
   ]
 },
 {

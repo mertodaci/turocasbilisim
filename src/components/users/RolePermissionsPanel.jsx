@@ -27,7 +27,7 @@ const CATEGORIES = [
   { label: "Sözleşme Yönetimi", keys: ["sozlesmeler", "hakedisler", "sozlesme_tanimlar", "sozlesme_turleri", "sozlesme_urunler", "sozlesme_moduller"] },
   { label: "Fatura Yönetimi", keys: ["fatura_tanimlar", "fatura_aboneler", "fatura_islemler", "fatura_raporlar"] },
   { label: "Evrak Yönetimi", keys: ["ebys_evraklar", "ebys_tanimlar", "ebys_ayarlari"] },
-  { label: "Arşiv Yönetimi", keys: ["arsiv_ozet", "arsiv_sozlesme", "arsiv_musteri", "arsiv_ik", "arsiv_is_takibi", "arsiv_bordro"] },
+  { label: "Arşiv Yönetimi", keys: ["arsiv_ozet", "arsiv_sozlesme", "arsiv_musteri", "arsiv_ik", "arsiv_is_takibi", "arsiv_bordro", "arsiv_belgeler"] },
   { label: "Sistem Yönetimi",  keys: ["users", "definitions", "announcements", "role_permissions", "cop_kutusu", "denetim_kaydi", "oturum_yonetimi", "sistem_sagligi"] },
   { label: "Stok — Genel", keys: ["stok_dashboard", "stok_mobil", "stok_etiket", "stok_demirbas_sorgula", "stok_excel"] },
   { label: "Stok — Tanımlar", keys: ["stok_urunler", "stok_gruplar", "stok_depolar", "stok_raflar", "stok_urun_raf", "stok_sahalar", "stok_tedarikciler", "stok_zimmet_yerleri", "stok_tanimlar"] },

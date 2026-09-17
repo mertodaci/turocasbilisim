@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Archive, ScrollText, FileText, Users, ClipboardList, Wallet } from "lucide-react";
+import { Archive, ScrollText, FileText, Users, ClipboardList, Wallet, Search } from "lucide-react";
 
 const CARDS = [
   { key: "sozlesmeler", label: "Sözleşmeler", icon: ScrollText, to: "/arsiv/sozlesmeler", tone: "blue" },
@@ -9,6 +9,7 @@ const CARDS = [
   { key: "ik", label: "İnsan Kaynakları", icon: Users, to: "/arsiv/ik", tone: "indigo" },
   { key: "isTakibi", label: "İş Takibi", icon: ClipboardList, to: "/arsiv/is-takibi", tone: "teal" },
   { key: "bordro", label: "Bordro", icon: Wallet, to: "/arsiv/bordro", tone: "amber" },
+  { key: "arama", label: "Arşiv Arama", icon: Search, to: "/arsiv/arama", tone: "violet" },
 ];
 
 const TONE_BG = {
@@ -17,6 +18,7 @@ const TONE_BG = {
   indigo: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600",
   teal: "bg-teal-50 dark:bg-teal-950/30 text-teal-600",
   amber: "bg-amber-50 dark:bg-amber-950/30 text-amber-600",
+  violet: "bg-violet-50 dark:bg-violet-950/30 text-violet-600",
 };
 
 function useCount(key, fetcher) {
@@ -34,7 +36,8 @@ export default function ArsivOzet() {
   const ik = useCount("ik", flowApi.arsiv.ik);
   const isTakibi = useCount("isTakibi", flowApi.arsiv.isTakibi);
   const bordro = useCount("bordro", flowApi.arsiv.bordro);
-  const counts = { sozlesmeler, musteriEvraklari, ik, isTakibi, bordro };
+  const arama = useCount("arama", () => flowApi.arsiv.ara({}));
+  const counts = { sozlesmeler, musteriEvraklari, ik, isTakibi, bordro, arama };
 
   return (
     <div className="space-y-5">

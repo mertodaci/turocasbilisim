@@ -97,6 +97,7 @@ const JSON_COLUMNS = {
   job_comments: ['attachments'],
   job_kanban_boards: ['columns'],
   job_ticket_statuses: ['board_ids'],
+  devriye_noktalar: ['birim_ids'],
   hakedisler: ['tahsilat'],
   stok_etiket_fisleri: ['satirlar_json'],
   ik_vardiya_planlari: ['adimlar_json', 'personel_ids_json'],
@@ -458,7 +459,7 @@ const ALLOWED_COLUMNS = {
   ik_izin_evraklari: ['leave_id','personel_id','personel_adi','evrak_adi','dosya_url','durum','aciklama','is_deleted'],
   // ── Devriye Yönetimi ──
   devriye_lokasyonlar: ['ad','aciklama','aktif'],
-  devriye_noktalar: ['lokasyon_id','lokasyon_adi','sira','nokta_adi','olmasi_gereken_saat','qr_token','aktif'],
+  devriye_noktalar: ['lokasyon_id','lokasyon_adi','sira','nokta_adi','olmasi_gereken_saat','qr_token','aktif','qr_zorunlu','qr_tipi','disaridan_cikis_izni','birim_ids','gps_enlem','gps_boylam'],
   devriye_vardiyalar: ['ad','baslangic','bitis'],
   devriye_atamalar: ['guvenlik_user_id','guvenlik_adi','lokasyon_id','lokasyon_adi','vardiya_id','vardiya_adi','tarih'],
 };

@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, AlertTriangle } from "lucide-react";
 
 // TurkeyMap.jsx ile aynı desen: Leaflet CDN'den (window.L) yükleniyor,
 // react-leaflet kullanılmıyor.
-function ensureLeaflet() {
-  return new Promise((resolve) => {
+function ensureLeaflet(timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
     if (window.L) { resolve(window.L); return; }
     const interval = setInterval(() => {
-      if (window.L) { clearInterval(interval); resolve(window.L); }
+      if (window.L) { clearInterval(interval); clearTimeout(timer); resolve(window.L); }
     }, 50);
+    const timer = setTimeout(() => { clearInterval(interval); reject(new Error("Harita yüklenemedi")); }, timeoutMs);
   });
 }
 
@@ -19,10 +20,13 @@ export default function MapPickerDialog({ open, onOpenChange, initialLat, initia
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const [pos, setPos] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open || !mapRef.current) return;
 
+    setLoadError(false);
     const startLat = Number(initialLat) || 39.1;
     const startLng = Number(initialLng) || 35.5;
     const hasInitial = !!(Number(initialLat) && Number(initialLng));
@@ -55,6 +59,8 @@ export default function MapPickerDialog({ open, onOpenChange, initialLat, initia
       if (hasInitial) placeMarker(startLat, startLng);
 
       map.on('click', (e) => placeMarker(e.latlng.lat, e.latlng.lng));
+    }).catch(() => {
+      if (!cancelled) setLoadError(true);
     });
 
     return () => {
@@ -65,7 +71,7 @@ export default function MapPickerDialog({ open, onOpenChange, initialLat, initia
       }
       markerRef.current = null;
     };
-  }, [open, initialLat, initialLng]);
+  }, [open, initialLat, initialLng, reloadKey]);
 
   const handleUse = () => {
     if (!pos) return;
@@ -81,7 +87,26 @@ export default function MapPickerDialog({ open, onOpenChange, initialLat, initia
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">Haritada bir noktaya tıklayın ya da işaretçiyi sürükleyin.</p>
-          <div ref={mapRef} style={{ height: 380, width: "100%", borderRadius: 12, overflow: "hidden" }} />
+          {loadError ? (
+            <div
+              className="flex flex-col items-center justify-center gap-3 text-center bg-muted rounded-xl"
+              style={{ height: 380, width: "100%" }}
+            >
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Harita yüklenemedi — internet bağlantınızı kontrol edin.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setLoadError(false); setReloadKey((k) => k + 1); }}
+              >
+                Yeniden Dene
+              </Button>
+            </div>
+          ) : (
+            <div ref={mapRef} style={{ height: 380, width: "100%", borderRadius: 12, overflow: "hidden" }} />
+          )}
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
               {pos ? `Enlem: ${pos.lat.toFixed(6)}, Boylam: ${pos.lng.toFixed(6)}` : "Henüz konum seçilmedi"}

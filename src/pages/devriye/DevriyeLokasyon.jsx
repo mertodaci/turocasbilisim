@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash2, MapPin, QrCode, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import MapPickerDialog from "@/components/map/MapPickerDialog";
 
 function QrImage({ value, size = 120 }) {
   const [src, setSrc] = useState("");
@@ -22,7 +24,11 @@ function QrImage({ value, size = 120 }) {
 }
 
 const emptyLok = { ad: "", aciklama: "", aktif: 1 };
-const emptyNokta = { lokasyon_id: "", sira: 1, nokta_adi: "", olmasi_gereken_saat: "08:00", aktif: 1 };
+const emptyNokta = {
+  lokasyon_id: "", sira: 1, nokta_adi: "", olmasi_gereken_saat: "08:00", aktif: 1,
+  qr_zorunlu: 1, qr_tipi: "sabit", disaridan_cikis_izni: 0, birim_ids: [],
+  gps_enlem: null, gps_boylam: null,
+};
 
 export default function DevriyeLokasyon() {
   const qc = useQueryClient();
@@ -31,6 +37,7 @@ export default function DevriyeLokasyon() {
   const [noktaDialog, setNoktaDialog] = useState({ open: false, item: null, lokasyonId: null });
   const [noktaForm, setNoktaForm] = useState(emptyNokta);
   const [expanded, setExpanded] = useState({});
+  const [mapOpen, setMapOpen] = useState(false);
 
   const { data: lokasyonlar = [], isLoading } = useQuery({
     queryKey: ["devriye_lokasyonlar"],
@@ -39,6 +46,10 @@ export default function DevriyeLokasyon() {
   const { data: noktalar = [] } = useQuery({
     queryKey: ["devriye_noktalar"],
     queryFn: () => flowApi.entities.DevriyeNokta.list("sira", 5000),
+  });
+  const { data: birimler = [] } = useQuery({
+    queryKey: ["ik_bolumler_min"],
+    queryFn: () => flowApi.entities.IkBolum.list("ad", 2000),
   });
 
   const invalidateLok = () => qc.invalidateQueries({ queryKey: ["devriye_lokasyonlar"] });
@@ -80,7 +91,14 @@ export default function DevriyeLokasyon() {
   };
 
   const openNoktaEdit = (lokasyonId, n) => {
-    setNoktaForm(n ? { lokasyon_id: n.lokasyon_id, sira: n.sira, nokta_adi: n.nokta_adi, olmasi_gereken_saat: n.olmasi_gereken_saat, aktif: n.aktif } : { ...emptyNokta, lokasyon_id: lokasyonId });
+    setNoktaForm(n ? {
+      lokasyon_id: n.lokasyon_id, sira: n.sira, nokta_adi: n.nokta_adi,
+      olmasi_gereken_saat: n.olmasi_gereken_saat, aktif: n.aktif,
+      qr_zorunlu: n.qr_zorunlu ?? 1, qr_tipi: n.qr_tipi || "sabit",
+      disaridan_cikis_izni: n.disaridan_cikis_izni ?? 0,
+      birim_ids: Array.isArray(n.birim_ids) ? n.birim_ids : [],
+      gps_enlem: n.gps_enlem ?? null, gps_boylam: n.gps_boylam ?? null,
+    } : { ...emptyNokta, lokasyon_id: lokasyonId });
     setNoktaDialog({ open: true, item: n, lokasyonId });
   };
   const submitNokta = () => {
@@ -135,7 +153,12 @@ export default function DevriyeLokasyon() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold truncate">{n.sira}. {n.nokta_adi}</p>
                               <p className="text-xs text-muted-foreground">Saat: {n.olmasi_gereken_saat}</p>
-                              <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", n.aktif ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>{n.aktif ? "Aktif" : "Pasif"}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", n.aktif ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>{n.aktif ? "Aktif" : "Pasif"}</span>
+                                {n.qr_tipi === "degisen" && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-indigo-100 text-indigo-700">Değişen QR</span>}
+                                {Array.isArray(n.birim_ids) && n.birim_ids.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-sky-100 text-sky-700">{n.birim_ids.length} birim</span>}
+                                {n.gps_enlem != null && n.gps_boylam != null && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" /> Konum</span>}
+                              </div>
                               <div className="flex gap-1 mt-1">
                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openNoktaEdit(l.id, n)}><Pencil className="w-3 h-3" /></Button>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => { if (confirm("Nokta silinsin mi?")) deleteNokta.mutate(n.id); }}><Trash2 className="w-3 h-3" /></Button>
@@ -168,7 +191,7 @@ export default function DevriyeLokasyon() {
       </Dialog>
 
       <Dialog open={noktaDialog.open} onOpenChange={(v) => !v && setNoktaDialog({ open: false, item: null, lokasyonId: null })}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{noktaDialog.item ? "Nokta Düzenle" : "Yeni Devriye Noktası"}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="grid grid-cols-2 gap-3">
@@ -176,6 +199,95 @@ export default function DevriyeLokasyon() {
               <div><Label className="mb-1.5 block">Olması Gereken Saat</Label><Input type="time" value={noktaForm.olmasi_gereken_saat} onChange={(e) => setNoktaForm({ ...noktaForm, olmasi_gereken_saat: e.target.value })} /></div>
             </div>
             <div><Label className="mb-1.5 block">Nokta Adı *</Label><Input value={noktaForm.nokta_adi} onChange={(e) => setNoktaForm({ ...noktaForm, nokta_adi: e.target.value })} /></div>
+
+            <div className="flex items-center justify-between pt-1">
+              <Label>Durum</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{noktaForm.aktif ? "Aktif" : "Pasif"}</span>
+                <Switch checked={!!noktaForm.aktif} onCheckedChange={(v) => setNoktaForm({ ...noktaForm, aktif: v ? 1 : 0 })} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>QR Kod Okutma Zorunlu</Label>
+                <p className="text-xs text-muted-foreground">Geçiş kontrolü için QR kod doğrulaması zorunlu kılın.</p>
+              </div>
+              <Switch checked={!!noktaForm.qr_zorunlu} onCheckedChange={(v) => setNoktaForm({ ...noktaForm, qr_zorunlu: v ? 1 : 0 })} />
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">QR Tipi</Label>
+              <div className="flex gap-2">
+                {[{ v: "sabit", l: "Sabit" }, { v: "degisen", l: "Değişen" }].map((opt) => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setNoktaForm({ ...noktaForm, qr_tipi: opt.v })}
+                    className={cn(
+                      "flex-1 text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors",
+                      noktaForm.qr_tipi === opt.v ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">QR tek seferlik üretilir. Kağıda çıkarıp bir materyale bastırarak kullanabilirsiniz.</p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Başka Konumlardan Çıkışa İzin Ver</Label>
+                <p className="text-xs text-muted-foreground">Kapalıyken çalışanlar yalnızca bu geçiş noktasından çıkış yapabilir.</p>
+              </div>
+              <Switch checked={!!noktaForm.disaridan_cikis_izni} onCheckedChange={(v) => setNoktaForm({ ...noktaForm, disaridan_cikis_izni: v ? 1 : 0 })} />
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">Birimler</Label>
+              <p className="text-xs text-muted-foreground mb-1.5">Geçiş noktasının hangi birimlere ait olduğunu belirtin.</p>
+              {birimler.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Tanımlı birim yok.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {birimler.map((b) => {
+                    const sel = noktaForm.birim_ids.includes(b.id);
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setNoktaForm({
+                          ...noktaForm,
+                          birim_ids: sel ? noktaForm.birim_ids.filter((x) => x !== b.id) : [...noktaForm.birim_ids, b.id],
+                        })}
+                        className={cn(
+                          "text-xs px-2.5 py-1 rounded-full border font-medium transition-colors",
+                          sel ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        {b.ad}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label>Konum Doğrulama</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() => setMapOpen(true)}>
+                  <MapPin className="w-3.5 h-3.5 mr-1" /> Haritadan Seç
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {noktaForm.gps_enlem != null && noktaForm.gps_boylam != null
+                  ? `Enlem: ${Number(noktaForm.gps_enlem).toFixed(6)}, Boylam: ${Number(noktaForm.gps_boylam).toFixed(6)}`
+                  : "Konum seçilmedi"}
+              </p>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" onClick={() => setNoktaDialog({ open: false, item: null, lokasyonId: null })}>İptal</Button>
               <Button onClick={submitNokta}>Kaydet</Button>
@@ -183,6 +295,14 @@ export default function DevriyeLokasyon() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <MapPickerDialog
+        open={mapOpen}
+        onOpenChange={setMapOpen}
+        initialLat={noktaForm.gps_enlem}
+        initialLng={noktaForm.gps_boylam}
+        onPick={(lat, lng) => setNoktaForm({ ...noktaForm, gps_enlem: lat, gps_boylam: lng })}
+      />
     </div>
   );
 }

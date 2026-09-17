@@ -675,6 +675,16 @@ function initDb() {
     // güncellenmez).
     "ALTER TABLE ik_subeler ADD COLUMN qr_token TEXT",
     "UPDATE ik_subeler SET qr_token = lower(hex(randomblob(16))) WHERE qr_token IS NULL",
+
+    // Devriye Noktası — Kolay İK'daki "Geçiş Noktası" ekranıyla eşleşen
+    // eksik alanlar: QR zorunluluğu/tipi, dışarıdan çıkış izni, hangi
+    // birimlere ait olduğu (JSON dizi) ve konum doğrulama (GPS).
+    "ALTER TABLE devriye_noktalar ADD COLUMN qr_zorunlu INTEGER DEFAULT 1",
+    "ALTER TABLE devriye_noktalar ADD COLUMN qr_tipi TEXT DEFAULT 'sabit'",
+    "ALTER TABLE devriye_noktalar ADD COLUMN disaridan_cikis_izni INTEGER DEFAULT 0",
+    "ALTER TABLE devriye_noktalar ADD COLUMN birim_ids TEXT DEFAULT '[]'",
+    "ALTER TABLE devriye_noktalar ADD COLUMN gps_enlem REAL",
+    "ALTER TABLE devriye_noktalar ADD COLUMN gps_boylam REAL",
   ];
 
   // Yeni modüller için otomatik role_permissions ekleme

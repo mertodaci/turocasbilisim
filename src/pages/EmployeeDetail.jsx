@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Navigate } from "react-router-dom";
-import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning, MapPin, Wallet, CreditCard, Flag, Landmark, ShieldCheck, ContactRound } from "lucide-react";
+import { Phone, Briefcase, Pencil, Mail, Building2, GraduationCap, CalendarDays, Paperclip, User2, FileText, Users, Umbrella, UserMinus, CheckCircle, CheckCircle2, Circle, MoreVertical, FileSignature, FileWarning, MapPin, Wallet, CreditCard, Flag, Landmark, ShieldCheck, ContactRound, Eye } from "lucide-react";
 import { format, differenceInYears, addYears } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -126,6 +126,13 @@ export default function EmployeeDetail() {
     queryFn: () => flowApi.entities.LeaveRequest.filter({ employee_id: employeeId, status: "onaylandi" }, "-start_date"),
     enabled: !!employee && isPrivileged,
   });
+
+  const { data: izinEvraklari = [] } = useQuery({
+    queryKey: ["employee-izin-evrak", employeeId],
+    queryFn: () => flowApi.entities.IkIzinEvrak.filter({ personel_id: employeeId }),
+    enabled: !!employee && isPrivileged,
+  });
+  const evrakByLeave = izinEvraklari.reduce((m, e) => { if (e.leave_id && e.dosya_url) m[e.leave_id] = e.dosya_url; return m; }, {});
 
   if (loadingEmployee) {
     return (
@@ -841,6 +848,7 @@ export default function EmployeeDetail() {
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Oluşturulma Tarihi</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Durum</th>
                   <th className="text-center px-4 py-3 font-semibold text-muted-foreground">İmzalandı</th>
+                  <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Evrak</th>
                   <th className="px-4 py-3 w-10" />
                 </tr>
               </thead>
@@ -872,6 +880,19 @@ export default function EmployeeDetail() {
                           <Circle className="w-5 h-5 text-muted-foreground/40" />
                         )}
                       </button>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {evrakByLeave[leave.id] && (
+                        <a
+                          href={evrakByLeave[leave.id]}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Yüklenen evrakı görüntüle"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <DropdownMenu>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,7 @@ export default function IkIzinEvrak() {
             <SelectContent>
               {dropdownIzinler.map((l) => (
                 <SelectItem key={l.id} value={l.id}>
-                  {l.employee_full_name} · {l.leave_type} · {(l.start_date || "").slice(0, 10)}
+                  {l.employee_full_name} · {l.leave_type} · {l.start_date ? format(new Date(l.start_date), "dd/MM/yyyy") : "—"}
                   {!(evrakByLeave[l.id]?.length) ? "  ⚠" : ""}
                 </SelectItem>
               ))}

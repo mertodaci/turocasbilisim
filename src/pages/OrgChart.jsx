@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
-import { Users, ChevronDown, ChevronRight, Building2 } from "lucide-react";
+import { Users, ChevronDown, ChevronRight, Building2, Printer, Download } from "lucide-react";
+import { toast } from "sonner";
 
 const POSITION_LABELS = {
   genel_mudur: "Genel Müdür",
@@ -146,6 +147,7 @@ function OrgNode({ employee, employees, level = 0, expandedIds, onToggle }) {
 export default function OrgChart() {
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [search, setSearch] = useState("");
+  const chartRef = useRef(null);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees-org"],
@@ -180,6 +182,27 @@ export default function OrgChart() {
 
   const expandAll = () => setExpandedIds(new Set(employees.map(e => e.id)));
   const collapseAll = () => setExpandedIds(new Set());
+
+  const handlePrint = () => {
+    if (roots.length === 0) { toast.info("Yazdırılacak şema yok."); return; }
+    expandAll();
+    setTimeout(() => window.print(), 150);
+  };
+  const handleDownloadJpg = async () => {
+    if (roots.length === 0) { toast.info("İndirilecek şema yok."); return; }
+    expandAll();
+    await new Promise((r) => setTimeout(r, 150));
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(chartRef.current, { scale: 2, backgroundColor: "#ffffff" });
+      const a = document.createElement("a");
+      a.download = `organizasyon-semasi-${new Date().toISOString().slice(0, 10)}.jpg`;
+      a.href = canvas.toDataURL("image/jpeg", 0.95);
+      a.click();
+    } catch {
+      toast.error("Görsel oluşturulamadı.");
+    }
+  };
 
   // Departman istatistikleri
   const deptStats = useMemo(() => {
@@ -220,6 +243,8 @@ export default function OrgChart() {
           />
           <button onClick={expandAll} className="text-xs px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors">Tümünü Aç</button>
           <button onClick={collapseAll} className="text-xs px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors">Tümünü Kapat</button>
+          <button onClick={handlePrint} className="text-xs px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors flex items-center gap-1.5"><Printer className="w-3.5 h-3.5" /> Yazdır</button>
+          <button onClick={handleDownloadJpg} className="text-xs px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> JPG İndir</button>
         </div>
       </div>
 
@@ -266,7 +291,7 @@ export default function OrgChart() {
 
       {/* Org tree */}
       {!search.trim() && (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm p-8 overflow-x-auto">
+        <div id="org-chart-print" ref={chartRef} className="bg-card rounded-2xl border border-border/50 shadow-sm p-8 overflow-x-auto print:overflow-visible">
           <div className="flex gap-16 justify-center min-w-max">
             {roots.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
@@ -288,6 +313,15 @@ export default function OrgChart() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #org-chart-print, #org-chart-print * { visibility: visible; }
+          #org-chart-print { position: absolute; left: 0; top: 0; width: 100%; }
+          @page { size: A4 landscape; margin: 10mm; }
+        }
+      `}</style>
     </div>
   );
 }

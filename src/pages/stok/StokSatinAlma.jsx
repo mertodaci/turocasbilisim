@@ -12,6 +12,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ShoppingCart, Plus, Pencil, Trash2, Download, Printer, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { raporYazdir } from "@/lib/raporYazdir";
+import { paraSade } from "@/lib/ikFormat";
 
 const TABS = [
   { id: "merkez", label: "Merkez" }, { id: "eslesme", label: "Ürün - Tedarikçi" },
@@ -86,7 +87,7 @@ export default function StokSatinAlma() {
           <div className="bg-card border rounded-xl p-4">
             <p className="text-sm font-semibold mb-2">Son Fiyat Hareketleri</p>
             <table className="w-full text-xs"><tbody>
-              {(m.son_fiyat || []).map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1">{r.urun_adi}</td><td className="py-1 text-muted-foreground">{r.cari_adi}</td><td className="py-1 text-right">{r.alis_fiyati} ({r.kaynak})</td></tr>)}
+              {(m.son_fiyat || []).map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1">{r.urun_adi}</td><td className="py-1 text-muted-foreground">{r.cari_adi}</td><td className="py-1 text-right">{paraSade(r.alis_fiyati)} ({r.kaynak})</td></tr>)}
               {!(m.son_fiyat || []).length && <tr><td className="py-3 text-muted-foreground text-center">Kayıt yok</td></tr>}
             </tbody></table>
           </div>
@@ -115,10 +116,10 @@ export default function StokSatinAlma() {
                               href={`https://www.cimri.com/arama?q=${encodeURIComponent(u.barkod || u.ad)}`}>Cimri'de ara <ExternalLink className="w-3 h-3" /></a>
                           </p>
                         </td>
-                        <Td r>{(u.alis_fiyati ?? 0).toFixed(2)}</Td>
-                        <Td r>{(u.satis_fiyati ?? 0).toFixed(2)}</Td>
+                        <Td r>{paraSade(u.alis_fiyati ?? 0)}</Td>
+                        <Td r>{paraSade(u.satis_fiyati ?? 0)}</Td>
                         <Td>{en?.en_ucuz_cari || "—"}</Td>
-                        <Td r>{en ? `${en.en_dusuk} – ${en.en_yuksek}` : "—"}</Td>
+                        <Td r>{en ? `${paraSade(en.en_dusuk)} – ${paraSade(en.en_yuksek)}` : "—"}</Td>
                         <td className="px-3 py-2">
                           <Input type="number" className="h-8 w-28" value={arastirilan[u.id] ?? ""} onChange={(e) => setArastirilan({ ...arastirilan, [u.id]: e.target.value })} placeholder="0,00" />
                         </td>
@@ -148,7 +149,7 @@ export default function StokSatinAlma() {
                 {eslesmeler.map((r) => (
                   <tr key={r.id} className="border-b last:border-0">
                     <Td b>{r.urun_adi}{r.tercih_edilen ? " ⭐" : ""}</Td><Td>{r.cari_adi}</Td><Td>{[r.marka, r.model].filter(Boolean).join(" ")}</Td>
-                    <Td r>{r.birim_fiyat} {r.para_birimi}</Td><Td r>{r.teslim_suresi_gun}</Td><Td r>{r.min_siparis}</Td><Td>{r.fiyat_tarihi || "—"}</Td>
+                    <Td r>{paraSade(r.birim_fiyat)} {r.para_birimi}</Td><Td r>{r.teslim_suresi_gun}</Td><Td r>{r.min_siparis}</Td><Td>{r.fiyat_tarihi || "—"}</Td>
                     <td className="px-3 py-1.5 text-right">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}><Pencil className="w-3.5 h-3.5" /></Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Silinsin mi?")) delM.mutate(r.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -176,7 +177,7 @@ export default function StokSatinAlma() {
               <thead className="bg-muted/40 border-b"><tr><Th>Ürün</Th><Th>Tedarikçi</Th><Th>Marka/Model</Th><Th r>Fiyat</Th><Th r>Teslim</Th><Th r>Min Sip.</Th><Th>Güncellik</Th></tr></thead>
               <tbody>
                 {(karsilastirma.data?.rows || []).map((r) => (
-                  <tr key={r.id} className="border-b last:border-0"><Td b>{r.urun_adi}</Td><Td>{r.cari_adi}</Td><Td>{[r.marka, r.model].filter(Boolean).join(" ")}</Td><Td r>{r.birim_fiyat} {r.para_birimi}</Td><Td r>{r.teslim_suresi_gun}g</Td><Td r>{r.min_siparis}</Td><Td>{r.fiyat_tarihi || "—"}</Td></tr>
+                  <tr key={r.id} className="border-b last:border-0"><Td b>{r.urun_adi}</Td><Td>{r.cari_adi}</Td><Td>{[r.marka, r.model].filter(Boolean).join(" ")}</Td><Td r>{paraSade(r.birim_fiyat)} {r.para_birimi}</Td><Td r>{r.teslim_suresi_gun}g</Td><Td r>{r.min_siparis}</Td><Td>{r.fiyat_tarihi || "—"}</Td></tr>
                 ))}
                 {!(karsilastirma.data?.rows || []).length && <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">Teklif yok.</td></tr>}
               </tbody>
@@ -219,15 +220,15 @@ export default function StokSatinAlma() {
             <Button variant="outline" onClick={() => raporYazdir({ baslik: "Fiyat Geçmişi", kolonlar: [{key:"tarih",label:"Tarih"},{key:"urun_adi",label:"Ürün"},{key:"cari_adi",label:"Tedarikçi"},{key:"alis_fiyati",label:"Alış Fiyatı",align:"right"},{key:"kaynak",label:"Kaynak"},{key:"fis_no",label:"Fiş"}], satirlar: gecmis.data?.rows || [] })}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="grid grid-cols-4 gap-3 max-w-lg">
-            {[["Kayıt", gecmis.data?.ozet?.kayit], ["Son Fiyat", gecmis.data?.ozet?.son], ["En Düşük", gecmis.data?.ozet?.en_dusuk], ["En Yüksek", gecmis.data?.ozet?.en_yuksek]].map(([l, v]) => (
-              <div key={l} className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">{l}</p><p className="text-lg font-bold">{v ?? 0}</p></div>
+            {[["Kayıt", gecmis.data?.ozet?.kayit, false], ["Son Fiyat", gecmis.data?.ozet?.son, true], ["En Düşük", gecmis.data?.ozet?.en_dusuk, true], ["En Yüksek", gecmis.data?.ozet?.en_yuksek, true]].map(([l, v, para_]) => (
+              <div key={l} className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">{l}</p><p className="text-lg font-bold">{para_ ? paraSade(v ?? 0) : (v ?? 0)}</p></div>
             ))}
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-muted/40 border-b"><tr><Th>Tarih</Th><Th>Ürün</Th><Th>Tedarikçi</Th><Th r>Alış Fiyatı</Th><Th>Kaynak</Th><Th>Fiş</Th></tr></thead>
               <tbody>
-                {(gecmis.data?.rows || []).map((r) => <tr key={r.id} className="border-b last:border-0"><Td>{r.tarih}</Td><Td b>{r.urun_adi}</Td><Td>{r.cari_adi || "—"}</Td><Td r>{r.alis_fiyati} {r.para_birimi}</Td><Td>{r.kaynak}</Td><Td>{r.fis_no || "—"}</Td></tr>)}
+                {(gecmis.data?.rows || []).map((r) => <tr key={r.id} className="border-b last:border-0"><Td>{r.tarih}</Td><Td b>{r.urun_adi}</Td><Td>{r.cari_adi || "—"}</Td><Td r>{paraSade(r.alis_fiyati)} {r.para_birimi}</Td><Td>{r.kaynak}</Td><Td>{r.fis_no || "—"}</Td></tr>)}
                 {!(gecmis.data?.rows || []).length && <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">Kayıt yok.</td></tr>}
               </tbody>
             </table>

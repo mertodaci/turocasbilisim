@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { raporYazdir } from "@/lib/raporYazdir";
+import { paraSade } from "@/lib/ikFormat";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 const emptyItem = { date: "", description: "", accommodation: "", transport: "", fuel: "", meal: "", other: "" };
@@ -79,7 +80,7 @@ export default function ExpenseDetailDialog({ report, onClose, onPreview }) {
   const totalExpense = totals.accommodation + totals.transport + totals.fuel + totals.meal + totals.other;
   const advance = n(report.advance_amount);
   const balance = advance - totalExpense;
-  const fmt = (v) => (v || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
+  const fmt = paraSade;
 
   const handleAddItem = () => {
     if (!newItem.date || !newItem.description) {

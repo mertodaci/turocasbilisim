@@ -10,6 +10,7 @@ import ExpenseReportDialog from "@/components/expenses/ExpenseReportDialog";
 import ExpenseDetailDialog from "@/components/expenses/ExpenseDetailDialog";
 import { createPortal } from "react-dom";
 import ExpenseApprovalDialog from "@/components/expenses/ExpenseApprovalDialog";
+import { para } from "@/lib/ikFormat";
 
 const statusMap = {
   taslak: { label: "Taslak", className: "bg-slate-100 text-slate-600" },
@@ -105,10 +106,10 @@ export default function Expenses() {
                       {r.trip_end_date ? format(new Date(r.trip_end_date), "d MMM yyyy", { locale: tr }) : "—"}
                     </td>
                     <td className="px-5 py-3 text-right font-medium">
-                      {r.advance_amount ? r.advance_amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 }) : "0,00"} ₺
+                      {para(r.advance_amount || 0)}
                     </td>
                     <td className="px-5 py-3 text-right font-semibold">
-                      {(totalsByReport[r.id] || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                      {para(totalsByReport[r.id] || 0)}
                     </td>
                     <td className="px-5 py-3">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${st.className}`}>{st.label}</span>

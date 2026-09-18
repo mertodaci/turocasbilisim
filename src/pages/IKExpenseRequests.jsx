@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { raporYazdir } from "@/lib/raporYazdir";
+import { para } from "@/lib/ikFormat";
 
 
 
@@ -132,7 +133,10 @@ export default function IKExpenseRequests() {
       baslik: "Harcama Yönetimi (IK)",
       altBaslik: `${filtered.length} kayıt`,
       kolonlar: KOLONLAR,
-      satirlar: filtered.map(toRow),
+      satirlar: filtered.map((r) => {
+        const row = toRow(r);
+        return { ...row, advance_amount: para(row.advance_amount), toplam: para(row.toplam) };
+      }),
     });
   };
 
@@ -315,10 +319,10 @@ export default function IKExpenseRequests() {
                       {r.trip_end_date && ` → ${fmtAyYil(r.trip_end_date)}`}
                     </td>
                     <td className="px-4 py-3 font-semibold">
-                      {r.advance_amount ? r.advance_amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 }) : "0,00"} ₺
+                      {para(r.advance_amount || 0)}
                     </td>
                     <td className="px-4 py-3 font-semibold">
-                      {(totalsByReport[r.id] || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                      {para(totalsByReport[r.id] || 0)}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>

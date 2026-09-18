@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { para, paraSade } from "@/lib/ikFormat";
 
 const STATUS_CONFIG = {
   yonetici_onayi_bekliyor: { label: "Yönetici Onayı Bekliyor", color: "bg-blue-100 text-blue-700" },
@@ -87,7 +88,7 @@ export default function ExpenseApprovalDialog({ report, onClose, onSuccess }) {
             </div>
             <div>
               <p className="text-muted-foreground">Avans</p>
-              <p className="font-medium">{(report?.advance_amount || 0).toLocaleString("tr-TR")} ₺</p>
+              <p className="font-medium">{para(report?.advance_amount || 0)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Gidiş</p>
@@ -103,7 +104,7 @@ export default function ExpenseApprovalDialog({ report, onClose, onSuccess }) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-semibold text-foreground">Harcama Kalemleri</p>
-              <p className="text-sm font-bold text-foreground">{grandTotal.toLocaleString("tr-TR")} ₺</p>
+              <p className="text-sm font-bold text-foreground">{para(grandTotal)}</p>
             </div>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-xl">Kalem bulunamadı</p>
@@ -125,7 +126,7 @@ export default function ExpenseApprovalDialog({ report, onClose, onSuccess }) {
                   </thead>
                   <tbody>
                     {items.map((it) => {
-                      const cell = (v) => (v||0) > 0 ? (v).toLocaleString("tr-TR") : "";
+                      const cell = (v) => (v||0) > 0 ? paraSade(v) : "";
                       return (
                         <tr key={it.id} className="border-t border-border/40">
                           <td className="px-3 py-2 whitespace-nowrap">{it.date || "—"}</td>
@@ -135,7 +136,7 @@ export default function ExpenseApprovalDialog({ report, onClose, onSuccess }) {
                           <td className="px-3 py-2 text-right">{cell(it.fuel)}</td>
                           <td className="px-3 py-2 text-right">{cell(it.meal)}</td>
                           <td className="px-3 py-2 text-right">{cell((it.other||0)+(it.amount||0))}</td>
-                          <td className="px-3 py-2 text-right font-semibold">{rowSum(it).toLocaleString("tr-TR")}</td>
+                          <td className="px-3 py-2 text-right font-semibold">{paraSade(rowSum(it))}</td>
                           <td className="px-3 py-2 text-center">
                             {it.receipt_url
                               ? <a href={it.receipt_url} target="_blank" rel="noreferrer" className="text-indigo-600 inline-flex items-center gap-1"><FileText className="w-3.5 h-3.5"/></a>
@@ -148,7 +149,7 @@ export default function ExpenseApprovalDialog({ report, onClose, onSuccess }) {
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/30 font-bold">
                       <td className="px-3 py-2" colSpan={7}>TOPLAM</td>
-                      <td className="px-3 py-2 text-right">{grandTotal.toLocaleString("tr-TR")} ₺</td>
+                      <td className="px-3 py-2 text-right">{para(grandTotal)}</td>
                       <td className="px-3 py-2"></td>
                     </tr>
                   </tfoot>

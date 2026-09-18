@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, FileText, Check, X, Pencil, Eye, Printer, Undo2, Plus } from "lucide-react";
 import { fisBelgeYazdir } from "@/lib/stokBelge";
 import { toast } from "sonner";
+import { paraSade } from "@/lib/ikFormat";
 
 const TIP_BADGE = {
   giris: { label: "Giriş", cls: "bg-emerald-100 text-emerald-700", Icon: ArrowDownToLine },
@@ -256,7 +257,7 @@ export default function StokFisListesi() {
                       <td className="px-2 py-1.5 text-muted-foreground">{s.birim} ×{s.carpan}</td>
                       <td className="px-2 py-1.5 text-right">{s.miktar}</td>
                       <td className="px-2 py-1.5 text-right">{s.miktar_ana_birim}</td>
-                      <td className="px-2 py-1.5 text-right">{s.birim_fiyat}</td>
+                      <td className="px-2 py-1.5 text-right">{paraSade(s.birim_fiyat)}</td>
                     </tr>
                   ))}
                 </tbody>

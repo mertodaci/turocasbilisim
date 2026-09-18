@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { FileUp, Undo2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { paraSade } from "@/lib/ikFormat";
 
 // Beklenen kolonlar: "kod"/"urun_kodu" veya "barkod", "miktar", opsiyonel "birim_fiyat"
 function parseSheet(file, cb) {
@@ -77,7 +78,7 @@ export default function StokExcel() {
             <div className="max-h-64 overflow-y-auto border rounded-lg">
               <table className="w-full text-xs">
                 <thead className="bg-muted/40 sticky top-0"><tr><th className="text-left px-2 py-1.5">Kod</th><th className="text-left px-2 py-1.5">Barkod</th><th className="text-right px-2 py-1.5">Miktar</th><th className="text-right px-2 py-1.5">Birim Fiyat</th></tr></thead>
-                <tbody>{rows.slice(0, 200).map((r, i) => <tr key={i} className="border-t"><td className="px-2 py-1">{r.kod}</td><td className="px-2 py-1">{r.barkod}</td><td className="px-2 py-1 text-right">{r.miktar}</td><td className="px-2 py-1 text-right">{r.birim_fiyat}</td></tr>)}</tbody>
+                <tbody>{rows.slice(0, 200).map((r, i) => <tr key={i} className="border-t"><td className="px-2 py-1">{r.kod}</td><td className="px-2 py-1">{r.barkod}</td><td className="px-2 py-1 text-right">{r.miktar}</td><td className="px-2 py-1 text-right">{r.birim_fiyat === "" ? "" : paraSade(r.birim_fiyat)}</td></tr>)}</tbody>
               </table>
             </div>
             <div className="flex justify-end">

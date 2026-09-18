@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { FileCheck2, Plus, Trash2, Paperclip, AlertTriangle, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
+import CameraCaptureDialog from "@/components/shared/CameraCaptureDialog";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 const DURUM = [["eksik", "Eksik"], ["fiziki", "Fiziki Verildi"], ["dijital", "Dijital Yüklendi"]];
@@ -22,6 +23,7 @@ export default function IkIzinEvrak() {
   const [form, setForm] = useState({ durum: "eksik", dosya_url: "", aciklama: "" });
   const [busy, setBusy] = useState(false);
   const [sadeceEvraksiz, setSadeceEvraksiz] = useState(true);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const { data: leaves = [] } = useQuery({ queryKey: ["leave_requests_min"], queryFn: () => flowApi.entities.LeaveRequest.list("-start_date", 2000) });
   const { data: evraklar = [] } = useQuery({ queryKey: ["ik_izin_evrak_all"], queryFn: () => flowApi.entities.IkIzinEvrak.list("-created_date", 5000) });
@@ -43,8 +45,7 @@ export default function IkIzinEvrak() {
   const updateM = useMutation({ mutationFn: ({ id, data }) => flowApi.entities.IkIzinEvrak.update(id, data), onSuccess: invalidate });
   const deleteM = useMutation({ mutationFn: (id) => flowApi.entities.IkIzinEvrak.delete(id), onSuccess: () => { invalidate(); toast.success("Silindi"); } });
 
-  const onFile = async (e) => {
-    const file = e.target.files?.[0];
+  const uploadFile = async (file) => {
     if (!file) return;
     setBusy(true);
     try {
@@ -55,6 +56,7 @@ export default function IkIzinEvrak() {
     } catch { toast.error("Yüklenemedi"); }
     finally { setBusy(false); }
   };
+  const onFile = (e) => uploadFile(e.target.files?.[0]);
   const submit = () => {
     if (!leaveId) { toast.error("İzin kaydı seçin"); return; }
     if (!form.dosya_url) { toast.error("Taranmış evrak dosyası ekleyin — kanunen ıslak imzasız izinler kullanılmamış sayılır"); return; }
@@ -150,11 +152,8 @@ export default function IkIzinEvrak() {
                     <input type="file" className="hidden" onChange={onFile} disabled={busy} />
                   </label>
                 </Button>
-                <Button asChild variant="outline" className="flex-1" disabled={busy}>
-                  <label className="cursor-pointer justify-center">
-                    <Camera className="w-4 h-4 mr-1.5" /> Kamera Aç
-                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} disabled={busy} />
-                  </label>
+                <Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setCameraOpen(true)}>
+                  <Camera className="w-4 h-4 mr-1.5" /> Kamera Aç
                 </Button>
               </div>
               {busy && <p className="text-xs text-muted-foreground mt-1">Yükleniyor...</p>}
@@ -170,6 +169,8 @@ export default function IkIzinEvrak() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CameraCaptureDialog open={cameraOpen} onOpenChange={setCameraOpen} onCapture={uploadFile} />
     </div>
   );
 }

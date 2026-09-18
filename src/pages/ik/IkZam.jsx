@@ -10,6 +10,7 @@ import { Receipt, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { paraSade as nf } from "@/lib/ikFormat";
+import { num, fmtMoney } from "@/lib/hakedisUtils";
 
 export default function IkZam() {
   const queryClient = useQueryClient();
@@ -37,7 +38,7 @@ export default function IkZam() {
 
   const uygula = useMutation({
     mutationFn: () => flowApi.ik.zamUygula({
-      ...f, deger: Number(f.deger),
+      ...f, deger: f.islem === "yuzde" ? Number(f.deger) : num(f.deger),
       maas_min: f.maas_min === "" ? undefined : Number(f.maas_min),
       maas_max: f.maas_max === "" ? undefined : Number(f.maas_max),
     }),
@@ -108,7 +109,7 @@ export default function IkZam() {
           </div>
           <div>
             <Label className="mb-1.5 block">İşlem</Label>
-            <Select value={f.islem} onValueChange={(v) => setF({ ...f, islem: v })}>
+            <Select value={f.islem} onValueChange={(v) => setF({ ...f, islem: v, deger: "" })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="yuzde">Yüzde Zam</SelectItem>
@@ -117,7 +118,14 @@ export default function IkZam() {
               </SelectContent>
             </Select>
           </div>
-          <div><Label className="mb-1.5 block">{islemAdi}</Label><Input type="number" value={f.deger} onChange={(e) => setF({ ...f, deger: e.target.value })} /></div>
+          <div>
+            <Label className="mb-1.5 block">{islemAdi}</Label>
+            <Input
+              inputMode="decimal"
+              value={f.deger}
+              onChange={(e) => setF({ ...f, deger: f.islem === "yuzde" ? e.target.value : fmtMoney(e.target.value) })}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

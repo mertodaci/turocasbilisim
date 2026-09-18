@@ -46,6 +46,18 @@ export const num = (v) => {
 
 export const tl = (n) => (n == null || n === "" ? "–" : Number(n).toLocaleString("tr-TR", { maximumFractionDigits: 0 }));
 
+// Canlı para girişi biçimleyici — kullanıcı yazarken binlik ayraç + en fazla
+// 2 ondalık (virgüllü) gösterir. Boş ise "". num() bu çıktıyı geri sayıya çevirir.
+export function fmtMoney(raw) {
+  let s = String(raw ?? "").replace(/[^\d,]/g, "");
+  const parts = s.split(",");
+  let intPart = parts[0].replace(/^0+(?=\d)/, "");
+  const dec = parts.length > 1 ? "," + parts.slice(1).join("").slice(0, 2) : "";
+  if (intPart === "" && dec === "") return "";
+  const grouped = intPart ? Number(intPart).toLocaleString("tr-TR") : "0";
+  return grouped + dec;
+}
+
 // Dar kutucuk için kısaltılmış gösterim
 export const kisa = (n) => {
   if (n == null || n === "") return "–";

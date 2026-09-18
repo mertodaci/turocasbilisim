@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Upload, Loader2, Plus, Trash2, ScrollText } from "lucide-react";
-import { num, tl, KDV_OPTS } from "@/lib/hakedisUtils";
+import { num, tl, KDV_OPTS, fmtMoney } from "@/lib/hakedisUtils";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
@@ -34,17 +34,6 @@ const emptyForm = () => ({
   hakedis_start_date: "", installment_count: "", hakedis_period: "1", kdv_durumu: "",
   file_url: "", notes: "", products: [],
 });
-
-// Binlik ayrac + tek ondalik virgul; bos ise ""
-function fmtMoney(raw) {
-  let s = String(raw ?? "").replace(/[^\d,]/g, "");
-  const parts = s.split(",");
-  let intPart = parts[0].replace(/^0+(?=\d)/, "");
-  const dec = parts.length > 1 ? "," + parts.slice(1).join("").slice(0, 2) : "";
-  if (intPart === "" && dec === "") return "";
-  const grouped = intPart ? Number(intPart).toLocaleString("tr-TR") : "0";
-  return grouped + dec;
-}
 
 function MoneyInput({ value, onChange, placeholder }) {
   return (

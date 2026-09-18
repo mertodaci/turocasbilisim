@@ -9,8 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { ShoppingCart, Plus, Pencil, Trash2, Download, ExternalLink } from "lucide-react";
+import { ShoppingCart, Plus, Pencil, Trash2, Download, Printer, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 const TABS = [
   { id: "merkez", label: "Merkez" }, { id: "eslesme", label: "Ürün - Tedarikçi" },
@@ -192,6 +193,7 @@ export default function StokSatinAlma() {
               <SelectContent>{RAPOR_TIPLERI.map((r) => <SelectItem key={r.v} value={r.v}>{r.l}</SelectItem>)}</SelectContent>
             </Select>
             <Button variant="outline" onClick={() => xlsx(rapor.data?.rows, `satinalma-${rtip}`)}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => rapor.data?.rows?.length && raporYazdir({ baslik: RAPOR_TIPLERI.find((r) => r.v === rtip)?.l || "Satınalma Raporu", kolonlar: Object.keys(rapor.data.rows[0]).map((k) => ({ key: k, label: k, align: typeof rapor.data.rows[0][k] === "number" ? "right" : undefined })), satirlar: rapor.data.rows })}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             {rapor.isLoading ? <div className="py-6 text-center text-muted-foreground">Yükleniyor...</div>
@@ -214,6 +216,7 @@ export default function StokSatinAlma() {
             <div className="w-56"><SearchableSelect value={gf.urun_id} onChange={(v) => setGf({ ...gf, urun_id: v })} options={[{ value: "", label: "Tüm Ürünler" }, ...urunler.map((u) => ({ value: u.id, label: u.ad }))]} placeholder="Ürün" /></div>
             <div className="w-52"><SearchableSelect value={gf.cari_id} onChange={(v) => setGf({ ...gf, cari_id: v })} options={[{ value: "", label: "Tüm Tedarikçiler" }, ...tedarikciler.map((c) => ({ value: c.id, label: c.company_name }))]} placeholder="Tedarikçi" /></div>
             <Button variant="outline" onClick={() => xlsx(gecmis.data?.rows, "fiyat-gecmisi")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => raporYazdir({ baslik: "Fiyat Geçmişi", kolonlar: [{key:"tarih",label:"Tarih"},{key:"urun_adi",label:"Ürün"},{key:"cari_adi",label:"Tedarikçi"},{key:"alis_fiyati",label:"Alış Fiyatı",align:"right"},{key:"kaynak",label:"Kaynak"},{key:"fis_no",label:"Fiş"}], satirlar: gecmis.data?.rows || [] })}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="grid grid-cols-4 gap-3 max-w-lg">
             {[["Kayıt", gecmis.data?.ozet?.kayit], ["Son Fiyat", gecmis.data?.ozet?.son], ["En Düşük", gecmis.data?.ozet?.en_dusuk], ["En Yüksek", gecmis.data?.ozet?.en_yuksek]].map(([l, v]) => (

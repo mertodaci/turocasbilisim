@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { FileDown, Users } from "lucide-react";
+import { FileDown, Printer, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 const departmentLabels = {
   satis: "Satış", pazarlama: "Pazarlama", musteri_hizmetleri: "Müşteri Hizmetleri",
@@ -39,23 +40,32 @@ export default function EmployeeReport() {
     queryFn: () => flowApi.entities.Definition.filter({ category: "pozisyon", is_active: true }),
   });
   const getPozisyonLabel = (value) => pozisyonlar.find(p => p.value === value)?.label || value || "-";
+
+  // Excel/CSV/PDF üçü de aynı satır şeklini kullanıyor -- kod tekrarını
+  // önlemek için ortak bir dönüşüm.
+  const KOLONLAR = ["Ad Soyad", "TC Kimlik No", "Doğum Tarihi", "İşe Başlama Tarihi", "Ünvan / Pozisyon",
+    "Cinsiyet", "E-posta", "Telefon", "Departman", "Eğitim Durumu", "En Yüksek Eğitim Seviyesi",
+    "Üniversite", "Bölüm", "Mezuniyet Tarihi", "Durum"];
+  const toRow = (e) => ({
+    "Ad Soyad": e.full_name || "",
+    "TC Kimlik No": e.tc || "",
+    "Doğum Tarihi": fmtDate(e.birth_date),
+    "İşe Başlama Tarihi": fmtDate(e.hire_date),
+    "Ünvan / Pozisyon": getPozisyonLabel(e.position),
+    "Cinsiyet": genderLabels[e.gender] || "",
+    "E-posta": e.email || "",
+    "Telefon": e.phone || "",
+    "Departman": departmentLabels[e.department] || e.department || "",
+    "Eğitim Durumu": educationLabels[e.education_level] || "",
+    "En Yüksek Eğitim Seviyesi": educationLabels[e.highest_education] || "",
+    "Üniversite": e.university || "",
+    "Bölüm": e.education_department || "",
+    "Mezuniyet Tarihi": fmtDate(e.graduation_date),
+    "Durum": e.status === "pasif" ? "Pasif" : "Aktif",
+  });
+
   const handleExportExcel = () => {
-    const rows = employees.map((e) => ({
-      "TC Kimlik No": e.tc || "",
-      "Doğum Tarihi": fmtDate(e.birth_date),
-      "İşe Başlama Tarihi": fmtDate(e.hire_date),
-      "Ünvan / Pozisyon": getPozisyonLabel(e.position),
-      "Cinsiyet": genderLabels[e.gender] || "",
-      "E-posta": e.email || "",
-      "Telefon": e.phone || "",
-      "Departman": departmentLabels[e.department] || e.department || "",
-      "Eğitim Durumu": educationLabels[e.education_level] || "",
-      "En Yüksek Eğitim Seviyesi": educationLabels[e.highest_education] || "",
-      "Üniversite": e.university || "",
-      "Bölüm": e.education_department || "",
-      "Mezuniyet Tarihi": fmtDate(e.graduation_date),
-      "Durum": e.status === "pasif" ? "Pasif" : "Aktif",
-    }));
+    const rows = employees.map(toRow);
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Çalışanlar");
@@ -101,6 +111,15 @@ export default function EmployeeReport() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePdf = () => {
+    raporYazdir({
+      baslik: "Çalışan Raporu",
+      altBaslik: `${employees.length} çalışan`,
+      kolonlar: KOLONLAR.map((k) => ({ key: k })),
+      satirlar: employees.map(toRow),
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -124,6 +143,10 @@ export default function EmployeeReport() {
           <Button onClick={handleExportExcel} variant="outline" className="gap-2 shrink-0">
             <FileDown className="w-4 h-4" />
             Excel İndir
+          </Button>
+          <Button onClick={handlePdf} variant="outline" className="gap-2 shrink-0">
+            <Printer className="w-4 h-4" />
+            PDF İndir
           </Button>
           <Button onClick={handleExportCSV} className="gap-2 shrink-0">
             <FileDown className="w-4 h-4" />

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { BarChart3, Download, Boxes, Warehouse, Rows3, AlertTriangle, TrendingDown } from "lucide-react";
+import { BarChart3, Download, Printer, Boxes, Warehouse, Rows3, AlertTriangle, TrendingDown } from "lucide-react";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 const TABS = [
   { id: "merkez", label: "Merkez" },
@@ -28,6 +29,11 @@ const xlsx = (rows, name) => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Rapor");
   XLSX.writeFile(wb, `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+const pdf = (baslik, kolonlar, rows) => {
+  if (!rows?.length) return;
+  raporYazdir({ baslik, kolonlar, satirlar: rows });
 };
 
 export default function StokRaporlar() {
@@ -106,6 +112,7 @@ export default function StokRaporlar() {
               <SelectContent><SelectItem value="hepsi">Tümü</SelectItem><SelectItem value="zero">Stok 0</SelectItem><SelectItem value="critical">Kritik</SelectItem></SelectContent>
             </Select>
             <Button variant="outline" onClick={() => xlsx(durum.data?.rows, "stok-durum")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("Stok Durum Raporu", [{key:"depo_adi",label:"Depo"},{key:"raf_adi",label:"Raf"},{key:"urun_kodu",label:"Ürün Kodu"},{key:"urun_adi",label:"Ürün Adı"},{key:"giren",label:"Giren",align:"right"},{key:"cikan",label:"Çıkan",align:"right"},{key:"mevcut",label:"Mevcut",align:"right"}], durum.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 max-w-2xl">
             <div className="bg-card border rounded-xl p-3"><p className="text-[11px] text-muted-foreground">Giren</p><p className="text-lg font-bold">{durum.data?.toplam?.giren ?? 0}</p></div>
@@ -137,6 +144,7 @@ export default function StokRaporlar() {
             <Input type="date" className="w-40" value={f.t1} onChange={(e) => setF({ ...f, t1: e.target.value })} />
             <Input type="date" className="w-40" value={f.t2} onChange={(e) => setF({ ...f, t2: e.target.value })} />
             <Button variant="outline" onClick={() => xlsx(ekstre.data?.rows, "urun-ekstresi")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("Ürün Ekstresi", [{key:"tarih",label:"Tarih"},{key:"fis_no",label:"Fiş"},{key:"tip",label:"Tip"},{key:"depo",label:"Depo"},{key:"giris",label:"Giriş",align:"right"},{key:"cikis",label:"Çıkış",align:"right"},{key:"bakiye",label:"Bakiye",align:"right"}], ekstre.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           {!f.urun_id ? <p className="text-sm text-muted-foreground">Ekstre için ürün seçin.</p> : (
             <div className="bg-card border rounded-2xl overflow-x-auto">
@@ -165,6 +173,7 @@ export default function StokRaporlar() {
             <Input type="date" className="w-40" value={f.t1} onChange={(e) => setF({ ...f, t1: e.target.value })} />
             <Input type="date" className="w-40" value={f.t2} onChange={(e) => setF({ ...f, t2: e.target.value })} />
             <Button variant="outline" onClick={() => xlsx(hareket.data?.rows, "hareket-raporu")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("Stok Hareket Raporu", [{key:"fis_no",label:"Fiş No"},{key:"tip",label:"Tip"},{key:"tarih",label:"Tarih"},{key:"cari",label:"Firma"},{key:"depo",label:"Depo"},{key:"miktar",label:"Miktar",align:"right"},{key:"kullanici",label:"Kullanıcı"}], hareket.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm min-w-[760px]">
@@ -226,6 +235,7 @@ export default function StokRaporlar() {
             <div className="w-64"><SearchableSelect value={f.urun_id} onChange={(v) => setF({ ...f, urun_id: v })} options={urunOpts} placeholder="Ürün" /></div>
             <div className="ml-auto bg-primary/10 text-primary rounded-lg px-4 py-2 text-sm font-semibold">Toplam Değer: {(degerleme.data?.toplam_deger ?? 0).toLocaleString("tr-TR")} ₺</div>
             <Button variant="outline" onClick={() => xlsx(degerleme.data?.rows, "stok-degerleme")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("Stok Değerleme Raporu", [{key:"urun_adi",label:"Ürün"},{key:"depo_adi",label:"Depo"},{key:"miktar",label:"Miktar",align:"right"},{key:"ort_maliyet",label:"Ort. Maliyet",align:"right"},{key:"deger",label:"Değer",align:"right"}], degerleme.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
@@ -248,6 +258,7 @@ export default function StokRaporlar() {
             <div className="w-52"><SearchableSelect value={f.depo_id} onChange={(v) => setF({ ...f, depo_id: v })} options={depoOpts} placeholder="Depo" /></div>
             <div className="ml-auto bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-lg px-4 py-2 text-sm font-semibold">Ölü Stok: {devir.data?.olu_sayisi ?? 0} ürün ({devir.data?.olu_esik ?? 90}+ gün hareketsiz)</div>
             <Button variant="outline" onClick={() => xlsx(devir.data?.rows, "devir-yaslanma")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("Devir & Yaşlanma Raporu", [{key:"urun_kodu",label:"Ürün Kodu"},{key:"urun_adi",label:"Ürün Adı"},{key:"grup",label:"Grup"},{key:"mevcut",label:"Mevcut",align:"right"},{key:"cikis_365",label:"Çıkış (365g)",align:"right"},{key:"devir_hizi",label:"Devir Hızı",align:"right"}], devir.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm min-w-[760px]">
@@ -281,6 +292,7 @@ export default function StokRaporlar() {
               ))}
             </div>
             <Button variant="outline" onClick={() => xlsx(abc.data?.rows, "abc-analizi")}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+            <Button variant="outline" onClick={() => pdf("ABC Analizi", [{key:"sinif",label:"Sınıf"},{key:"urun_adi",label:"Ürün"},{key:"miktar",label:"Miktar",align:"right"},{key:"deger",label:"Değer",align:"right"},{key:"yuzde",label:"Pay %",align:"right"},{key:"kumulatif_yuzde",label:"Kümülatif %",align:"right"}], abc.data?.rows)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
           </div>
           <div className="bg-card border rounded-2xl overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">

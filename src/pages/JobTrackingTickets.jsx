@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Search, Eye, Pencil, Trash2, FileSpreadsheet, ChevronDown, Clock } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Trash2, FileSpreadsheet, Printer, ChevronDown, Clock } from "lucide-react";
+import { raporYazdir } from "@/lib/raporYazdir";
 import JTTicketFormDialog from "@/components/jobtracking/JTTicketFormDialog";
 import JTTicketDetailDialog from "@/components/jobtracking/JTTicketDetailDialog";
 import { format } from "date-fns";
@@ -343,6 +344,23 @@ export default function JobTrackingTickets() {
     const bugun = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `biletler-${bugun}.xlsx`);
   };
+  const exportPdf = () => {
+    const statusName = (key) => (statuses.find(s => s.key === key)?.name) || key || "";
+    const prioName = (p) => (PRIORITY_CONFIG[p]?.label) || p || "";
+    raporYazdir({
+      baslik: "Biletler",
+      kolonlar: [
+        { key: "no", label: "Bilet No" }, { key: "baslik", label: "Başlık" }, { key: "durum", label: "Durum" },
+        { key: "oncelik", label: "Öncelik" }, { key: "musteri", label: "Müşteri" }, { key: "atanan", label: "Atanan" },
+        { key: "beklenen_bitis", label: "Beklenen Bitiş" },
+      ],
+      satirlar: filteredTickets.map((t) => ({
+        no: t.ticket_number || "", baslik: t.title || "", durum: statusName(t.status), oncelik: prioName(t.priority),
+        musteri: ticketCustomerName(t), atanan: t.assigned_to_name || (Array.isArray(t.assigned_to_names) ? t.assigned_to_names.join(", ") : "") || "",
+        beklenen_bitis: t.due_date ? String(t.due_date).slice(0, 10) : "",
+      })),
+    });
+  };
   const pendingApprovalTickets = isMusteri ? filteredTickets.filter(t => CUSTOMER_APPROVAL_STATUSES.includes(t.status)) : [];
   const otherTickets = isMusteri ? filteredTickets.filter(t => !CUSTOMER_APPROVAL_STATUSES.includes(t.status)) : filteredTickets;
 
@@ -364,6 +382,11 @@ export default function JobTrackingTickets() {
           {!isMusteri && (
             <Button variant="outline" onClick={exportExcel} disabled={filteredTickets.length === 0}>
               <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
+            </Button>
+          )}
+          {!isMusteri && (
+            <Button variant="outline" onClick={exportPdf} disabled={filteredTickets.length === 0}>
+              <Printer className="w-4 h-4 mr-2" /> PDF
             </Button>
           )}
           <Button onClick={() => { setEditingTicket(null); setShowTicketForm(true); }}>

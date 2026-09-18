@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { flowApi } from "@/api/flowApiClient";
-import { Plus, FileSpreadsheet, X, Upload, Eye, Pencil, Check } from "lucide-react";
+import { Plus, FileSpreadsheet, Printer, X, Upload, Eye, Pencil, Check } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import * as XLSX from "xlsx";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 const emptyItem = { date: "", description: "", accommodation: "", transport: "", fuel: "", meal: "", other: "" };
@@ -177,14 +178,39 @@ export default function ExpenseDetailDialog({ report, onClose, onPreview }) {
     XLSX.writeFile(wb, `masraf_raporu_${report.employee_name.replace(/ /g, "_")}.xlsx`);
   };
 
+  const exportPdf = () => {
+    raporYazdir({
+      baslik: `Masraf Raporu — ${report.employee_name}`,
+      altBaslik: report.project_name || "",
+      kolonlar: [
+        { key: "tarih", label: "Tarih" }, { key: "aciklama", label: "Açıklama" },
+        { key: "konaklama", label: "Konaklama", align: "right" }, { key: "ulasim", label: "Ulaşım", align: "right" },
+        { key: "yakit", label: "Yakıt", align: "right" }, { key: "yemek", label: "Yemek", align: "right" },
+        { key: "diger", label: "Diğer", align: "right" }, { key: "toplam", label: "Toplam", align: "right" },
+      ],
+      satirlar: items.map((item) => ({
+        tarih: item.date ? format(new Date(item.date), "dd.MM.yyyy") : "",
+        aciklama: item.description,
+        konaklama: n(item.accommodation) || "", ulasim: n(item.transport) || "", yakit: n(item.fuel) || "",
+        yemek: n(item.meal) || "", diger: n(item.other) || "",
+        toplam: n(item.accommodation) + n(item.transport) + n(item.fuel) + n(item.meal) + n(item.other),
+      })),
+    });
+  };
+
   return (<>
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between pr-8">
           <DialogTitle>Masraf Detayı — {report.employee_name}</DialogTitle>
-          <Button variant="outline" size="sm" className="gap-2" onClick={exportExcel}>
-            <FileSpreadsheet className="w-4 h-4" /> Excel İndir
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4" /> Excel İndir
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={exportPdf}>
+              <Printer className="w-4 h-4" /> PDF İndir
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* Report meta */}

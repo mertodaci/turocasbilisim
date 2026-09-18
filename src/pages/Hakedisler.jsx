@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, FileSpreadsheet, Upload, Wallet, Eye, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, FileSpreadsheet, Printer, Upload, Wallet, Eye, Check } from "lucide-react";
+import { raporYazdir } from "@/lib/raporYazdir";
 import {
   MONTHS, MONTH_KEYS, DURUM_OPTS, ANLASMA_OPTS, KDV_OPTS,
   num, tl, serialToISO, fmtDate, rowAdet, rowOrtalama,
@@ -220,6 +221,24 @@ export default function Hakedisler() {
     XLSX.writeFile(wb, "hakedisler-tumu.xlsx");
   };
 
+  const exportPdf = () => {
+    raporYazdir({
+      baslik: "Hakedişler",
+      kolonlar: [
+        { key: "year", label: "Yıl" }, { key: "musteri", label: "Müşteri" }, { key: "is_konusu", label: "İşin Konusu" },
+        { key: "durum", label: "Durum" }, { key: "yil_hedefi", label: "Yıl Hedefi", align: "right" },
+        { key: "gerceklesen", label: "Gerçekleşen", align: "right" }, { key: "kalan", label: "Kalan", align: "right" },
+      ],
+      satirlar: allRows.map((r) => {
+        const g = rowTahsilEdilen(r);
+        return {
+          year: r.year ?? "", musteri: r.musteri || "", is_konusu: r.is_konusu || "", durum: r.durum || "",
+          yil_hedefi: num(r.yil_hedefi) ?? "", gerceklesen: g, kalan: (num(r.yil_hedefi) || 0) - g,
+        };
+      }),
+    });
+  };
+
   const onImportFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -292,6 +311,9 @@ export default function Hakedisler() {
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={exportExcel} disabled={allRows.length === 0} className="gap-1.5">
             <FileSpreadsheet className="w-4 h-4" /> Excel'e Aktar
+          </Button>
+          <Button variant="outline" onClick={exportPdf} disabled={allRows.length === 0} className="gap-1.5">
+            <Printer className="w-4 h-4" /> PDF İndir
           </Button>
           {canAdd && (
             <>

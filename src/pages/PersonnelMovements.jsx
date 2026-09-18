@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import {
-  Upload, LogIn, LogOut, Clock, AlertTriangle, Search, Calendar, FileSpreadsheet, CreditCard,
+  Upload, LogIn, LogOut, Clock, AlertTriangle, Search, Calendar, FileSpreadsheet, Printer, CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
+import { raporYazdir } from "@/lib/raporYazdir";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -266,6 +267,29 @@ export default function PersonnelMovements() {
     XLSX.writeFile(wb, `personel-hareketleri-${startDate}_${endDate}.xlsx`);
   };
 
+  const exportPdf = () => {
+    raporYazdir({
+      baslik: "Kart Geçiş Geçmişi — Günlük Rapor",
+      altBaslik: `${startDate} – ${endDate}`,
+      kolonlar: [
+        { key: "date", label: "Tarih" },
+        { key: "name", label: "Çalışan" },
+        { key: "card_uid", label: "Kart ID" },
+        { key: "ilkGiris", label: "İlk Giriş" },
+        { key: "sonCikis", label: "Son Çıkış" },
+        { key: "sure", label: "Toplam Süre" },
+      ],
+      satirlar: dailyReport.map((p) => ({
+        date: p.date,
+        name: p.name,
+        card_uid: p.card_uid,
+        ilkGiris: p.ilkGiris ? p.ilkGiris.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "—",
+        sonCikis: p.sonCikis ? p.sonCikis.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "—",
+        sure: fmtDuration(p.sure),
+      })),
+    });
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Başlık */}
@@ -367,9 +391,14 @@ export default function PersonnelMovements() {
           </button>
         </div>
         {tab === "rapor" && dailyReport.length > 0 && (
-          <Button variant="outline" size="sm" onClick={exportExcel} className="ml-auto">
-            <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Excel
-          </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" onClick={exportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPdf}>
+              <Printer className="w-4 h-4 mr-1.5" /> PDF
+            </Button>
+          </div>
         )}
       </div>
 

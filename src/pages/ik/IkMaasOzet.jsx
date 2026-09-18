@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileSpreadsheet, Download } from "lucide-react";
+import { FileSpreadsheet, Download, Printer } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ymd } from "@/lib/dateUtils";
 import { paraSade, sayi } from "@/lib/ikFormat";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 const nf = paraSade;
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -75,6 +76,14 @@ function xlsxYaz(cols, rows, adi) {
   XLSX.writeFile(wb, `${adi}.xlsx`);
 }
 
+function pdfYaz(cols, rows, baslik) {
+  raporYazdir({
+    baslik,
+    kolonlar: cols.map(([k, l, tip]) => ({ key: k, label: l, align: tip === "metin" ? undefined : "right" })),
+    satirlar: rows.map((r) => Object.fromEntries(cols.map(([k, , tip]) => [k, hucre(r[k], tip)]))),
+  });
+}
+
 // ── Sekme 1: Maaş Özet (ay bazlı bordro satırları) ──
 function MaasOzetTab() {
   // "now" module-scope sabit degil, component ilk render edildiginde hesaplanir.
@@ -98,6 +107,7 @@ function MaasOzetTab() {
           <SelectContent><SelectItem value="hepsi">Tüm Şubeler</SelectItem>{subeler.map((s) => <SelectItem key={s.id} value={s.id}>{s.ad}</SelectItem>)}</SelectContent>
         </Select>
         <Button variant="outline" disabled={!rows.length} onClick={() => xlsxYaz(OZET_COLS, rows, `maas-ozet-${yil}-${ay}`)}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+        <Button variant="outline" disabled={!rows.length} onClick={() => pdfYaz(OZET_COLS, rows, `Maaş Özet ${AYLAR[ay - 1]} ${yil}`)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
       </div>
       <DataTable cols={OZET_COLS} rows={rows} isFetching={isFetching} emptyText="Bu dönem için bordro yok." />
     </div>
@@ -142,6 +152,7 @@ function HareketOzetiTab() {
           </Select>
         </div>
         <Button variant="outline" disabled={!rows.length} onClick={() => xlsxYaz(HAREKET_COLS, rows, `personel-hareket-${bas}_${bit}`)}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+        <Button variant="outline" disabled={!rows.length} onClick={() => pdfYaz(HAREKET_COLS, rows, `Personel Hareket Özeti ${bas} – ${bit}`)}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {kartlar.map(([l, v]) => (

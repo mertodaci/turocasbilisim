@@ -4,9 +4,10 @@ import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Download } from "lucide-react";
+import { BarChart3, Download, Printer } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ymd } from "@/lib/dateUtils";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 // ymd(): toISOString().slice(0,10) UTC donusumu yuzunden Turkiye (+3) saat
 // diliminde ay basini bir gun geriye kaydiriyordu.
@@ -31,6 +32,19 @@ export default function IkPuantajRapor() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Puantaj");
     XLSX.writeFile(wb, `puantaj-rapor-${f.t1}_${f.t2}.xlsx`);
+  };
+
+  const pdf = () => {
+    raporYazdir({
+      baslik: "Puantaj Raporu",
+      altBaslik: `${f.t1} – ${f.t2}`,
+      kolonlar: [
+        { key: "tarih", label: "Tarih" }, { key: "personel_adi", label: "Personel" }, { key: "sube_adi", label: "Şube" },
+        { key: "durum_kodu", label: "Durum" }, { key: "giris_saat", label: "Giriş" }, { key: "cikis_saat", label: "Çıkış" },
+        { key: "gec_dk", label: "Geç (dk)", align: "right" }, { key: "mesai_dk", label: "Mesai (dk)", align: "right" }, { key: "ozet", label: "Özet" },
+      ],
+      satirlar: rows,
+    });
   };
 
   return (
@@ -58,6 +72,7 @@ export default function IkPuantajRapor() {
           </SelectContent>
         </Select>
         <Button variant="outline" onClick={excel} disabled={!rows.length}><Download className="w-4 h-4 mr-1.5" /> Excel</Button>
+        <Button variant="outline" onClick={pdf} disabled={!rows.length}><Printer className="w-4 h-4 mr-1.5" /> PDF</Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-lg">

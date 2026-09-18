@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calculator, RefreshCw, CheckCircle2, Printer, Pencil, Download } from "lucide-react";
+import { raporYazdir } from "@/lib/raporYazdir";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ucretPusulasiYazdir } from "@/lib/ikBordroPusula";
@@ -76,6 +77,19 @@ export default function IkBordro() {
     XLSX.writeFile(wb, `bordro-${yil}-${ay}.xlsx`);
   };
 
+  const pdf = () => {
+    raporYazdir({
+      baslik: "Bordro Listesi",
+      altBaslik: `${AYLAR[ay - 1]} ${yil}`,
+      kolonlar: [
+        { key: "tc", label: "TC" }, { key: "personel_adi", label: "Ad Soyad" }, { key: "sube_adi", label: "İşyeri" },
+        { key: "resmi_toplam", label: "Resmî Toplam", align: "right" }, { key: "resmi_net", label: "Resmî Net", align: "right" },
+        { key: "genel_net", label: "Genel Net", align: "right" },
+      ],
+      satirlar: rows,
+    });
+  };
+
   const kapali = donem?.durum === "kapali";
   const onayli = donem?.durum === "onayli" || kapali;
 
@@ -108,6 +122,7 @@ export default function IkBordro() {
         {!onayli && <Button variant="outline" disabled={onayla.isPending || !rows.length} onClick={() => onayla.mutate(false)}><CheckCircle2 className="w-4 h-4 mr-1.5" /> Bordroyu Onayla</Button>}
         {onayli && !kapali && <Button variant="outline" disabled={onayla.isPending} onClick={() => { if (confirm("Onay geri alınacak, dönem taslağa dönecek. Devam?")) onayla.mutate(true); }}><RefreshCw className="w-4 h-4 mr-1.5" /> Onayı Geri Al</Button>}
         <Button variant="outline" disabled={!rows.length} onClick={excel}><Download className="w-4 h-4 mr-1.5" /> Muhasebe Excel</Button>
+        <Button variant="outline" disabled={!rows.length} onClick={pdf}><Printer className="w-4 h-4 mr-1.5" /> PDF İndir</Button>
         <Select value={sube || "hepsi"} onValueChange={(v) => setSube(v === "hepsi" ? "" : v)}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Şube" /></SelectTrigger>
           <SelectContent><SelectItem value="hepsi">Tüm Şubeler</SelectItem>{subeler.map((s) => <SelectItem key={s.id} value={s.id}>{s.ad}</SelectItem>)}</SelectContent>

@@ -44,7 +44,7 @@ export default function Todos() {
   const { setUnreadTodoCount } = useTodos();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [filter, setFilter] = useState("hepsi");
+  const [filter, setFilter] = useState("yapilacak");
   const [form, setForm] = useState({ title: "", description: "", priority: "orta", due_date: "", status: "yapilacak" });
 
   const { data: todos = [], isLoading } = useQuery({
@@ -130,8 +130,8 @@ export default function Todos() {
       {/* Filtreler */}
       <div className="flex gap-2 flex-wrap">
         {[
+          ...Object.entries(statusConfig).map(([key, v]) => ({ key, label: v.label })),
           { key: "hepsi", label: "Hepsi" },
-          ...Object.entries(statusConfig).map(([key, v]) => ({ key, label: v.label }))
         ].map(({ key, label }) => (
           <button
             key={key}

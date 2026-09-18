@@ -50,8 +50,13 @@ export default function EmployeeDetail() {
     queryKey: ["definitions", "pozisyon"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "pozisyon" }),
   });
+  const { data: educationLevelDefs = [] } = useQuery({
+    queryKey: ["definitions", "egitim_seviyesi"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "egitim_seviyesi" }),
+  });
   const getDeptLabel = (val) => departmentDefs.find(d => d.value === val)?.label || val;
   const getPosLabel = (val) => positionDefs.find(p => p.value === val)?.label || val;
+  const getEducationLabel = (val) => educationLevelDefs.find(e => e.value === val)?.label || val;
   const { data: exitReasonDefs = [] } = useQuery({
     queryKey: ["definitions", "ayrilis_nedeni"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "ayrilis_nedeni" }),
@@ -582,7 +587,7 @@ export default function EmployeeDetail() {
                 {egitimDurumuVar && (
                   <div className="p-3 bg-muted/30 rounded-xl mb-5">
                     <p className="text-[11px] text-muted-foreground">Eğitim Durumu</p>
-                    <p className="text-sm font-medium">{employee.education_level || "Seçilmemiştir"}</p>
+                    <p className="text-sm font-medium">{employee.education_level ? getEducationLabel(employee.education_level) : "Seçilmemiştir"}</p>
                   </div>
                 )}
 

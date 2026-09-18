@@ -5,14 +5,20 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { flowApi } from "@/api/flowApiClient";
 import { Button } from "@/components/ui/button";
-import { Clock, Receipt, User, Eye, Search } from "lucide-react";
+import { Clock, Receipt, User, Eye, Search, Download, Printer, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ExpenseApprovalDialog from "@/components/expenses/ExpenseApprovalDialog";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import * as XLSX from "xlsx";
+import { raporYazdir } from "@/lib/raporYazdir";
 
 
 
@@ -46,6 +52,12 @@ export default function IKExpenseRequests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]); // [] = tümü
+  const [empSearch, setEmpSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["all-expense-reports"],
@@ -54,6 +66,10 @@ export default function IKExpenseRequests() {
   const { data: allItems = [] } = useQuery({
     queryKey: ["expense-items-all-ik"],
     queryFn: () => flowApi.entities.ExpenseItem.list(),
+  });
+  const { data: employees = [] } = useQuery({
+    queryKey: ["ik_personel_full"],
+    queryFn: () => flowApi.entities.Employee.list("full_name", 8000),
   });
   const totalsByReport = {};
   for (const it of allItems) {
@@ -72,8 +88,61 @@ export default function IKExpenseRequests() {
       searchQuery === "" ||
       r.employee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.employee_email?.toLowerCase().includes(searchQuery.toLowerCase());
-    return statusMatch && searchMatch;
+    const empMatch = selectedEmployeeIds.length === 0 || selectedEmployeeIds.includes(r.employee_id);
+    const total = totalsByReport[r.id] || 0;
+    const dateMatch =
+      (!dateFrom || (r.trip_end_date || r.trip_start_date || "") >= dateFrom) &&
+      (!dateTo || (r.trip_start_date || r.trip_end_date || "") <= dateTo);
+    const amountMatch =
+      (amountMin === "" || total >= Number(amountMin)) &&
+      (amountMax === "" || total <= Number(amountMax));
+    return statusMatch && searchMatch && empMatch && dateMatch && amountMatch;
   });
+
+  const fmtToplam = (r) => (totalsByReport[r.id] || 0);
+  const KOLONLAR = [
+    { key: "employee_name", label: "Çalışan" },
+    { key: "employee_email", label: "E-posta" },
+    { key: "project_name", label: "Proje / Müşteri" },
+    { key: "tarih_araligi", label: "Tarih Aralığı" },
+    { key: "advance_amount", label: "Avans", align: "right" },
+    { key: "toplam", label: "Toplam Harcama", align: "right" },
+    { key: "durum", label: "Durum" },
+  ];
+  const toRow = (r) => ({
+    employee_name: r.employee_name || "",
+    employee_email: r.employee_email || "",
+    project_name: r.project_name || "—",
+    tarih_araligi: `${fmtAyYil(r.trip_start_date)}${r.trip_end_date ? " → " + fmtAyYil(r.trip_end_date) : ""}`,
+    advance_amount: r.advance_amount || 0,
+    toplam: fmtToplam(r),
+    durum: (STATUS_CONFIG[r.status] || STATUS_CONFIG.taslak).label,
+  });
+
+  const handleExportExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(
+      filtered.map((r) => Object.fromEntries(KOLONLAR.map((k) => [k.label, toRow(r)[k.key]])))
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Harcamalar");
+    XLSX.writeFile(wb, `harcama-yonetimi-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+  };
+  const handleExportPdf = () => {
+    raporYazdir({
+      baslik: "Harcama Yönetimi (IK)",
+      altBaslik: `${filtered.length} kayıt`,
+      kolonlar: KOLONLAR,
+      satirlar: filtered.map(toRow),
+    });
+  };
+
+  const filteredEmployeeOptions = employees.filter((e) =>
+    !empSearch || e.full_name?.toLowerCase().includes(empSearch.toLowerCase())
+  );
+  const toggleEmployee = (id) => {
+    setSelectedEmployeeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setCurrentPage(1);
+  };
 
   const statusCounts = {
     ik_onayi_bekliyor: reports.filter((r) => r.status === "ik_onayi_bekliyor").length,
@@ -138,6 +207,67 @@ export default function IKExpenseRequests() {
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="pl-10"
           />
+        </div>
+
+        <DropdownMenu onOpenChange={(v) => !v && setEmpSearch("")}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              {selectedEmployeeIds.length > 0 ? `${selectedEmployeeIds.length} çalışan seçili` : "Çalışan Seç"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64 max-h-80 overflow-y-auto">
+            <DropdownMenuLabel>Çalışan Filtrele</DropdownMenuLabel>
+            <div className="px-2 pb-1.5">
+              <Input
+                placeholder="Ara..."
+                value={empSearch}
+                onChange={(e) => setEmpSearch(e.target.value)}
+                className="h-8 text-xs"
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <DropdownMenuSeparator />
+            {selectedEmployeeIds.length > 0 && (
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setSelectedEmployeeIds([]); setCurrentPage(1); }}>
+                Temizle
+              </DropdownMenuItem>
+            )}
+            {filteredEmployeeOptions.slice(0, 200).map((emp) => (
+              <DropdownMenuCheckboxItem
+                key={emp.id}
+                checked={selectedEmployeeIds.includes(emp.id)}
+                onCheckedChange={() => toggleEmployee(emp.id)}
+                onSelect={(e) => e.preventDefault()}
+              >
+                {emp.full_name}
+              </DropdownMenuCheckboxItem>
+            ))}
+            {filteredEmployeeOptions.length === 0 && (
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">Çalışan bulunamadı</p>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="flex items-center gap-1.5">
+          <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }} className="w-36 h-9" />
+          <span className="text-muted-foreground text-sm">→</span>
+          <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }} className="w-36 h-9" />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Input type="number" placeholder="Min ₺" value={amountMin} onChange={(e) => { setAmountMin(e.target.value); setCurrentPage(1); }} className="w-24 h-9" />
+          <span className="text-muted-foreground text-sm">–</span>
+          <Input type="number" placeholder="Max ₺" value={amountMax} onChange={(e) => { setAmountMax(e.target.value); setCurrentPage(1); }} className="w-24 h-9" />
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={filtered.length === 0} className="gap-1.5">
+            <Download className="w-3.5 h-3.5" /> Excel İndir
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={filtered.length === 0} className="gap-1.5">
+            <Printer className="w-3.5 h-3.5" /> PDF İndir
+          </Button>
         </div>
       </div>
 

@@ -40,6 +40,8 @@ export default function IkSubeler() {
   const [q, setQ] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [qrItem, setQrItem] = useState(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocoded, setGeocoded] = useState(null);
 
   const { data: subeler = [], isLoading } = useQuery({
     queryKey: ["ik_subeler"],
@@ -101,6 +103,30 @@ export default function IkSubeler() {
     else createMutation.mutate(data);
   };
 
+  // Adres alanı doluyken (ve GPS henüz seçilmemişse) "Haritadan Seç" haritayı
+  // Türkiye geneli yerine o adrese ortalasın diye tek seferlik bir Nominatim
+  // (ücretsiz, CORS'a açık OpenStreetMap arama servisi) çağrısı yapılır.
+  // GPS zaten kayıtlıysa (önceden seçilmiş konum) geocoding hiç tetiklenmez.
+  const haritayiAc = async () => {
+    setGeocoded(null);
+    const zatenGpsVar = Number(form.gps_enlem) && Number(form.gps_boylam);
+    if (!zatenGpsVar && form.adres?.trim()) {
+      setGeocoding(true);
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tr&q=${encodeURIComponent(form.adres)}`;
+        const res = await fetch(url);
+        const [hit] = await res.json();
+        if (hit) setGeocoded({ lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) });
+        else toast.info("Adres haritada bulunamadı, Türkiye genelinde açılıyor — elle seçebilirsiniz.");
+      } catch {
+        toast.info("Adres aranamadı, Türkiye genelinde açılıyor — elle seçebilirsiniz.");
+      } finally {
+        setGeocoding(false);
+      }
+    }
+    setMapOpen(true);
+  };
+
   const filtered = subeler.filter((s) => !q || `${s.ad} ${s.yetkili} ${s.telefon} ${s.adres}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -137,8 +163,8 @@ export default function IkSubeler() {
           </div>
           <div className="flex items-center justify-between">
             <Label className="block">Konum</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => setMapOpen(true)}>
-              <MapPin className="w-3.5 h-3.5 mr-1.5" /> Haritadan Seç
+            <Button type="button" size="sm" variant="outline" onClick={haritayiAc} disabled={geocoding}>
+              <MapPin className={`w-3.5 h-3.5 mr-1.5 ${geocoding ? "animate-pulse" : ""}`} /> {geocoding ? "Aranıyor…" : "Haritadan Seç"}
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -224,8 +250,8 @@ export default function IkSubeler() {
       <MapPickerDialog
         open={mapOpen}
         onOpenChange={setMapOpen}
-        initialLat={form.gps_enlem}
-        initialLng={form.gps_boylam}
+        initialLat={form.gps_enlem || geocoded?.lat}
+        initialLng={form.gps_boylam || geocoded?.lng}
         onPick={(lat, lng) => setForm({ ...form, gps_enlem: lat, gps_boylam: lng })}
       />
 

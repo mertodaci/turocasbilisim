@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Plus, Pencil, Trash2, Building2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const empty = { ad: "", sube_id: "", hedef_personel_sayisi: 0, aciklama: "", aktif: 1 };
 
@@ -22,10 +23,12 @@ export default function IkBolumler() {
   const { data: bolumler = [], isLoading } = useQuery({
     queryKey: ["ik_bolumler"],
     queryFn: () => flowApi.entities.IkBolum.list("ad", 3000),
+    select: (d) => sortTr(d, "ad"),
   });
   const { data: subeler = [] } = useQuery({
     queryKey: ["ik_subeler_min"],
     queryFn: () => flowApi.entities.IkSube.list("ad", 2000),
+    select: (d) => sortTr(d, "ad"),
   });
   const { data: personeller = [] } = useQuery({
     queryKey: ["ik_personel_min"],

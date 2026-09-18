@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Users } from "lucide-react";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const empty = {
   abone_adi: "", abone_turu: "", tesisat_kullanim_yeri: "", sozlesme_no: "",
@@ -29,10 +30,12 @@ export default function FaturaAboneler() {
   const { data: aboneTurleri = [] } = useQuery({
     queryKey: ["definitions", "abone_turu"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "abone_turu", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
   const { data: kullanimYerleri = [] } = useQuery({
     queryKey: ["definitions", "tesisat_kullanim_yeri"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "tesisat_kullanim_yeri", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["fatura-aboneler"] });

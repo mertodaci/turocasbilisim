@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CalendarClock, RefreshCw, Pencil, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { ymd } from "@/lib/dateUtils";
+import { sortTr } from "@/lib/sortTr";
 
 const DURUM = {
   N: { l: "Normal", c: "bg-emerald-100 text-emerald-700" },
@@ -37,7 +38,7 @@ export default function IkPuantaj() {
     queryKey: ["ik_puantaj_cetvel", tarih, sube],
     queryFn: () => flowApi.ik.puantajCetvel({ tarih, ...(sube ? { sube_id: sube } : {}) }),
   });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data: personeller = [] } = useQuery({ queryKey: ["ik_personel_full"], queryFn: () => flowApi.entities.Employee.list("full_name", 8000) });
   const aktif = useMemo(() => personeller.filter((p) => p.app_role !== "musteri" && p.is_deleted !== 1 && p.status !== "pasif" && !p.exit_date), [personeller]);
 

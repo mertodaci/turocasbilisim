@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ucretPusulasiYazdir } from "@/lib/ikBordroPusula";
 import { paraSade as nf } from "@/lib/ikFormat";
+import { sortTr } from "@/lib/sortTr";
 
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
@@ -28,7 +29,7 @@ export default function IkBordro() {
     queryKey: ["ik_bordro_liste", yil, ay, sube],
     queryFn: () => flowApi.ik.bordroListe({ yil, ay, ...(sube ? { sube_id: sube } : {}) }),
   });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data: vergiAyarlari } = useQuery({ queryKey: ["ik_vergi_ayarlari"], queryFn: () => flowApi.entities.IkVergiAyar.get(1) });
 
   const rows = data?.rows || [];

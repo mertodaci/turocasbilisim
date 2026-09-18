@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const KESINTI = { hic: "Hiç Kesme", yemek: "Yemekten Kes", yol: "Yoldan Kes", her_ikisi: "Her İkisi", maas: "Maaştan Kes" };
 
@@ -18,7 +19,7 @@ export default function IkBordroYemek() {
 
   const { data: kurallar = [], isLoading } = useQuery({ queryKey: ["ik_bordro_yemek_kural"], queryFn: () => flowApi.entities.IkBordroYemekKural.list("personel_adi", 5000) });
   const { data: personeller = [] } = useQuery({ queryKey: ["ik_personel_full"], queryFn: () => flowApi.entities.Employee.list("full_name", 8000) });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
 
   const aktif = useMemo(() => personeller.filter((p) => p.app_role !== "musteri" && p.is_deleted !== 1 && p.status !== "pasif" && !p.exit_date), [personeller]);
   const kuralByP = kurallar.reduce((m, k) => { m[k.personel_id] = k; return m; }, {});

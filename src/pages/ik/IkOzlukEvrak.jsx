@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FolderArchive, Upload, Trash2, Paperclip, CheckCircle2, AlertTriangle, Info, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp)$/i;
@@ -25,6 +26,7 @@ function useBelgeTurleri() {
   const { data = [] } = useQuery({
     queryKey: ["definitions", "belge_turu"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "belge_turu", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
   const tipler = useMemo(() => (data.length ? data.map((d) => d.value) : ["diger"]), [data]);
   const tipLabel = useMemo(() => {

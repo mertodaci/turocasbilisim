@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileSignature, Plus, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
@@ -38,6 +39,7 @@ export default function EbysEvraklar() {
   const { data: evrakTurleri = [] } = useQuery({
     queryKey: ["definitions", "ebys_evrak_turu"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "ebys_evrak_turu" }),
+    select: (d) => sortTr(d, "value"),
   });
   const { data: settingsList = [] } = useQuery({ queryKey: ["ebys_ayarlari"], queryFn: () => flowApi.entities.EbysAyarlar.list("id", 5) });
   const settings = settingsList[0];

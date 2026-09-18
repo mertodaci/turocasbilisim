@@ -11,6 +11,7 @@ import * as XLSX from "xlsx";
 import { ymd } from "@/lib/dateUtils";
 import { paraSade, sayi } from "@/lib/ikFormat";
 import { raporYazdir } from "@/lib/raporYazdir";
+import { sortTr } from "@/lib/sortTr";
 
 const nf = paraSade;
 const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
@@ -91,7 +92,7 @@ function MaasOzetTab() {
   const [ay, setAy] = useState(() => new Date().getMonth() + 1);
   const [sube, setSube] = useState("");
   const { data, isFetching } = useQuery({ queryKey: ["ik_bordro_liste", yil, ay, sube], queryFn: () => flowApi.ik.bordroListe({ yil, ay, ...(sube ? { sube_id: sube } : {}) }) });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const rows = data?.rows || [];
   return (
     <div className="space-y-4">
@@ -121,7 +122,7 @@ function HareketOzetiTab() {
   const [bit, setBit] = useState(() => { const n = new Date(); return ymd(new Date(n.getFullYear(), n.getMonth() + 1, 0)); });
   const [sube, setSube] = useState("");
   const [personel, setPersonel] = useState("");
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data: personeller = [] } = useQuery({ queryKey: ["ik_personel_min"], queryFn: () => flowApi.entities.Employee.list("full_name", 5000) });
   const params = { bas, bit, ...(sube ? { sube_id: sube } : {}), ...(personel ? { personel_id: personel } : {}) };
   const { data, isFetching } = useQuery({ queryKey: ["ik_hareket_rapor", params], queryFn: () => flowApi.ik.hareketRapor(params) });

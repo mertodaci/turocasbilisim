@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { sortTr } from "@/lib/sortTr";
 
 const empty = {
   company_name: "", customer_type: "", city: "",
@@ -19,8 +20,8 @@ export default function CustomerFormDialog({ open, onClose, onSubmit, isLoading,
   const [form, setForm] = useState(empty);
   const [formBaseline, setFormBaseline] = useState(empty);
 
-  const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }) });
-  const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }) });
+  const { data: customerTypeOptions = [] } = useQuery({ queryKey: ["definitions", "musteri_tipi"], queryFn: () => flowApi.entities.Definition.filter({ category: "musteri_tipi", is_active: true }), select: (d) => sortTr(d, "label") });
+  const { data: cityOptions = [] } = useQuery({ queryKey: ["definitions", "sehir"], queryFn: () => flowApi.entities.Definition.filter({ category: "sehir", is_active: true }), select: (d) => sortTr(d, "label") });
 
   useEffect(() => {
     if (customer) {

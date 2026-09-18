@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const AVATAR_COLORS = ["bg-indigo-500","bg-purple-500","bg-pink-500","bg-teal-500","bg-blue-500","bg-emerald-500","bg-orange-500","bg-rose-500"];
 
@@ -38,6 +39,7 @@ export default function Employees() {
 
   const { data: subeler = [] } = useQuery({
     queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), enabled: bordroMode,
+    select: (d) => sortTr(d, "ad"),
   });
   const subeAd = (id) => subeler.find((s) => s.id === id)?.ad || "";
   const cikisMutation = useMutation({

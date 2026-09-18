@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Upload, Loader2, Plus, Trash2, ScrollText } from "lucide-react";
 import { num, tl, KDV_OPTS, fmtMoney } from "@/lib/hakedisUtils";
+import { sortTr } from "@/lib/sortTr";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
@@ -68,14 +69,17 @@ export default function SozlesmeForm() {
   const { data: contractTypes = [] } = useQuery({
     queryKey: ["definitions", "sozlesme_turu"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "sozlesme_turu", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
   const { data: productDefinitions = [] } = useQuery({
     queryKey: ["definitions", "urun"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "urun", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
   const { data: moduleDefinitions = [] } = useQuery({
     queryKey: ["definitions", "modul"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "modul", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const [form, setForm] = useState(emptyForm());

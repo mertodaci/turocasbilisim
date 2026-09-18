@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, MapPin, Check, X, QrCode, Download } from "lucide
 import { formatTrPhone } from "@/lib/utils";
 import { toast } from "sonner";
 import MapPickerDialog from "@/components/map/MapPickerDialog";
+import { sortTr } from "@/lib/sortTr";
 
 function QrImage({ value, size = 220 }) {
   const [src, setSrc] = useState("");
@@ -46,6 +47,7 @@ export default function IkSubeler() {
   const { data: subeler = [], isLoading } = useQuery({
     queryKey: ["ik_subeler"],
     queryFn: () => flowApi.entities.IkSube.list("ad", 2000),
+    select: (d) => sortTr(d, "ad"),
   });
   const { data: personeller = [] } = useQuery({
     queryKey: ["ik_personel_min"],

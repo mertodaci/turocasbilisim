@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRolePermissions } from "@/lib/RolePermissionsContext";
 import { formatTrPhone } from "@/lib/utils";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
@@ -67,25 +68,29 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
   const { data: positionOptions = [] } = useQuery({
     queryKey: ["definitions", "pozisyon"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "pozisyon", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const { data: departmentOptions = [] } = useQuery({
     queryKey: ["definitions", "departman"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "departman", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const { data: educationLevelOptions = [] } = useQuery({
     queryKey: ["definitions", "egitim_seviyesi"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "egitim_seviyesi", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const { data: uyrukOptions = [] } = useQuery({
     queryKey: ["definitions", "uyruk"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "uyruk", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
-  const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 3000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
+  const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 3000), select: (d) => sortTr(d, "ad") });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingCertIdx, setUploadingCertIdx] = useState(null);

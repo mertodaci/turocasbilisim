@@ -11,6 +11,7 @@ import { Plus, Pencil, Trash2, MapPin, QrCode, ChevronDown, ChevronRight } from 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import MapPickerDialog from "@/components/map/MapPickerDialog";
+import { sortTr } from "@/lib/sortTr";
 
 function QrImage({ value, size = 120 }) {
   const [src, setSrc] = useState("");
@@ -50,6 +51,7 @@ export default function DevriyeLokasyon() {
   const { data: birimler = [] } = useQuery({
     queryKey: ["ik_bolumler_min"],
     queryFn: () => flowApi.entities.IkBolum.list("ad", 2000),
+    select: (d) => sortTr(d, "ad"),
   });
 
   const invalidateLok = () => qc.invalidateQueries({ queryKey: ["devriye_lokasyonlar"] });

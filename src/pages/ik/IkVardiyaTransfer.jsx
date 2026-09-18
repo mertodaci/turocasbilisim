@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 export default function IkVardiyaTransfer() {
   const qc = useQueryClient();
@@ -19,7 +20,7 @@ export default function IkVardiyaTransfer() {
 
   const { data: personeller = [] } = useQuery({ queryKey: ["ik_personel_full"], queryFn: () => flowApi.entities.Employee.list("full_name", 8000) });
   const { data: vardiyalar = [] } = useQuery({ queryKey: ["ik_vardiyalar"], queryFn: () => flowApi.entities.IkVardiya.list("ad", 500) });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data: atamalar = [] } = useQuery({ queryKey: ["ik_vardiya_atamalari"], queryFn: () => flowApi.entities.IkVardiyaAtama.list("-created_date", 300) });
 
   const vardiyaAdi = (id) => vardiyalar.find((v) => v.id === id)?.ad || "—";

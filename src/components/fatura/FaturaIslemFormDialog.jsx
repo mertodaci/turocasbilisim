@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { sortTr } from "@/lib/sortTr";
 import { toast } from "sonner";
 
 const empty = {
@@ -27,6 +28,7 @@ export default function FaturaIslemFormDialog({ open, onClose, fatura, onSubmit,
     queryKey: ["definitions", "fatura_tarife_turu"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "fatura_tarife_turu", is_active: true }),
     enabled: open,
+    select: (d) => sortTr(d, "label"),
   });
 
   useEffect(() => {

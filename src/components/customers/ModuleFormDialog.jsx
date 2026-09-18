@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { flowApi } from "@/api/flowApiClient";
+import { sortTr } from "@/lib/sortTr";
 
 const statusLabels = {
   aktif: "Aktif",
@@ -22,6 +23,7 @@ export default function ModuleFormDialog({ open, onClose, module: mod, onSubmit,
   const { data: moduleDefinitions = [] } = useQuery({
     queryKey: ["definitions", "modul"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "modul", is_active: true }),
+    select: (d) => sortTr(d, "label"),
   });
 
   const moduleOptions = moduleDefinitions.map((d) => d.label);

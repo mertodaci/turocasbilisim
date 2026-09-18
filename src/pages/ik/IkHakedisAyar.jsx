@@ -11,6 +11,7 @@ import { ShieldAlert, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { paraSade as nf } from "@/lib/ikFormat";
+import { sortTr } from "@/lib/sortTr";
 const GENEL_ALANLAR = [
   ["ticket_qr_yoksa_kes", "Normal çalışma gününde QR girişi yoksa Ticket kes"],
   ["ticket_e_kes", "E / Gelmedi durumunda Ticket kes"],
@@ -28,7 +29,7 @@ export default function IkHakedisAyar() {
   const [toplu, setToplu] = useState({ tur: "yemek", aktif: true, baz_gun: 26, aylik_tutar: 0 });
 
   const { data, isLoading } = useQuery({ queryKey: ["ik_hakedis_liste"], queryFn: () => flowApi.ik.hakedisListe() });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data: vergiAyarlariData } = useQuery({ queryKey: ["ik_vergi_ayarlari"], queryFn: () => flowApi.entities.IkVergiAyar.get(1) });
   const currentYil = new Date().getFullYear();
   const { data: dilimlerData = [] } = useQuery({ queryKey: ["ik_gelir_vergisi_dilimleri", currentYil], queryFn: () => flowApi.entities.IkGelirVergisiDilim.filter({ yil: currentYil }, "sira") });

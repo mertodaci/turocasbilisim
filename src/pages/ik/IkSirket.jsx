@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { sortTr } from "@/lib/sortTr";
 
 const empty = { bolum_adi: "", unvan: "", vergi_dairesi: "", vergi_no: "", sgk_sicil: "", mersis: "", adres: "", merkez_adres: "", web: "" };
 
@@ -16,7 +17,7 @@ export default function IkSirket() {
   const [form, setForm] = useState(empty);
 
   const { data: kayitlar = [] } = useQuery({ queryKey: ["ik_sirket_bilgileri"], queryFn: () => flowApi.entities.IkSirket.list("kapsam", 200) });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
 
   const mevcut = kayitlar.find((k) => k.kapsam === kapsam);
   useEffect(() => { setForm(mevcut ? { ...empty, ...mevcut } : empty); }, [kapsam, mevcut]);

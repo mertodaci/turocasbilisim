@@ -9,6 +9,7 @@ import { Plus, Pencil, Trash2, Megaphone } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { sortTr } from "@/lib/sortTr";
 
 const COLOR_OPTIONS = [
   { value: "blue", label: "Mavi", bg: "bg-blue-500" },
@@ -30,8 +31,8 @@ export default function Announcements() {
     queryKey: ["announcements"],
     queryFn: () => flowApi.entities.Announcement.list(),
   });
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
-  const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
+  const { data: bolumler = [] } = useQuery({ queryKey: ["ik_bolumler_min"], queryFn: () => flowApi.entities.IkBolum.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const subeById = useMemo(() => Object.fromEntries(subeler.map((s) => [s.id, s])), [subeler]);
   const bolumById = useMemo(() => Object.fromEntries(bolumler.map((b) => [b.id, b])), [bolumler]);
   const filteredBolumler = useMemo(

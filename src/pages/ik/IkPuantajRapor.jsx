@@ -8,6 +8,7 @@ import { BarChart3, Download, Printer } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ymd } from "@/lib/dateUtils";
 import { raporYazdir } from "@/lib/raporYazdir";
+import { sortTr } from "@/lib/sortTr";
 
 // ymd(): toISOString().slice(0,10) UTC donusumu yuzunden Turkiye (+3) saat
 // diliminde ay basini bir gun geriye kaydiriyordu.
@@ -17,7 +18,7 @@ const bugun = () => ymd(new Date());
 export default function IkPuantajRapor() {
   const [f, setF] = useState({ t1: ay0(), t2: bugun(), sube_id: "", tur: "tumu" });
 
-  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000) });
+  const { data: subeler = [] } = useQuery({ queryKey: ["ik_subeler_min"], queryFn: () => flowApi.entities.IkSube.list("ad", 2000), select: (d) => sortTr(d, "ad") });
   const { data, isFetching } = useQuery({
     queryKey: ["ik_puantaj_rapor", f],
     queryFn: () => flowApi.ik.puantajRapor({ t1: f.t1, t2: f.t2, tur: f.tur, ...(f.sube_id ? { sube_id: f.sube_id } : {}) }),

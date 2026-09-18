@@ -12,6 +12,7 @@ const CATEGORIES = [
   { key: "ayrilis_nedeni", label: "Ayrılış Nedenleri", group: "Çalışan" },
   { key: "belge_turu",     label: "Belge Türleri",     group: "Çalışan" },
   { key: "uyruk",          label: "Uyruklar",          group: "Çalışan" },
+  { key: "meslek_kodu",    label: "Meslek Kodları (SGK)", group: "Çalışan" },
   { key: "subeler",        label: "Şubeler / Lokasyonlar", group: "Organizasyon", component: IkSubeler },
   { key: "bolumler",       label: "Bölümler",             group: "Organizasyon", component: IkBolumler },
   { key: "izin_turleri",   label: "İzin Türleri ve Kuralları", group: "İzin", component: LeaveTypeManager },

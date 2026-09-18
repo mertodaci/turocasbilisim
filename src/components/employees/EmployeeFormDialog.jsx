@@ -83,6 +83,11 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
     select: (d) => sortTr(d, "label"),
   });
 
+  const { data: meslekKoduOptions = [] } = useQuery({
+    queryKey: ["definitions", "meslek_kodu"],
+    queryFn: () => flowApi.entities.Definition.filter({ category: "meslek_kodu", is_active: true }),
+  });
+
   const { data: uyrukOptions = [] } = useQuery({
     queryKey: ["definitions", "uyruk"],
     queryFn: () => flowApi.entities.Definition.filter({ category: "uyruk", is_active: true }),
@@ -751,7 +756,9 @@ export default function EmployeeFormDialog({ open, onOpenChange, onClose, employ
         </div>
         <div>
           <Label className="mb-1.5 block">Meslek Kodu (SGK)</Label>
-          <Input value={form.meslek_kodu} onChange={(e) => setForm({ ...form, meslek_kodu: e.target.value })} placeholder="örn: 4225.03" />
+          <SearchableSelect value={form.meslek_kodu} onChange={(v) => setForm({ ...form, meslek_kodu: v })}
+            options={meslekKoduOptions.map((m) => ({ value: m.value, label: m.label }))}
+            placeholder="Meslek kodu / adı seçin" searchPlaceholder="Kod veya meslek adı ara..." fixDialogWheelScroll />
         </div>
         <div>
           <Label className="mb-1.5 block">Kanun No (SGK teşvik)</Label>

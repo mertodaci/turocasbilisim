@@ -2086,6 +2086,24 @@ function initDb() {
     }
   } catch(e) { console.error('uyruk seed:', e.message); }
 
+  // ── Meslek Kodu (SGK/İŞKUR resmi liste, idempotent) ──
+  // Calisan formundaki "Meslek Kodu (SGK)" alani artik serbest metin degil,
+  // bu listeden secilen bir SearchableSelect. 6334 satir oldugu icin tek
+  // transaction icinde toplu insert edilir (performans).
+  try {
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const meslekKoduVar = db.prepare("SELECT 1 FROM definitions WHERE category='meslek_kodu' LIMIT 1").get();
+    if (!meslekKoduVar) {
+      const meslekKodlari = require('./seedData/meslekKodlari.json'); // [{code, label}, ...]
+      const ins = db.prepare("INSERT INTO definitions (id, category, label, value, is_active, sort_order, created_by, created_date, updated_date) VALUES (?,?,?,?,1,?,?,?,?)");
+      const insertAll = db.transaction((rows) => {
+        rows.forEach((m, i) => ins.run(uuidv4(), 'meslek_kodu', `${m.label} (${m.code})`, m.code, i, 'sistem', now, now));
+      });
+      insertAll(meslekKodlari);
+    }
+  } catch(e) { console.error('meslek kodu seed:', e.message); }
+
   console.log('✅ Veritabanı tabloları hazır');
 }
 
